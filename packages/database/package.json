@@ -1,0 +1,26 @@
+{
+  "name": "@zobra/database",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "generate": "npx prisma generate",
+    "migrate": "npx prisma migrate dev",
+    "push": "npx prisma db push",
+    "seed": "tsx prisma/seed.ts",
+    "test": "vitest run",
+    "test:vitest": "vitest run"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.19.0",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "prisma": "^5.19.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}

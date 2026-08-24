@@ -1,0 +1,408 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SALES
+  PRODUCTION
+  CUSTOMER
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum QuoteActivityType {
+  NOTE
+  WHATSAPP
+  STATUS_CHANGE
+  PRICE_UPDATE
+  QUOTE_SENT
+  CUSTOMER_APPROVED
+  CUSTOMER_REJECTED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PRODUCTION
+  READY_FOR_DISPATCH
+  DISPATCHED
+  DELIVERED
+  CANCELLED
+}
+
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+}
+
+enum ProductionStage {
+  PENDING
+  PRINTING
+  QUALITY_CHECK
+  PACKING
+  READY_TO_DISPATCH
+}
+
+enum DispatchStatus {
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  RETURNED
+}
+
+enum CMSType {
+  BLOG
+  TESTIMONIAL
+  FAQ
+}
+
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  passwordHash  String
+  name          String
+  phone         String?
+  role          Role            @default(CUSTOMER)
+  companyId     String?
+  company       Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  quotes        Quote[]
+  orders        Order[]
+  assignedJobs  ProductionJob[] @relation("AssignedProductionUser")
+  activities    QuoteActivity[]
+  testimonials  Testimonial[]   @relation("CustomerTestimonials")
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@map("users")
+}
+
+model Company {
+  id           String        @id @default(uuid())
+  name         String
+  gstin        String?       @unique
+  address      String
+  city         String
+  state        String
+  pincode      String
+  logo         String?
+  notes        String?
+  users        User[]
+  quotes       Quote[]
+  orders       Order[]
+  invoices     Invoice[]
+  testimonials Testimonial[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("companies")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  image       String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("categories")
+}
+
+model Product {
+  id           String           @id @default(uuid())
+  name         String
+  slug         String           @unique
+  hsnCode      String           @default("6109")
+  gstRate      Float            @default(5.0)
+  description  String
+  basePrice    Float
+  images       String[]         @default([])
+  categoryId   String
+  category     Category         @relation(fields: [categoryId], references: [id])
+  isActive     Boolean          @default(true)
+  variants     ProductVariant[]
+  bulkPricing  BulkPricing[]
+  quoteItems   QuoteItem[]
+  orderItems   OrderItem[]
+  testimonials Testimonial[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color     String
+  size      String
+  sku       String   @unique
+  stock     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("product_variants")
+}
+
+model BulkPricing {
+  id           String   @id @default(uuid())
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  minQuantity  Int
+  maxQuantity  Int
+  pricePerUnit Float
+  printType    String   @default("Front Only")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("bulk_pricings")
+}
+
+model Quote {
+  id          String          @id @default(uuid())
+  quoteNumber String          @unique
+  customerId  String
+  customer    User            @relation(fields: [customerId], references: [id])
+  companyId   String?
+  company     Company?        @relation(fields: [companyId], references: [id])
+  status      QuoteStatus     @default(DRAFT)
+  subtotal    Float
+  gstTotal    Float
+  discount    Float           @default(0.0)
+  totalAmount Float
+  notes       String?
+  validUntil  DateTime
+  items       QuoteItem[]
+  activities  QuoteActivity[]
+  order       Order?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id          String   @id @default(uuid())
+  quoteId     String
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  printType   String   @default("Front Only")
+  color       String   @default("Black")
+  size        String   @default("L")
+  quantity    Int
+  unitPrice   Float
+  totalPrice  Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("quote_items")
+}
+
+model QuoteActivity {
+  id        String            @id @default(uuid())
+  quoteId   String
+  quote     Quote             @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type      QuoteActivityType @default(NOTE)
+  message   String
+  createdAt DateTime          @default(now())
+
+  @@map("quote_activities")
+}
+
+enum PaymentRecordStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model Order {
+  id            String        @id @default(uuid())
+  orderNumber   String        @unique
+  quoteId       String?       @unique
+  quote         Quote?        @relation(fields: [quoteId], references: [id])
+  customerId    String
+  customer      User          @relation(fields: [customerId], references: [id])
+  companyId     String?
+  company       Company?      @relation(fields: [companyId], references: [id])
+  status        OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  subtotal      Float
+  gstTotal      Float
+  totalAmount   Float
+  items         OrderItem[]
+  production    ProductionJob?
+  dispatch      Dispatch?
+  invoices      Invoice[]
+  payments      Payment[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("orders")
+}
+
+model Payment {
+  id                String              @id @default(uuid())
+  orderId           String
+  order             Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  razorpayOrderId   String?             @unique
+  razorpayPaymentId String?             @unique
+  razorpaySignature String?
+  amount            Float
+  currency          String              @default("INR")
+  status            PaymentRecordStatus @default(PENDING)
+  method            String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@map("payments")
+}
+
+
+model OrderItem {
+  id                   String   @id @default(uuid())
+  orderId              String
+  order                Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId            String
+  product              Product  @relation(fields: [productId], references: [id])
+  printType            String   @default("Front Only")
+  color                String   @default("Black")
+  size                 String   @default("L")
+  quantity             Int
+  unitPrice            Float
+  totalPrice           Float
+  customizationDetails String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("order_items")
+}
+
+model ProductionJob {
+  id           String          @id @default(uuid())
+  orderId      String          @unique
+  order        Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  stage        ProductionStage @default(PENDING)
+  assignedToId String?
+  assignedTo   User?           @relation("AssignedProductionUser", fields: [assignedToId], references: [id])
+  notes        String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@map("production_jobs")
+}
+
+model Dispatch {
+  id             String         @id @default(uuid())
+  orderId        String         @unique
+  order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  shipmentNumber String         @unique
+  courierName    String
+  trackingNumber String
+  trackingUrl    String?
+  status         DispatchStatus @default(DISPATCHED)
+  dispatchedAt   DateTime       @default(now())
+  deliveredAt    DateTime?
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@map("dispatches")
+}
+
+model Invoice {
+  id            String   @id @default(uuid())
+  invoiceNumber String   @unique
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id])
+  companyId     String?
+  company       Company? @relation(fields: [companyId], references: [id])
+  amount        Float
+  gstAmount     Float
+  totalAmount   Float
+  dueDate       DateTime
+  status        String   @default("UNPAID")
+  pdfUrl        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("invoices")
+}
+
+model CMSContent {
+  id          String   @id @default(uuid())
+  type        CMSType
+  title       String
+  slug        String?  @unique
+  content     String
+  author      String?
+  image       String?
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("cms_contents")
+}
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+enum TestimonialStatus {
+  PENDING
+  PUBLISHED
+  INACTIVE
+}
+
+model Testimonial {
+  id           String            @id @default(uuid())
+  customerId   String?
+  customer     User?             @relation("CustomerTestimonials", fields: [customerId], references: [id], onDelete: SetNull)
+  companyId    String?
+  company      Company?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  productId    String?
+  product      Product?          @relation(fields: [productId], references: [id], onDelete: SetNull)
+  
+  customerName String
+  companyName  String?
+  designation  String?
+  rating       Int               @default(5)
+  content      String            @db.Text
+  avatarUrl    String?
+  
+  status       TestimonialStatus @default(PENDING)
+  isFeatured   Boolean           @default(false)
+  
+  publishedAt  DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@map("testimonials")
+}
