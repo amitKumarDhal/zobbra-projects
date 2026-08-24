@@ -43,6 +43,7 @@ export const getProducts = async (req: Request, res: Response) => {
   return res.json({ 
     success: true, 
     data: products,
+    products,
     pagination: {
       page: pageNum,
       pageSize: limitNum,

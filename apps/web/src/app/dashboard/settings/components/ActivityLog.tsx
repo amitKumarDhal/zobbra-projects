@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Activity } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
 export default function ActivityLog() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -9,7 +10,7 @@ export default function ActivityLog() {
     const fetchLogs = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:5000/api/v1/settings/activity', {
+        const res = await fetch(`${API_URL}/settings/activity`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const json = await res.json();

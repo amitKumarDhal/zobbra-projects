@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { API_URL } from '@/lib/api';
 
 declare global {
   interface Window {
@@ -65,7 +66,7 @@ export default function CustomerOrderDetailPage() {
   const fetchOrderDetail = async () => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
-      const res = await fetch(`http://localhost:5000/api/v1/orders/${id}`, {
+      const res = await fetch(`${API_URL}/orders/${id}`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
@@ -105,7 +106,7 @@ export default function CustomerOrderDetailPage() {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
       
       // 1. Call Backend Create Razorpay Order API
-      const createRes = await fetch('http://localhost:5000/api/v1/payments/create-order', {
+      const createRes = await fetch(`${API_URL}/payments/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -176,7 +177,7 @@ export default function CustomerOrderDetailPage() {
   const verifyPaymentOnServer = async (razorpay_order_id: string, razorpay_payment_id: string, razorpay_signature: string) => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
-      const verifyRes = await fetch('http://localhost:5000/api/v1/payments/verify', {
+      const verifyRes = await fetch(`${API_URL}/payments/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

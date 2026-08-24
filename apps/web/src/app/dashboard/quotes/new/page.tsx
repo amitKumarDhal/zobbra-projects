@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { API_URL } from '@/lib/api';
 import { 
   ArrowLeft, Search, Plus, Trash2, Save, Send, AlertCircle, 
   CheckCircle2, Loader2, IndianRupee, Users, Package, FileText 
@@ -62,7 +63,7 @@ export default function CreateQuotePage() {
   const fetchCustomers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/v1/customers?pageSize=100', {
+      const res = await fetch(`${API_URL}/customers?pageSize=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const json = await res.json();
@@ -75,7 +76,7 @@ export default function CreateQuotePage() {
   const fetchProducts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/v1/products?pageSize=100', {
+      const res = await fetch(`${API_URL}/products?pageSize=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const json = await res.json();
@@ -96,7 +97,7 @@ export default function CreateQuotePage() {
     setIsCalculating(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/v1/quotes/calculate', {
+      const res = await fetch(`${API_URL}/quotes/calculate`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -191,7 +192,7 @@ export default function CreateQuotePage() {
         validDays: 15
       };
 
-      const res = await fetch('http://localhost:5000/api/v1/quotes', {
+      const res = await fetch(`${API_URL}/quotes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

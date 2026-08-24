@@ -115,6 +115,7 @@ export const getQuotes = async (req: AuthRequest, res: Response) => {
   return res.json({ 
     success: true, 
     data: sanitizedQuotes,
+    quotes: sanitizedQuotes,
     pagination: {
       page: pageNum,
       pageSize: limitNum,

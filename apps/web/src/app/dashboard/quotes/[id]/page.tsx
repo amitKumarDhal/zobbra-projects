@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
+import { API_URL } from '@/lib/api';
 import {
   MessageSquare,
   Send,
@@ -77,7 +78,7 @@ export default function AdminQuoteDetailPage() {
   const fetchQuoteDetail = async () => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
-      const res = await fetch(`http://localhost:5000/api/v1/quotes/${id}`, {
+      const res = await fetch(`${API_URL}/quotes/${id}`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
@@ -109,7 +110,7 @@ export default function AdminQuoteDetailPage() {
     setAddingNote(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
-      const res = await fetch(`http://localhost:5000/api/v1/quotes/${id}/activity`, {
+      const res = await fetch(`${API_URL}/quotes/${id}/activity`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +133,7 @@ export default function AdminQuoteDetailPage() {
   const handleWhatsAppClick = async (templateKey: string = 'NEW_QUOTE') => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
-      const res = await fetch(`http://localhost:5000/api/v1/quotes/${id}/whatsapp`, {
+      const res = await fetch(`${API_URL}/quotes/${id}/whatsapp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -158,7 +159,7 @@ export default function AdminQuoteDetailPage() {
     setUpdating(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
-      const res = await fetch(`http://localhost:5000/api/v1/quotes/${id}/status`, {
+      const res = await fetch(`${API_URL}/quotes/${id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -181,7 +182,7 @@ export default function AdminQuoteDetailPage() {
     setUpdating(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
-      const res = await fetch(`http://localhost:5000/api/v1/quotes/${id}`, {
+      const res = await fetch(`${API_URL}/quotes/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -211,7 +212,7 @@ export default function AdminQuoteDetailPage() {
     setUpdating(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const res = await fetch(`http://localhost:5000/api/v1/orders/from-quote/${id}`, {
+      const res = await fetch(`${API_URL}/orders/from-quote/${id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, Phone, Mail, Building, MapPin, CheckCircle2, TrendingUp, Users, FileText, ShoppingBag, MessageSquare, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
-const API_URL = 'http://localhost:5000/api/v1';
+import { API_URL } from '@/lib/api';
 
 export default function AgentDetailPage({ params }: { params: { id: string } }) {
   const [agent, setAgent] = useState<any>(null);

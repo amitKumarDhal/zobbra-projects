@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { API_URL } from '@/lib/api';
 
 export default function CustomerDashboardPage() {
   const [userName, setUserName] = useState('Rahul Sharma');
@@ -46,7 +47,7 @@ export default function CustomerDashboardPage() {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
       if (!token) return;
 
-      const res = await fetch('http://localhost:5000/api/v1/quotes', {
+      const res = await fetch(`${API_URL}/quotes`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

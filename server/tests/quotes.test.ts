@@ -3,6 +3,10 @@ import app from '../src/app.js';
 import jwt from 'jsonwebtoken';
 import { config } from '../src/config/index.js';
 import { calculateServerPricing } from '../src/modules/quotes/quotes.controller.js';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+jest.setTimeout(30000);
 
 describe('Quote Management & Server-Side Pricing API Integration', () => {
   const customerAToken = jwt.sign(
@@ -22,6 +26,74 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
     config.jwtSecret,
     { expiresIn: '1h' }
   );
+
+  beforeAll(async () => {
+    await prisma.company.upsert({
+      where: { id: 'comp-101' },
+      update: {},
+      create: {
+        id: 'comp-101',
+        name: 'Acme Corp',
+        gstin: '21TESTA1234A1Z5',
+        address: 'Plot 101, Test Road',
+        city: 'Bhubaneswar',
+        state: 'Odisha',
+        pincode: '751024',
+      },
+    });
+    await prisma.company.upsert({
+      where: { id: 'comp-202' },
+      update: {},
+      create: {
+        id: 'comp-202',
+        name: 'Zepto Corp',
+        gstin: '22TESTB2345B2Z6',
+        address: 'Plot 202, Test Road',
+        city: 'Bhubaneswar',
+        state: 'Odisha',
+        pincode: '751024',
+      },
+    });
+    await prisma.user.upsert({
+      where: { id: 'cust-101' },
+      update: { companyId: 'comp-101' },
+      create: {
+        id: 'cust-101',
+        email: 'customerA@acme.com',
+        passwordHash: '$2a$10$abcdefghijklmnopqrstuvwxyz123456',
+        name: 'Customer A',
+        role: 'CUSTOMER',
+        companyId: 'comp-101',
+      },
+    });
+    await prisma.user.upsert({
+      where: { id: 'cust-202' },
+      update: { companyId: 'comp-202' },
+      create: {
+        id: 'cust-202',
+        email: 'customerB@zepto.com',
+        passwordHash: '$2a$10$abcdefghijklmnopqrstuvwxyz123456',
+        name: 'Customer B',
+        role: 'CUSTOMER',
+        companyId: 'comp-202',
+      },
+    });
+    await prisma.user.upsert({
+      where: { id: 'admin-101' },
+      update: {},
+      create: {
+        id: 'admin-101',
+        email: 'admin@zobbra.com',
+        passwordHash: '$2a$10$abcdefghijklmnopqrstuvwxyz123456',
+        name: 'Admin Test',
+        role: 'ADMIN',
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
 
   describe('Server-Side Pricing Engine', () => {
     it('calculates correct unit rates, 5% GST, and total for 100 Pcs with Front & Back Print', () => {

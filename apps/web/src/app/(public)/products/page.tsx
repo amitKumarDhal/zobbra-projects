@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, Loader2, PackageX } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { API_URL } from '@/lib/api';
 
 const CATEGORIES = [
   { id: 'all', label: 'ALL' },
@@ -50,7 +51,7 @@ function ProductsCatalog() {
           query.set('search', search);
         }
         
-        const res = await fetch(`http://localhost:5000/api/v1/products?${query.toString()}`);
+        const res = await fetch(`${API_URL}/products?${query.toString()}`);
         const data = await res.json();
         if (data.success) {
           setProducts(data.data);

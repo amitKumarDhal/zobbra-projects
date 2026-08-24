@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ArrowRight, ArrowLeft, Upload, CheckCircle2, Package, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { API_URL } from '@/lib/api';
 
 export default function CreateQuoteWizardPage() {
   const [step, setStep] = useState(1);
@@ -42,7 +43,7 @@ export default function CreateQuoteWizardPage() {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
 
-      const response = await fetch('http://localhost:5000/api/v1/quotes', {
+      const response = await fetch(`${API_URL}/quotes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

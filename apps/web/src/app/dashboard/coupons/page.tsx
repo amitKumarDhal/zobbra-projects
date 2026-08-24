@@ -6,7 +6,7 @@ import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } 
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
-const API_URL = 'http://localhost:5000/api/v1';
+import { API_URL } from '@/lib/api';
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<any[]>([]);

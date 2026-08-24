@@ -6,6 +6,7 @@ import { Package, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { API_URL } from '@/lib/api';
 
 interface CustomerOrder {
   id: string;
@@ -27,7 +28,7 @@ export default function CustomerOrdersPage() {
   const fetchOrders = async () => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
-      const res = await fetch('http://localhost:5000/api/v1/orders', {
+      const res = await fetch(`${API_URL}/orders`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },

@@ -6,7 +6,7 @@ import { Search, Filter, MessageSquare, Phone, Globe, Camera, Eye, MoreVertical,
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
-const API_URL = 'http://localhost:5000/api/v1';
+import { API_URL } from '@/lib/api';
 
 // --- TYPES ---
 type InquiryStatus = 'NEW' | 'CONTACTED' | 'FOLLOW_UP' | 'QUOTED' | 'CONVERTED' | 'LOST' | 'CLOSED';

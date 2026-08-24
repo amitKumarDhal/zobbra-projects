@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../../app.js';
-import { prisma } from '../../config/index.js';
+import { prisma, config } from '../../config/index.js';
+import jwt from 'jsonwebtoken';
 
 
 describe('Payment Module API & Security Tests (Razorpay Test Mode)', () => {
@@ -12,40 +13,59 @@ describe('Payment Module API & Security Tests (Razorpay Test Mode)', () => {
   let paidOrderId: string;
 
   beforeAll(async () => {
-    // 1. Fetch test customer
-    const customer = await prisma.user.findUnique({ where: { email: 'customer@zobbra.test' } });
-    const admin = await prisma.user.findUnique({ where: { email: 'admin@zobra.test' } });
+    // 1. Setup test customer 1
+    const customer = await prisma.user.upsert({
+      where: { email: 'customer@zobbra.test' },
+      update: {},
+      create: {
+        email: 'customer@zobbra.test',
+        name: 'Customer Test',
+        passwordHash: '$2a$10$e8w6W2Q1234567890123456789012345678901234567890123456',
+        role: 'CUSTOMER',
+      }
+    });
 
-    // Login customer 1
-    const resCust1 = await request(app)
-      .post('/api/v1/auth/login')
-      .send({ email: 'customer@zobbra.test', password: 'customer123' });
-    customerToken = resCust1.body.token;
+    // 2. Setup test admin
+    const admin = await prisma.user.upsert({
+      where: { email: 'admin@zobbra.test' },
+      update: {},
+      create: {
+        email: 'admin@zobbra.test',
+        name: 'Admin Test',
+        passwordHash: '$2a$10$e8w6W2Q1234567890123456789012345678901234567890123456',
+        role: 'ADMIN',
+      }
+    });
 
-    // Login admin
-    const resAdmin = await request(app)
-      .post('/api/v1/auth/login')
-      .send({ email: 'admin@zobra.test', password: 'admin123' });
-    adminToken = resAdmin.body.token;
+    // 3. Setup test customer 2
+    const user2 = await prisma.user.upsert({
+      where: { email: 'customer2@zobra.test' },
+      update: {},
+      create: {
+        email: 'customer2@zobra.test',
+        name: 'Customer Two',
+        passwordHash: '$2a$10$e8w6W2Q1234567890123456789012345678901234567890123456',
+        role: 'CUSTOMER',
+      },
+    });
 
-    // Create a dummy user 2 for unauthorized ownership tests
-    let user2 = await prisma.user.findUnique({ where: { email: 'customer2@zobra.test' } });
-    if (!user2) {
-      user2 = await prisma.user.create({
-        data: {
-          email: 'customer2@zobra.test',
-          name: 'Customer Two',
-          passwordHash: '$2a$10$e8w6W2Q1234567890123456789012345678901234567890123456',
-          role: 'CUSTOMER',
+    customerToken = jwt.sign(
+      { id: customer.id, email: customer.email, role: customer.role },
+      config.jwtSecret,
+      { expiresIn: '1h' }
+    );
 
-        },
-      });
-    }
+    adminToken = jwt.sign(
+      { id: admin.id, email: admin.email, role: admin.role },
+      config.jwtSecret,
+      { expiresIn: '1h' }
+    );
 
-    const resCust2 = await request(app)
-      .post('/api/v1/auth/login')
-      .send({ email: 'customer2@zobra.test', password: 'customer123' });
-    customer2Token = resCust2.body.token || customerToken;
+    customer2Token = jwt.sign(
+      { id: user2.id, email: user2.email, role: user2.role },
+      config.jwtSecret,
+      { expiresIn: '1h' }
+    );
 
     // Create test orders in DB
     const order1 = await prisma.order.create({

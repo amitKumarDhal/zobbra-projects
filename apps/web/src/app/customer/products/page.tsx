@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Modal } from '@/components/ui/modal';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { API_URL } from '@/lib/api';
 
 interface ProductItem {
   id: string;
@@ -44,7 +45,7 @@ export default function CustomerProductsPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/v1/products');
+      const res = await fetch(`${API_URL}/products`);
       const data = await res.json();
       if (data.data && Array.isArray(data.data)) {
         const mapped: ProductItem[] = data.data.map((p: any) => ({
@@ -73,7 +74,7 @@ export default function CustomerProductsPage() {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
 
-      const response = await fetch('http://localhost:5000/api/v1/quotes', {
+      const response = await fetch(`${API_URL}/quotes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

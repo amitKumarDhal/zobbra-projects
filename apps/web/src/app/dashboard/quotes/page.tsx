@@ -6,7 +6,7 @@ import { Search, Filter, FileText, Download, ExternalLink, MoreVertical, Message
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
-const API_URL = 'http://localhost:5000/api/v1';
+import { API_URL } from '@/lib/api';
 
 // Types
 type QuoteStatus = 'DRAFT' | 'SENT' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
@@ -81,6 +81,22 @@ export default function QuotesPage() {
       }
     } catch(err) {
       console.error('Failed to load quote details', err);
+    }
+  };
+
+  const handleWhatsApp = async (quoteId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/quotes/${quoteId}/whatsapp`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).then(r => r.json());
+      if (res.whatsappUrl || res.link) {
+        window.open(res.whatsappUrl || res.link, '_blank');
+      }
+      fetchData();
+    } catch (err: any) {
+      console.error('Failed to trigger WhatsApp for quote:', err);
     }
   };
 
@@ -240,8 +256,8 @@ export default function QuotesPage() {
                     </td>
                     <td className="px-4 py-4 text-center">
                       <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-1.5 bg-white border border-[#E5E7EB] text-[#6B7280] hover:text-[#3B6FEB] rounded shadow-sm" title="View Details" data-cy="admin-row-view-btn"><Eye className="w-3.5 h-3.5" /></button>
-                        <button onClick={(e) => { e.stopPropagation(); setSelectedQuote(q); openWhatsApp(); }} className="p-1.5 bg-white border border-[#E5E7EB] text-green-600 hover:text-green-700 rounded shadow-sm" title="WhatsApp" data-cy="whatsapp-btn"><MessageSquare className="w-3.5 h-3.5" /></button>
+                        <button className="p-1.5 bg-white border border-[#E5E7EB] text-[#6B7280] hover:text-[#3B6FEB] rounded shadow-sm" title="View Details" data-cy="admin-row-view-btn" onClick={(e) => { e.stopPropagation(); handleOpenQuote(q.id); }}><Eye className="w-3.5 h-3.5" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleWhatsApp(q.id); }} className="p-1.5 bg-white border border-[#E5E7EB] text-green-600 hover:text-green-700 rounded shadow-sm" title="WhatsApp" data-cy="whatsapp-btn"><MessageSquare className="w-3.5 h-3.5" /></button>
                         <button className="p-1.5 bg-white border border-[#E5E7EB] text-[#6B7280] hover:text-[#111111] rounded shadow-sm" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
                         <button className="p-1.5 bg-white border border-[#E5E7EB] text-[#6B7280] hover:text-[#111111] rounded shadow-sm" title="More Options"><MoreVertical className="w-3.5 h-3.5" /></button>
                       </div>

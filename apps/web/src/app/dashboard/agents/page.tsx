@@ -7,7 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
-const API_URL = 'http://localhost:5000/api/v1';
+import { API_URL } from '@/lib/api';
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<any[]>([]);

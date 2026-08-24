@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Filter, Star, Edit2, Trash2, CheckCircle, XCircle, MessageSquare, ThumbsUp, Clock, AlertCircle } from 'lucide-react';
 import TestimonialDrawer from './TestimonialDrawer';
 
-const API_URL = 'http://localhost:5000/api/v1';
+import { API_URL } from '@/lib/api';
 
 export default function TestimonialsPage() {
   const [testimonials, setTestimonials] = useState<any[]>([]);

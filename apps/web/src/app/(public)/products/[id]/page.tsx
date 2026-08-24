@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { API_URL } from '@/lib/api';
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/v1/products/${params.id}`);
+        const res = await fetch(`${API_URL}/products/${params.id}`);
         const data = await res.json();
         if (data.success && data.data) {
           const prod = data.data;

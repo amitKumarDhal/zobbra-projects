@@ -184,6 +184,7 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
   return res.json({ 
     success: true, 
     data: orders,
+    orders,
     pagination: {
       page: pageNum,
       pageSize: limitNum,

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, UploadCloud, Star } from 'lucide-react';
 import RatingOverview from './RatingOverview';
+import { API_URL } from '@/lib/api';
 
 interface TestimonialDrawerProps {
   isOpen: boolean;
@@ -30,7 +31,7 @@ export default function TestimonialDrawer({ isOpen, onClose, onSaved, testimonia
     const fetchProducts = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:5000/api/v1/products?limit=100', {
+        const res = await fetch(`${API_URL}/products?limit=100`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const json = await res.json();
@@ -88,8 +89,8 @@ export default function TestimonialDrawer({ isOpen, onClose, onSaved, testimonia
       setLoading(true);
       const token = localStorage.getItem('token');
       const url = testimonial 
-        ? `http://localhost:5000/api/v1/testimonials/${testimonial.id}`
-        : `http://localhost:5000/api/v1/testimonials`;
+        ? `${API_URL}/testimonials/${testimonial.id}`
+        : `${API_URL}/testimonials`;
       
       const res = await fetch(url, {
         method: testimonial ? 'PUT' : 'POST',

@@ -8,6 +8,7 @@ import SecuritySettings from './components/SecuritySettings';
 import PaymentEmailSettings from './components/PaymentEmailSettings';
 import ActivityLog from './components/ActivityLog';
 import SystemInfoSidebar from './components/SystemInfoSidebar';
+import { API_URL } from '@/lib/api';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
@@ -23,9 +24,9 @@ export default function SettingsPage() {
         const headers = { Authorization: `Bearer ${token}` };
         
         const [settingsRes, infoRes, healthRes] = await Promise.all([
-          fetch('http://localhost:5000/api/v1/settings', { headers }),
-          fetch('http://localhost:5000/api/v1/settings/info', { headers }),
-          fetch('http://localhost:5000/api/v1/settings/health', { headers })
+          fetch(`${API_URL}/settings`, { headers }),
+          fetch(`${API_URL}/settings/info`, { headers }),
+          fetch(`${API_URL}/settings/health`, { headers })
         ]);
 
         const settingsJson = await settingsRes.json();
@@ -61,7 +62,7 @@ export default function SettingsPage() {
 
   const handleSaveSetting = async (key: string, value: any) => {
     const token = localStorage.getItem('token');
-    await fetch('http://localhost:5000/api/v1/settings', {
+    await fetch(`${API_URL}/settings`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',

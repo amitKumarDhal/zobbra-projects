@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
-const API_URL = 'http://localhost:5000/api/v1';
+import { API_URL } from '@/lib/api';
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<any[]>([]);

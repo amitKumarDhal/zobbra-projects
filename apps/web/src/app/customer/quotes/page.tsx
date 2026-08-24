@@ -7,6 +7,7 @@ import { PlusCircle, ShoppingBag, FileText, CheckCircle2, XCircle } from 'lucide
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { API_URL } from '@/lib/api';
 
 interface QuoteItem {
   id: string;
@@ -37,7 +38,7 @@ export default function CustomerQuotesPage() {
     setLoading(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
-      const res = await fetch('http://localhost:5000/api/v1/quotes', {
+      const res = await fetch(`${API_URL}/quotes`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
@@ -62,7 +63,7 @@ export default function CustomerQuotesPage() {
   const handleUpdateStatus = async (id: string, newStatus: 'APPROVED' | 'REJECTED') => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
-      const res = await fetch(`http://localhost:5000/api/v1/quotes/${id}/status`, {
+      const res = await fetch(`${API_URL}/quotes/${id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +86,7 @@ export default function CustomerQuotesPage() {
     setConvertingId(quoteId);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
-      const res = await fetch(`http://localhost:5000/api/v1/orders/from-quote/${quoteId}`, {
+      const res = await fetch(`${API_URL}/orders/from-quote/${quoteId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
