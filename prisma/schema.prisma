@@ -486,6 +486,13 @@ model Inquiry {
   productId       String?
   product         Product?       @relation(fields: [productId], references: [id])
   
+  // Guest customer fields
+  customerName    String?
+  companyName     String?
+  email           String?
+  phone           String?
+  customerType    String         @default("GUEST") // GUEST or REGISTERED
+  
   productInterest String?
   quantity        Int?
   printingType    String?

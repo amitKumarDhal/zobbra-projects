@@ -99,6 +99,7 @@ export class InquiryController {
       const result = await InquiryService.convertToQuote(req.params.id, userId);
       res.status(201).json(result);
     } catch (error: any) {
+      console.error('Error in convertToQuote:', error);
       res.status(400).json({ message: error.message });
     }
   }

@@ -33,6 +33,22 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
   }
 };
 
+export const optionalAuth = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, config.jwtSecret) as any;
+    req.user = decoded;
+  } catch (error) {
+    // Ignore error for optional auth
+  }
+  next();
+};
+
 export const authorizeRoles = (...roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user || !roles.includes(req.user.role)) {

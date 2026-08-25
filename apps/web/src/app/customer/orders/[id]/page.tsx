@@ -10,6 +10,7 @@ import {
   Package,
   ShieldCheck,
   AlertCircle,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -25,6 +26,7 @@ declare global {
 interface OrderDetail {
   id: string;
   orderNumber: string;
+  quoteId?: string;
   status: string;
   paymentStatus: string;
   subtotal: number;
@@ -84,125 +86,18 @@ export default function CustomerOrderDetailPage() {
 
   useEffect(() => {
     if (id) fetchOrderDetail();
-
-    // Dynamically load Razorpay Checkout Script
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    document.body.appendChild(script);
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
   }, [id]);
 
-  const handlePayNow = async () => {
-    if (!order) return;
-    setProcessingPayment(true);
-    setPaymentError(null);
-
+  const openWhatsApp = async () => {
+    if (!order?.quoteId) return alert('No quote attached to this order for WhatsApp link generation.');
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
-      
-      // 1. Call Backend Create Razorpay Order API
-      const createRes = await fetch(`${API_URL}/payments/create-order`, {
+      const res = await fetch(`${API_URL}/quotes/${order.quoteId}/whatsapp`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ orderId: order.id }),
-      });
-
-      const createData = await createRes.json();
-      if (!createRes.ok || !createData.success || !createData.payment) {
-        throw new Error(createData.message || 'Failed to initialize Razorpay payment session');
-      }
-
-      const { razorpayOrderId, amount, currency, keyId, orderNumber } = createData.payment;
-
-      // If Cypress is running automated E2E test, complete test verification automatically
-      const isCypress = typeof window !== 'undefined' && (window as any).Cypress;
-
-      if (isCypress) {
-        const mockPayId = `pay_cy_${Date.now()}`;
-        const mockSig = `sig_cy_${Date.now()}`;
-        await verifyPaymentOnServer(razorpayOrderId, mockPayId, mockSig);
-        return;
-      }
-
-      // Check if Razorpay SDK is available in browser
-      if (typeof window !== 'undefined' && window.Razorpay) {
-        const options = {
-          key: keyId,
-          amount: amount,
-          currency: currency || 'INR',
-          name: 'ZOBBRA B2B Merchandise',
-          description: `Payment for Order #${orderNumber}`,
-          order_id: razorpayOrderId,
-          prefill: {
-            name: order.customer?.name || 'Customer',
-            email: order.customer?.email || 'customer@zobbra.test',
-            contact: order.customer?.phone || '9876543210',
-          },
-          theme: {
-            color: '#3B6FEB',
-          },
-          handler: async function (response: any) {
-            await verifyPaymentOnServer(response.razorpay_order_id, response.razorpay_payment_id, response.razorpay_signature);
-          },
-          modal: {
-            ondismiss: function () {
-              setProcessingPayment(false);
-            },
-          },
-        };
-
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-      } else {
-        const mockPayId = `pay_test_${Date.now()}`;
-        const mockSig = `sig_test_${Date.now()}`;
-        await verifyPaymentOnServer(razorpayOrderId, mockPayId, mockSig);
-      }
-
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+      }).then(r => r.json());
+      if(res.link) window.open(res.link, '_blank');
     } catch (err: any) {
-      console.error('Payment Error:', err);
-      setPaymentError(err.message || 'Failed to launch payment gateway');
-      setProcessingPayment(false);
-    }
-  };
-
-  const verifyPaymentOnServer = async (razorpay_order_id: string, razorpay_payment_id: string, razorpay_signature: string) => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
-      const verifyRes = await fetch(`${API_URL}/payments/verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          orderId: order?.id,
-          razorpay_order_id,
-          razorpay_payment_id,
-          razorpay_signature,
-        }),
-      });
-
-      const verifyData = await verifyRes.json();
-      if (verifyRes.ok && verifyData.success) {
-        router.push(
-          `/customer/payment/success?orderId=${order?.id}&paymentId=${razorpay_payment_id}&orderNumber=${order?.orderNumber}&amount=${order?.totalAmount}`
-        );
-      } else {
-        router.push(`/customer/payment/failed?orderId=${order?.id}&reason=${encodeURIComponent(verifyData.message || 'Signature failed')}`);
-      }
-    } catch {
-      router.push(`/customer/payment/failed?orderId=${order?.id}&reason=verification_error`);
-    } finally {
-      setProcessingPayment(false);
+      console.error('Failed to generate link');
     }
   };
 
@@ -247,17 +142,26 @@ export default function CustomerOrderDetailPage() {
 
         {/* Action Button */}
         {!isPaid ? (
-          <Button
-            data-cy="pay-now-btn"
-            variant="primary"
-            size="lg"
-            onClick={handlePayNow}
-            disabled={processingPayment}
-            className="gap-2 font-bold px-8 shadow-md"
-          >
-            <CreditCard className="w-5 h-5" />
-            {processingPayment ? 'INITIALIZING CHECKOUT...' : 'PAY NOW (RAZORPAY TEST)'}
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              variant="outline"
+              size="lg"
+              disabled
+              className="gap-2 font-bold px-6 shadow-sm opacity-60 cursor-not-allowed"
+            >
+              <CreditCard className="w-5 h-5" />
+              ONLINE PAYMENT — COMING SOON
+            </Button>
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={openWhatsApp}
+              className="gap-2 font-bold px-6 shadow-md bg-[#25D366] hover:bg-[#128C7E] text-white border-none"
+            >
+              <MessageSquare className="w-5 h-5" />
+              CONTACT SALES ON WHATSAPP
+            </Button>
+          </div>
         ) : (
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2 rounded-xl text-xs font-bold shadow-sm">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -343,15 +247,29 @@ export default function CustomerOrderDetailPage() {
             </div>
 
             {!isPaid && (
-              <Button
-                data-cy="pay-now-summary-btn"
-                variant="primary"
-                onClick={handlePayNow}
-                disabled={processingPayment}
-                className="w-full font-bold py-3 shadow-sm mt-4"
-              >
-                {processingPayment ? 'PROCESSING...' : 'PROCEED TO PAY (RAZORPAY TEST)'}
-              </Button>
+              <div className="mt-4 space-y-3">
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                   <p className="text-xs text-amber-800 font-medium flex gap-2">
+                     <AlertCircle className="w-4 h-4 shrink-0" />
+                     Payment will be arranged with our sales team after order confirmation.
+                   </p>
+                </div>
+                <Button
+                  data-cy="contact-sales-btn"
+                  variant="primary"
+                  onClick={openWhatsApp}
+                  className="w-full font-bold py-3 shadow-sm bg-[#25D366] hover:bg-[#128C7E] text-white border-none flex items-center justify-center gap-2"
+                >
+                  <MessageSquare className="w-4 h-4" /> CONTACT SALES ON WHATSAPP
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled
+                  className="w-full font-bold py-3 shadow-sm opacity-60 cursor-not-allowed"
+                >
+                  ONLINE PAYMENT — COMING SOON
+                </Button>
+              </div>
             )}
           </Card>
         </div>

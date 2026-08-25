@@ -372,7 +372,10 @@ export const updateQuoteStatus = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  const quote = await prisma.quote.findUnique({ where: { id } });
+  const quote = await prisma.quote.findUnique({ 
+    where: { id },
+    include: { items: true }
+  });
   if (!quote) {
     return res.status(404).json({ success: false, message: 'Quote not found' });
   }
@@ -393,6 +396,15 @@ export const updateQuoteStatus = async (req: AuthRequest, res: Response) => {
       success: false,
       message: `Invalid status transition from ${currentStatus} to ${status}. Allowed: ${allowed.join(', ')}`,
     });
+  }
+
+  if (status === 'APPROVED') {
+    if (!quote.items || quote.items.length === 0) {
+      return res.status(400).json({ success: false, message: 'Cannot approve a quote with no items.' });
+    }
+    if (quote.totalAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Cannot approve a quote with zero total amount.' });
+    }
   }
 
   const activityType = status === 'APPROVED' ? 'CUSTOMER_APPROVED' : status === 'REJECTED' ? 'CUSTOMER_REJECTED' : 'STATUS_CHANGE';

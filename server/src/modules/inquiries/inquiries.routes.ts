@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { InquiryController } from './inquiries.controller.js';
-import { authenticateJWT, authorizeRoles } from '../../middleware/auth.js';
+import { authenticateJWT, authorizeRoles, optionalAuth } from '../../middleware/auth.js';
 
 const router = Router();
 
@@ -10,7 +10,7 @@ router.get('/stats', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryC
 router.get('/', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.getAll);
 router.get('/:id', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.getById);
 
-router.post('/', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.create);
+router.post('/', optionalAuth, InquiryController.create);
 
 router.patch('/:id/status', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.updateStatus);
 router.patch('/:id/assign', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.assign);

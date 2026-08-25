@@ -27,6 +27,11 @@ interface Inquiry {
   status: InquiryStatus;
   nextFollowUpAt: string;
   createdAt: string;
+  customerType: string;
+  customerName?: string;
+  companyName?: string;
+  email?: string;
+  phone?: string;
   customer: { name: string; company?: string; email: string; phone: string };
   company?: { name: string };
   assignedTo?: { id: string; name: string };
@@ -36,8 +41,9 @@ interface Inquiry {
 
 export default function InquiriesPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
-  const [stats, setStats] = useState<any>({ total: 0, new: 0, contacted: 0, quoted: 0, converted: 0 });
+  const [stats, setStats] = useState<any>({ total: 0, new: 0, contacted: 0, quoted: 0, converted: 0, registered: 0, guest: 0 });
   const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState('ALL');
   const [loading, setLoading] = useState(true);
   
   // Drawer state
@@ -119,9 +125,9 @@ export default function InquiriesPage() {
       {/* KPI CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatCard icon={<Users className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-50" title="Total Inquiries" value={stats.total} trend={18.6} />
-        <StatCard icon={<FileText className="w-5 h-5 text-green-600" />} iconBg="bg-green-50" title="New Inquiries" value={stats.new} trend={12.3} />
+        <StatCard icon={<UserCircle className="w-5 h-5 text-indigo-600" />} iconBg="bg-indigo-50" title="Registered" value={stats.registered} trend={12.3} />
+        <StatCard icon={<Globe className="w-5 h-5 text-teal-600" />} iconBg="bg-teal-50" title="Guests" value={stats.guest} trend={4.1} />
         <StatCard icon={<Phone className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-50" title="Contacted" value={stats.contacted} trend={8.2} />
-        <StatCard icon={<FileCheck className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-50" title="Quoted" value={stats.quoted} trend={5.6} />
         <StatCard icon={<CheckCircle className="w-5 h-5 text-emerald-600" />} iconBg="bg-emerald-50" title="Converted" value={stats.converted} trend={-3.1} />
       </div>
 
@@ -145,8 +151,10 @@ export default function InquiriesPage() {
               <select className="px-3 py-2 bg-white border border-[#E5E7EB] rounded-lg text-sm font-medium text-[#374151] outline-none hover:bg-[#F9FAFB]">
                 <option>All Status</option>
               </select>
-              <select className="px-3 py-2 bg-white border border-[#E5E7EB] rounded-lg text-sm font-medium text-[#374151] outline-none hover:bg-[#F9FAFB]">
-                <option>All Sources</option>
+              <select value={filterType} onChange={e=>setFilterType(e.target.value)} className="px-3 py-2 bg-white border border-[#E5E7EB] rounded-lg text-sm font-medium text-[#374151] outline-none hover:bg-[#F9FAFB]">
+                <option value="ALL">All Types</option>
+                <option value="REGISTERED">Registered</option>
+                <option value="GUEST">Guest</option>
               </select>
               <button className="flex items-center gap-2 px-4 py-2 border border-[#E5E7EB] rounded-lg text-sm font-semibold text-[#374151] hover:bg-[#F9FAFB] transition-colors bg-white">
                 <Filter className="w-4 h-4" /> Filter
@@ -175,13 +183,18 @@ export default function InquiriesPage() {
                   <tr><td colSpan={9} className="p-8 text-center text-gray-500">Loading inquiries...</td></tr>
                 ) : inquiries.length === 0 ? (
                   <tr><td colSpan={9} className="p-8 text-center text-gray-500">No inquiries found.</td></tr>
-                ) : inquiries.map((inq) => (
+                ) : inquiries.filter(inq => filterType === 'ALL' || inq.customerType === filterType).map((inq) => (
                   <tr key={inq.id} className="hover:bg-[#F9FAFB] transition-colors cursor-pointer group" onClick={() => handleOpenInquiry(inq.id)}>
                     <td className="px-4 py-4 text-center"><input type="checkbox" className="rounded border-gray-300" onClick={e=>e.stopPropagation()} /></td>
                     <td className="px-4 py-4 text-xs font-bold text-[#111111]">{inq.inquiryNumber}</td>
                     <td className="px-4 py-4">
-                      <p className="text-xs font-bold text-[#111111]">{inq.customer?.name}</p>
-                      <p className="text-[10px] text-[#6B7280] mt-0.5">{inq.customer?.company || inq.company?.name || 'Individual'}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-bold text-[#111111]">{inq.customerName || inq.customer?.name}</p>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${inq.customerType === 'REGISTERED' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                          {inq.customerType}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-[#6B7280] mt-0.5">{inq.companyName || inq.customer?.company || inq.company?.name || 'Individual'}</p>
                     </td>
                     <td className="px-4 py-4">
                       <p className="text-xs font-medium text-[#374151] line-clamp-1">{inq.quantity ? `${inq.quantity} ` : ''}{inq.productInterest || 'N/A'}</p>
@@ -322,6 +335,9 @@ function InquiryDrawer({ inquiry, onClose, onRefresh }: { inquiry: Inquiry, onCl
           <div className="flex items-center gap-3 mt-1.5">
             <span className="text-sm font-bold text-[#111111]">{inquiry.inquiryNumber}</span>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getStatusColor(inquiry.status)}`}>{inquiry.status}</span>
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${inquiry.customerType === 'REGISTERED' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+              {inquiry.customerType}
+            </span>
           </div>
           <p className="text-[10px] text-[#6B7280] mt-1">{new Date(inquiry.createdAt).toLocaleString()}</p>
         </div>
@@ -336,13 +352,13 @@ function InquiryDrawer({ inquiry, onClose, onRefresh }: { inquiry: Inquiry, onCl
         <div>
           <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2 mb-3"><UserCircle className="w-4 h-4"/> Customer Information</h3>
           <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-4 space-y-2.5 text-sm">
-            <div className="flex"><span className="w-24 text-[#6B7280] text-xs">Name</span><span className="font-semibold text-[#111111]">{inquiry.customer?.name}</span></div>
-            <div className="flex"><span className="w-24 text-[#6B7280] text-xs">Company</span><span className="font-semibold text-[#374151]">{inquiry.company?.name || inquiry.customer?.company || 'N/A'}</span></div>
+            <div className="flex"><span className="w-24 text-[#6B7280] text-xs">Name</span><span className="font-semibold text-[#111111]">{inquiry.customerName || inquiry.customer?.name}</span></div>
+            <div className="flex"><span className="w-24 text-[#6B7280] text-xs">Company</span><span className="font-semibold text-[#374151]">{inquiry.companyName || inquiry.company?.name || inquiry.customer?.company || 'N/A'}</span></div>
             <div className="flex items-center"><span className="w-24 text-[#6B7280] text-xs">Phone</span>
-              <span className="font-semibold text-[#374151]">{inquiry.customer?.phone}</span>
-              {inquiry.customer?.phone && <button onClick={openWhatsApp} className="ml-2 text-green-500 hover:bg-green-50 p-1 rounded"><MessageSquare className="w-3.5 h-3.5" /></button>}
+              <span className="font-semibold text-[#374151]">{inquiry.phone || inquiry.customer?.phone}</span>
+              {(inquiry.phone || inquiry.customer?.phone) && <button onClick={openWhatsApp} className="ml-2 text-green-500 hover:bg-green-50 p-1 rounded"><MessageSquare className="w-3.5 h-3.5" /></button>}
             </div>
-            <div className="flex"><span className="w-24 text-[#6B7280] text-xs">Email</span><span className="font-semibold text-[#3B6FEB]">{inquiry.customer?.email}</span></div>
+            <div className="flex"><span className="w-24 text-[#6B7280] text-xs">Email</span><span className="font-semibold text-[#3B6FEB]">{inquiry.email || inquiry.customer?.email}</span></div>
           </div>
         </div>
 

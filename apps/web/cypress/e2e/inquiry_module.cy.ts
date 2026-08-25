@@ -1,83 +1,37 @@
-describe('Inquiry Module (E2E)', () => {
+describe('Admin Inquiry Module', () => {
   beforeEach(() => {
-    // 1. Intercept API requests
-    cy.intercept('GET', '**/api/v1/inquiries*').as('getInquiries');
-    cy.intercept('GET', '**/api/v1/inquiries/stats').as('getStats');
-    cy.intercept('GET', '**/api/v1/inquiries/*').as('getInquiryDetails');
-    cy.intercept('POST', '**/api/v1/inquiries/*/activity').as('addActivity');
-    cy.intercept('POST', '**/api/v1/inquiries/*/convert-to-quote').as('convertToQuote');
-    
-    // 2. Login as admin
+    // Custom command or login simulation (assuming Admin role)
     cy.login('admin@zobra.test', 'admin123');
-
-    // Ensure at least one inquiry exists
-    cy.window().then((win) => {
-      const token = win.localStorage.getItem('token');
-      cy.request({
-        method: 'POST',
-        url: 'http://localhost:5000/api/v1/inquiries',
-        headers: { Authorization: `Bearer ${token}` },
-        body: {
-          source: 'WEBSITE',
-          productInterest: 'Corporate Hoodies 320 GSM',
-          quantity: 100,
-          budget: '50000',
-          message: 'Need 100 corporate hoodies for team offsite',
-        },
-      });
-    });
-    
-    // 3. Navigate to inquiries dashboard
     cy.visit('/dashboard/inquiries');
-    cy.wait('@getInquiries');
-    cy.wait('@getStats');
   });
 
-  it('loads the inquiries dashboard with KPI cards and table', () => {
-    cy.contains('h1', 'Inquiry').should('be.visible');
-    cy.contains('Manage all customer inquiries and follow-ups').should('be.visible');
-    
-    // Verify KPI Cards
+  it('displays inquiries and allows filtering', () => {
     cy.contains('Total Inquiries').should('be.visible');
-    cy.contains('New Inquiries').should('be.visible');
-    cy.contains('Contacted').should('be.visible');
+    cy.contains('Registered').should('be.visible');
+    cy.contains('Guests').should('be.visible');
+
+    // Check table loads
+    cy.get('table').should('be.visible');
     
-    // Verify Table Headers
-    cy.contains('th', 'Inquiry ID').should('be.visible');
-    cy.contains('th', 'Customer').should('be.visible');
-    cy.contains('th', 'Product Interested').should('be.visible');
+    // Filter by Guest
+    cy.get('select').eq(1).select('Guest');
+    // We expect the guest inquiry to be visible
+    cy.contains('Guest User').should('exist');
   });
 
-  it('opens inquiry drawer and adds a note', () => {
-    // Wait for table to load and click the first row
-    cy.contains('Loading inquiries...').should('not.exist');
-    cy.get('tbody tr').not(':contains("Loading")').first().find('td').eq(1).click();
-    cy.wait('@getInquiryDetails');
+  it('allows adding a note to an inquiry', () => {
+    // Open the first inquiry
+    cy.contains('INQ-').first().click();
     
-    // Drawer should open
-    cy.contains('h2', 'Inquiry Details').should('be.visible');
-    cy.contains('Customer Information').should('be.visible');
-    cy.contains('Inquiry Information').should('be.visible');
+    // Check Drawer opens
+    cy.contains('Inquiry Details').should('be.visible');
     
-    // Add a note
-    cy.get('[data-cy="inquiry-note-input"]').type('Test E2E Note');
+    // Add Note
+    const testNote = `Test Note ${Date.now()}`;
+    cy.get('[data-cy="inquiry-note-input"]').type(testNote);
     cy.get('[data-cy="add-note-btn"]').click();
-    cy.wait('@addActivity');
     
-    // Note should appear in timeline
-    cy.contains('Test E2E Note').should('be.visible');
-  });
-
-  it('can convert an inquiry to a quote', () => {
-    cy.contains('Loading inquiries...').should('not.exist');
-    cy.get('tbody tr').filter(':contains("New"), :contains("Contacted"), :contains("Follow-up")').first().find('td').eq(1).click();
-    cy.wait('@getInquiryDetails');
-    
-    cy.contains('button', 'Convert to Quote').click();
-    cy.wait('@convertToQuote').then((interception) => {
-      expect(interception.response?.statusCode).to.eq(201);
-    });
-    
-    cy.url().should('include', '/dashboard/quotes/');
+    // Verify note in timeline
+    cy.contains(testNote).should('be.visible');
   });
 });

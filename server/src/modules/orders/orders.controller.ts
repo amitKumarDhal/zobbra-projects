@@ -43,6 +43,20 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
     });
   }
 
+  // 3b. Data Integrity Guard: Quote MUST have items and value
+  if (!quote.items || quote.items.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Cannot convert a quote to an order because it has no items.',
+    });
+  }
+  if (quote.totalAmount <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Cannot convert a quote to an order with zero total amount.',
+    });
+  }
+
   // 4. Duplicate Check: Prevent multiple orders from the same quote (409 Conflict)
   const existingOrder = await prisma.order.findUnique({ where: { quoteId: quote.id } });
   if (existingOrder) {

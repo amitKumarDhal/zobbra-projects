@@ -277,6 +277,13 @@ export default function OrdersPage() {
 function OrderDrawer({ order, onClose, onRefresh }: { order: Order, onClose: () => void, onRefresh: () => void }) {
   const [note, setNote] = useState('');
   
+  // Manual Payment State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState(order.totalAmount.toString());
+  const [paymentMethod, setPaymentMethod] = useState('UPI');
+  const [paymentReference, setPaymentReference] = useState('');
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
   };
@@ -323,6 +330,33 @@ function OrderDrawer({ order, onClose, onRefresh }: { order: Order, onClose: () 
       }
     } catch (error) {
       console.error('Error updating status', error);
+    }
+  };
+
+  const handleManualPayment = async () => {
+    try {
+      setIsSubmittingPayment(true);
+      const res = await fetch(`${API_URL}/payments/record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+        body: JSON.stringify({ 
+          orderId: order.id,
+          amount: parseFloat(paymentAmount),
+          method: paymentMethod,
+          reference: paymentReference
+        })
+      }).then(r => r.json());
+      
+      if (res.success) {
+         setShowPaymentModal(false);
+         onRefresh();
+      } else {
+         alert(res.message);
+      }
+    } catch (error) {
+      console.error('Error recording payment', error);
+    } finally {
+      setIsSubmittingPayment(false);
     }
   };
 
@@ -430,6 +464,15 @@ function OrderDrawer({ order, onClose, onRefresh }: { order: Order, onClose: () 
       {/* Drawer Actions */}
       <div className="p-4 border-t border-[#E5E7EB] bg-[#FDFDFD] flex flex-col gap-3">
         
+        {order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED' && (
+          <button 
+            onClick={() => setShowPaymentModal(true)} 
+            className="w-full px-4 py-2.5 bg-green-600 rounded-lg text-sm font-bold text-white hover:bg-green-700 flex justify-center items-center gap-2 shadow-sm transition-colors"
+          >
+            Mark Payment Received
+          </button>
+        )}
+
         {!isCompleted && (
           <button 
             onClick={() => updateStatus(order.status === 'PENDING' ? 'CONFIRMED' : 'DELIVERED')} 
@@ -454,6 +497,43 @@ function OrderDrawer({ order, onClose, onRefresh }: { order: Order, onClose: () 
            </button>
         )}
       </div>
+
+      {/* MANUAL PAYMENT MODAL */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2"><IndianRupee className="w-4 h-4 text-green-600" /> Record Payment</h2>
+              <button onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-gray-900 transition-colors"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Amount Received (INR)</label>
+                <input type="number" value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Payment Method</label>
+                <select value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500">
+                  <option value="UPI">UPI</option>
+                  <option value="BANK_TRANSFER">Bank Transfer</option>
+                  <option value="CASH">Cash</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Reference Number (Optional)</label>
+                <input type="text" value={paymentReference} onChange={e=>setPaymentReference(e.target.value)} placeholder="e.g. UTR Number" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500" />
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50 flex gap-3">
+              <button onClick={() => setShowPaymentModal(false)} className="flex-1 px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
+              <button onClick={handleManualPayment} disabled={isSubmittingPayment} className="flex-1 px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50">
+                {isSubmittingPayment ? 'Saving...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

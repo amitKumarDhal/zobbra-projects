@@ -83,10 +83,13 @@ export class InquiryService {
     });
   }
 
-  // 3. Create a new inquiry
   static async createInquiry(data: {
     customerId?: string;
     companyId?: string;
+    customerName?: string;
+    companyName?: string;
+    email?: string;
+    phone?: string;
     productId?: string;
     productInterest?: string;
     quantity?: number;
@@ -105,10 +108,14 @@ export class InquiryService {
     const inquiryNumber = `INQ-${new Date().getFullYear()}-${(count + 1).toString().padStart(4, '0')}`;
 
     return prisma.$transaction(async (tx) => {
+      const isRegistered = !!userId || !!data.customerId;
+      
       const inquiry = await tx.inquiry.create({
         data: {
           inquiryNumber,
           ...data,
+          customerId: data.customerId || userId || null,
+          customerType: isRegistered ? 'REGISTERED' : 'GUEST',
           status: InquiryStatus.NEW,
         },
       });
@@ -187,12 +194,14 @@ export class InquiryService {
 
   // 7. Stats for KPI Dashboard
   static async getStats() {
-    const [total, newInq, contacted, quoted, converted] = await Promise.all([
+    const [total, newInq, contacted, quoted, converted, registered, guest] = await Promise.all([
       prisma.inquiry.count(),
       prisma.inquiry.count({ where: { status: InquiryStatus.NEW } }),
       prisma.inquiry.count({ where: { status: InquiryStatus.CONTACTED } }),
       prisma.inquiry.count({ where: { status: InquiryStatus.QUOTED } }),
       prisma.inquiry.count({ where: { status: InquiryStatus.CONVERTED } }),
+      prisma.inquiry.count({ where: { customerType: 'REGISTERED' } }),
+      prisma.inquiry.count({ where: { customerType: 'GUEST' } }),
     ]);
 
     return {
@@ -201,6 +210,8 @@ export class InquiryService {
       contacted,
       quoted,
       converted,
+      registered,
+      guest
     };
   }
 
@@ -215,10 +226,7 @@ export class InquiryService {
     if (inquiry.status === InquiryStatus.CONVERTED) throw new Error('Inquiry already converted to Quote');
     
     let customerId = inquiry.customerId;
-    if (!customerId) {
-      const defaultCustomer = await prisma.user.findFirst({ where: { role: 'CUSTOMER' } });
-      customerId = defaultCustomer ? defaultCustomer.id : userId;
-    }
+    let companyId = inquiry.companyId;
 
     // Generate Quote Number
     const count = await prisma.quote.count();
@@ -228,6 +236,40 @@ export class InquiryService {
     validUntil.setDate(validUntil.getDate() + 7); // Default valid for 7 days
 
     return prisma.$transaction(async (tx) => {
+      // 0. Guest to Registered Customer conversion
+      if (inquiry.customerType === 'GUEST' && !customerId) {
+        let emailToUse = inquiry.email;
+        if (!emailToUse) {
+           emailToUse = `guest-${inquiry.phone || inquiry.id.substring(0, 8)}@zobbra.guest`;
+        }
+        
+        let existingUser = await tx.user.findUnique({ where: { email: emailToUse }});
+        if (!existingUser) {
+           existingUser = await tx.user.create({
+             data: {
+               email: emailToUse,
+               name: inquiry.customerName || 'Guest Customer',
+               phone: inquiry.phone,
+               passwordHash: 'GENERATED_NO_PASSWORD', // They will have to reset password to login
+               role: 'CUSTOMER',
+               isActive: true
+             }
+           });
+        }
+        customerId = existingUser.id;
+        
+        // Update inquiry to reflect it's now registered
+        await tx.inquiry.update({
+          where: { id: inquiry.id },
+          data: { customerId: existingUser.id, customerType: 'REGISTERED' }
+        });
+      }
+
+      if (!customerId) {
+        const defaultCustomer = await tx.user.findFirst({ where: { role: 'CUSTOMER' } });
+        customerId = defaultCustomer ? defaultCustomer.id : userId;
+      }
+
       // 1. Create the Quote
       const quote = await tx.quote.create({
         data: {
@@ -243,33 +285,58 @@ export class InquiryService {
         }
       });
 
-      // 2. If product is linked, add it as a QuoteItem
-      if (inquiry.productId) {
-        await tx.quoteItem.create({
-          data: {
-            quoteId: quote.id,
-            productId: inquiry.productId,
-            printType: inquiry.printingType || 'Front Only',
-            color: inquiry.colors || 'Standard',
-            size: 'M', // Default or parse from details
-            quantity: inquiry.quantity || 1,
-            unitPrice: inquiry.product?.basePrice || 0,
-            totalPrice: (inquiry.quantity || 1) * (inquiry.product?.basePrice || 0)
-          }
+      // 2. Resolve Product (Fallback to first available product if not linked)
+      let product = inquiry.product;
+      let productId = inquiry.productId;
+      if (!product || !productId) {
+        const fallbackProduct = await tx.product.findFirst({
+          orderBy: { createdAt: 'asc' }
         });
-        
-        // Update quote totals based on the item
-        const amount = (inquiry.quantity || 1) * (inquiry.product?.basePrice || 0);
-        const gst = amount * 0.05; // 5% GST default
-        await tx.quote.update({
-          where: { id: quote.id },
-          data: {
-            subtotal: amount,
-            gstTotal: gst,
-            totalAmount: amount + gst
-          }
-        });
+        if (!fallbackProduct) throw new Error("No products available in the system to create a Quote.");
+        product = fallbackProduct;
+        productId = fallbackProduct.id;
       }
+
+      const qty = inquiry.quantity || 50;
+      const basePrice = product.basePrice || 249;
+      const printType = inquiry.printingType || 'Front Only';
+      
+      // Basic price calculation (similar to calculateServerPricing)
+      let volumePrice = basePrice;
+      if (qty >= 500) volumePrice = Math.max(100, basePrice - 60);
+      else if (qty >= 100) volumePrice = Math.max(120, basePrice - 30);
+      else if (qty >= 50) volumePrice = Math.max(140, basePrice - 10);
+      
+      let positionAddon = 20;
+      if (printType.toLowerCase().includes('front') && printType.toLowerCase().includes('back')) positionAddon = 40;
+      else if (printType.toLowerCase().includes('embroidery') || printType.toLowerCase().includes('back')) positionAddon = 30;
+      
+      const unitPrice = volumePrice + positionAddon;
+      const amount = unitPrice * qty;
+      const gst = Math.round(amount * (product.gstRate / 100));
+
+      await tx.quoteItem.create({
+        data: {
+          quoteId: quote.id,
+          productId: productId,
+          printType: printType,
+          color: inquiry.colors || 'Navy Blue',
+          size: 'L',
+          quantity: qty,
+          unitPrice: unitPrice,
+          totalPrice: amount
+        }
+      });
+      
+      // Update quote totals based on the item
+      await tx.quote.update({
+        where: { id: quote.id },
+        data: {
+          subtotal: amount,
+          gstTotal: gst,
+          totalAmount: amount + gst
+        }
+      });
 
       // 3. Mark Inquiry as Converted and link Quote
       const updatedInquiry = await tx.inquiry.update({
