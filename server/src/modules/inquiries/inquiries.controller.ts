@@ -42,10 +42,53 @@ export class InquiryController {
 
   static async create(req: Request, res: Response) {
     try {
-      // Assuming userId is available in req.user from auth middleware
       const userId = (req as any).user?.id;
       const data = req.body;
-      const inquiry = await InquiryService.createInquiry(data, userId);
+
+      let customerName = data.customerName || data.name;
+      let companyName = data.companyName || data.company;
+      let phone = data.phone;
+      let email = data.email;
+      const productInterest = data.productInterest || data.category || 'Custom Merchandise';
+      const quantity = Number(data.quantity) || 50;
+
+      const effectiveUserId = data.customerId || userId;
+      if (effectiveUserId) {
+        const user = await InquiryService.getUserById(effectiveUserId);
+        if (user) {
+          customerName = customerName || user.name;
+          companyName = companyName || user.company?.name || 'Individual';
+          phone = phone || user.phone || '9999999999';
+          email = email || user.email;
+        }
+      }
+
+      if (!customerName || !phone) {
+        return res.status(400).json({
+          message: 'Missing required fields: customerName and phone are required.'
+        });
+      }
+
+      const inquiry = await InquiryService.createInquiry({
+        ...data,
+        companyName: companyName || 'Individual',
+        customerName,
+        phone,
+        email: email || undefined,
+        productInterest,
+        quantity,
+        location: data.location || undefined,
+        colors: data.colors || data.color || undefined,
+        sizes: data.sizes || data.size || undefined,
+        printingType: data.printingType || undefined,
+        printPosition: data.printPosition || undefined,
+        budget: data.budget || undefined,
+        customizationRequirements: data.customizationRequirements || data.message || undefined,
+        artworkUrl: data.artworkUrl || data.artwork || undefined,
+        deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : undefined,
+        source: data.source || InquirySource.WEBSITE,
+      }, userId);
+
       res.status(201).json(inquiry);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

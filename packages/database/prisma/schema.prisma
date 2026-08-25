@@ -14,6 +14,17 @@ enum Role {
   CUSTOMER
 }
 
+enum CouponType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum CouponStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
+
 enum QuoteStatus {
   DRAFT
   SENT
@@ -30,6 +41,35 @@ enum QuoteActivityType {
   QUOTE_SENT
   CUSTOMER_APPROVED
   CUSTOMER_REJECTED
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  FOLLOW_UP
+  QUOTED
+  CONVERTED
+  LOST
+  CLOSED
+}
+
+enum InquirySource {
+  WEBSITE
+  WHATSAPP
+  PHONE
+  INSTAGRAM
+  REFERRAL
+  OTHER
+}
+
+enum InquiryActivityType {
+  CREATED
+  NOTE
+  WHATSAPP
+  CALL
+  FOLLOW_UP
+  STATUS_CHANGE
+  QUOTE_CREATED
 }
 
 enum OrderStatus {
@@ -70,6 +110,30 @@ enum CMSType {
   FAQ
 }
 
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+  CANCELLED
+}
+
+enum TaskCategory {
+  FOLLOW_UP
+  QUOTE
+  CUSTOMER
+  ORDER
+  PAYMENT
+  OTHER
+}
+
 model User {
   id            String          @id @default(uuid())
   email         String          @unique
@@ -81,32 +145,50 @@ model User {
   company       Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
   quotes        Quote[]
   orders        Order[]
-  assignedJobs  ProductionJob[] @relation("AssignedProductionUser")
-  activities    QuoteActivity[]
-  testimonials  Testimonial[]   @relation("CustomerTestimonials")
+  assignedJobs      ProductionJob[]     @relation("AssignedProductionUser")
+  activities        QuoteActivity[]
+  inquiries         Inquiry[]           @relation("CustomerInquiries")
+  assignedInquiries Inquiry[]           @relation("AssignedSalesUser")
+  inquiryActivities InquiryActivity[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+
+  assignedTasks Task[]          @relation("AssignedTasks")
+  createdTasks  Task[]          @relation("CreatedTasks")
+  customerTasks Task[]          @relation("CustomerTasks")
+
+  assignedQuotes Quote[]        @relation("AssignedQuoteUser")
+  assignedOrders Order[]        @relation("AssignedOrderUser")
+  
+  couponUsages   CouponUsage[]
+
+  isActive      Boolean         @default(true)
+  department    String?
+  location      String?
+  testimonials  Testimonial[]   @relation("CustomerTestimonials")
+  systemActivities SystemActivity[] @relation("UserSystemActivities")
 
   @@map("users")
 }
 
 model Company {
-  id           String        @id @default(uuid())
-  name         String
-  gstin        String?       @unique
-  address      String
-  city         String
-  state        String
-  pincode      String
-  logo         String?
-  notes        String?
-  users        User[]
-  quotes       Quote[]
-  orders       Order[]
-  invoices     Invoice[]
+  id        String    @id @default(uuid())
+  name      String
+  gstin     String?   @unique
+  address   String
+  city      String
+  state     String
+  pincode   String
+  logo      String?
+  notes     String?
+  users     User[]
+  quotes    Quote[]
+  orders    Order[]
+  invoices  Invoice[]
+  inquiries Inquiry[]
   testimonials Testimonial[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@map("companies")
 }
@@ -125,24 +207,25 @@ model Category {
 }
 
 model Product {
-  id           String           @id @default(uuid())
-  name         String
-  slug         String           @unique
-  hsnCode      String           @default("6109")
-  gstRate      Float            @default(5.0)
-  description  String
-  basePrice    Float
-  images       String[]         @default([])
-  categoryId   String
-  category     Category         @relation(fields: [categoryId], references: [id])
-  isActive     Boolean          @default(true)
-  variants     ProductVariant[]
-  bulkPricing  BulkPricing[]
-  quoteItems   QuoteItem[]
-  orderItems   OrderItem[]
+  id          String           @id @default(uuid())
+  name        String
+  slug        String           @unique
+  hsnCode     String           @default("6109")
+  gstRate     Float            @default(5.0)
+  description String
+  basePrice   Float
+  images      String[]         @default([])
+  categoryId  String
+  category    Category         @relation(fields: [categoryId], references: [id])
+  isActive    Boolean          @default(true)
+  variants    ProductVariant[]
+  bulkPricing BulkPricing[]
+  quoteItems  QuoteItem[]
+  orderItems  OrderItem[]
+  inquiries   Inquiry[]
   testimonials Testimonial[]
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@map("products")
 }
@@ -191,7 +274,16 @@ model Quote {
   validUntil  DateTime
   items       QuoteItem[]
   activities  QuoteActivity[]
+  tasks       Task[]
   order       Order?
+  inquiry     Inquiry?
+  
+  assignedToId String?
+  assignedTo   User?          @relation("AssignedQuoteUser", fields: [assignedToId], references: [id])
+  
+  couponId    String?
+  coupon      Coupon?        @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
@@ -254,6 +346,15 @@ model Order {
   dispatch      Dispatch?
   invoices      Invoice[]
   payments      Payment[]
+  tasks         Task[]
+  
+  assignedToId  String?
+  assignedTo    User?         @relation("AssignedOrderUser", fields: [assignedToId], references: [id])
+  
+  couponId      String?
+  coupon        Coupon?       @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  discountAmount Float        @default(0.0)
+
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -375,6 +476,137 @@ model SystemSetting {
   @@map("system_settings")
 }
 
+model Inquiry {
+  id              String         @id @default(uuid())
+  inquiryNumber   String         @unique
+  customerId      String?
+  customer        User?          @relation("CustomerInquiries", fields: [customerId], references: [id])
+  companyId       String?
+  company         Company?       @relation(fields: [companyId], references: [id])
+  productId       String?
+  product         Product?       @relation(fields: [productId], references: [id])
+  
+  // Guest customer fields
+  customerName    String?
+  companyName     String?
+  email           String?
+  phone           String?
+  location        String?
+  customerType    String         @default("GUEST") // GUEST or REGISTERED
+  
+  productInterest String?
+  quantity        Int?
+  printingType    String?
+  printPosition   String?
+  colors          String?
+  sizes           String?
+  artworkUrl      String?
+  deliveryDate    DateTime?
+  budget          String?
+  customizationRequirements String?
+  source          InquirySource  @default(OTHER)
+  message         String?
+  
+  status          InquiryStatus  @default(NEW)
+  assignedToId    String?
+  assignedTo      User?          @relation("AssignedSalesUser", fields: [assignedToId], references: [id])
+  
+  quoteId         String?        @unique
+  quote           Quote?         @relation(fields: [quoteId], references: [id])
+  
+  nextFollowUpAt  DateTime?
+  activities      InquiryActivity[]
+  tasks           Task[]
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@map("inquiries")
+}
+
+model InquiryActivity {
+  id          String              @id @default(uuid())
+  inquiryId   String
+  inquiry     Inquiry             @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type        InquiryActivityType @default(NOTE)
+  message     String
+  createdAt   DateTime            @default(now())
+
+  @@map("inquiry_activities")
+}
+
+model Task {
+  id           String       @id @default(uuid())
+  title        String
+  description  String?
+  assignedToId String?
+  assignedTo   User?        @relation("AssignedTasks", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdById  String
+  createdBy    User         @relation("CreatedTasks", fields: [createdById], references: [id])
+  
+  customerId   String?
+  customer     User?        @relation("CustomerTasks", fields: [customerId], references: [id], onDelete: SetNull)
+  inquiryId    String?
+  inquiry      Inquiry?     @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  quoteId      String?
+  quote        Quote?       @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  orderId      String?
+  order        Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  priority     TaskPriority @default(MEDIUM)
+  status       TaskStatus   @default(PENDING)
+  category     TaskCategory @default(FOLLOW_UP)
+  
+  dueAt        DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@map("tasks")
+}
+
+model Coupon {
+  id                  String         @id @default(uuid())
+  code                String         @unique
+  name                String
+  description         String?
+  discountType        CouponType
+  discountValue       Float
+  minimumOrderAmount  Float?
+  maximumDiscount     Float?
+  startAt             DateTime
+  endAt               DateTime
+  usageLimit          Int?
+  usageCount          Int            @default(0)
+  perCustomerLimit    Int?
+  status              CouponStatus   @default(ACTIVE)
+  createdById         String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  
+  quotes              Quote[]
+  orders              Order[]
+  usages              CouponUsage[]
+
+  @@map("coupons")
+}
+
+model CouponUsage {
+  id              String    @id @default(uuid())
+  couponId        String
+  coupon          Coupon    @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  customerId      String
+  customer        User      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  quoteId         String?
+  orderId         String?
+  discountAmount  Float
+  usedAt          DateTime  @default(now())
+
+  @@map("coupon_usages")
+}
+
 enum TestimonialStatus {
   PENDING
   PUBLISHED
@@ -405,4 +637,17 @@ model Testimonial {
   updatedAt    DateTime          @updatedAt
 
   @@map("testimonials")
+}
+
+model SystemActivity {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation("UserSystemActivities", fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String?
+  message    String
+  createdAt  DateTime @default(now())
+
+  @@map("system_activities")
 }

@@ -10,4 +10,7 @@ coverage
 .husky/_
 cypress/videos
 cypress/screenshots
+apps/web/cypress/screenshots
 .turbo
+backups/
+scratch/

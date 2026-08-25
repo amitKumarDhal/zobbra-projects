@@ -83,6 +83,13 @@ export class InquiryService {
     });
   }
 
+  static async getUserById(id: string) {
+    return prisma.user.findUnique({
+      where: { id },
+      include: { company: true }
+    });
+  }
+
   static async createInquiry(data: {
     customerId?: string;
     companyId?: string;
@@ -90,14 +97,18 @@ export class InquiryService {
     companyName?: string;
     email?: string;
     phone?: string;
+    location?: string;
     productId?: string;
     productInterest?: string;
     quantity?: number;
     printingType?: string;
     printPosition?: string;
     colors?: string;
+    sizes?: string;
+    artworkUrl?: string;
     deliveryDate?: Date;
     budget?: string;
+    customizationRequirements?: string;
     source?: InquirySource;
     message?: string;
     assignedToId?: string;
@@ -285,23 +296,43 @@ export class InquiryService {
         }
       });
 
-      // 2. Resolve Product (Fallback to first available product if not linked)
+      // 2. Resolve Product (Match by productInterest or fallback to first available product)
       let product = inquiry.product;
       let productId = inquiry.productId;
       if (!product || !productId) {
-        const fallbackProduct = await tx.product.findFirst({
-          orderBy: { createdAt: 'asc' }
-        });
-        if (!fallbackProduct) throw new Error("No products available in the system to create a Quote.");
-        product = fallbackProduct;
-        productId = fallbackProduct.id;
+        if (inquiry.productInterest) {
+          const matchingProduct = await tx.product.findFirst({
+            where: {
+              OR: [
+                { name: { contains: inquiry.productInterest, mode: 'insensitive' } },
+                { slug: { contains: inquiry.productInterest.toLowerCase().replace(/[^a-z0-9]/g, '-'), mode: 'insensitive' } },
+                { category: { name: { contains: inquiry.productInterest, mode: 'insensitive' } } }
+              ]
+            }
+          });
+          if (matchingProduct) {
+            product = matchingProduct;
+            productId = matchingProduct.id;
+          }
+        }
+
+        if (!product || !productId) {
+          const fallbackProduct = await tx.product.findFirst({
+            orderBy: { createdAt: 'asc' }
+          });
+          if (!fallbackProduct) throw new Error("No products available in the system to create a Quote.");
+          product = fallbackProduct;
+          productId = fallbackProduct.id;
+        }
       }
 
       const qty = inquiry.quantity || 50;
       const basePrice = product.basePrice || 249;
-      const printType = inquiry.printingType || 'Front Only';
+      const printType = inquiry.printPosition 
+        ? `${inquiry.printingType || 'Standard Print'} (${inquiry.printPosition})`
+        : (inquiry.printingType || 'Front Only');
       
-      // Basic price calculation (similar to calculateServerPricing)
+      // Volume pricing calculation
       let volumePrice = basePrice;
       if (qty >= 500) volumePrice = Math.max(100, basePrice - 60);
       else if (qty >= 100) volumePrice = Math.max(120, basePrice - 30);
@@ -320,8 +351,8 @@ export class InquiryService {
           quoteId: quote.id,
           productId: productId,
           printType: printType,
-          color: inquiry.colors || 'Navy Blue',
-          size: 'L',
+          color: inquiry.colors || 'Black',
+          size: inquiry.sizes || 'L',
           quantity: qty,
           unitPrice: unitPrice,
           totalPrice: amount

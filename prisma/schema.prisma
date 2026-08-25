@@ -491,6 +491,7 @@ model Inquiry {
   companyName     String?
   email           String?
   phone           String?
+  location        String?
   customerType    String         @default("GUEST") // GUEST or REGISTERED
   
   productInterest String?
@@ -498,8 +499,11 @@ model Inquiry {
   printingType    String?
   printPosition   String?
   colors          String?
+  sizes           String?
+  artworkUrl      String?
   deliveryDate    DateTime?
   budget          String?
+  customizationRequirements String?
   source          InquirySource  @default(OTHER)
   message         String?
   

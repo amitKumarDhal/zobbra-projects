@@ -32,6 +32,10 @@ interface Inquiry {
   companyName?: string;
   email?: string;
   phone?: string;
+  location?: string;
+  sizes?: string;
+  artworkUrl?: string;
+  customizationRequirements?: string;
   customer: { name: string; company?: string; email: string; phone: string };
   company?: { name: string };
   assignedTo?: { id: string; name: string };
@@ -134,7 +138,7 @@ export default function InquiriesPage() {
       {/* MAIN CONTENT AREA */}
       <div className="flex flex-1 gap-6 relative">
         {/* LIST TABLE (Takes full width if drawer is closed, or partial if open) */}
-        <div className={`bg-white border border-[#E5E7EB] rounded-2xl shadow-sm transition-all duration-300 flex-1 ${isDrawerOpen ? 'w-2/3 hidden lg:block' : 'w-full'}`}>
+        <div className={`bg-white border border-[#E5E7EB] rounded-2xl shadow-sm transition-all duration-300 flex-1 ${isDrawerOpen ? 'w-full lg:w-2/3' : 'w-full'}`}>
           {/* Toolbar */}
           <div className="p-4 border-b border-[#E5E7EB] flex flex-wrap gap-3 justify-between items-center bg-[#FDFDFD] rounded-t-2xl">
             <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -327,7 +331,7 @@ function InquiryDrawer({ inquiry, onClose, onRefresh }: { inquiry: Inquiry, onCl
   };
 
   return (
-    <div className="w-full lg:w-1/3 min-w-[360px] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
+    <div data-cy="inquiry-drawer" className="w-full lg:w-1/3 min-w-[360px] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
       {/* Drawer Header */}
       <div className="p-5 border-b border-[#E5E7EB] flex items-start justify-between bg-[#FDFDFD]">
         <div>
@@ -350,28 +354,40 @@ function InquiryDrawer({ inquiry, onClose, onRefresh }: { inquiry: Inquiry, onCl
         
         {/* Customer Information */}
         <div>
-          <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2 mb-3"><UserCircle className="w-4 h-4"/> Customer Information</h3>
+          <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2 mb-3"><UserCircle className="w-4 h-4 text-[#3B6FEB]"/> Customer Information</h3>
           <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-4 space-y-2.5 text-sm">
-            <div className="flex"><span className="w-24 text-[#6B7280] text-xs">Name</span><span className="font-semibold text-[#111111]">{inquiry.customerName || inquiry.customer?.name}</span></div>
-            <div className="flex"><span className="w-24 text-[#6B7280] text-xs">Company</span><span className="font-semibold text-[#374151]">{inquiry.companyName || inquiry.company?.name || inquiry.customer?.company || 'N/A'}</span></div>
-            <div className="flex items-center"><span className="w-24 text-[#6B7280] text-xs">Phone</span>
-              <span className="font-semibold text-[#374151]">{inquiry.phone || inquiry.customer?.phone}</span>
-              {(inquiry.phone || inquiry.customer?.phone) && <button onClick={openWhatsApp} className="ml-2 text-green-500 hover:bg-green-50 p-1 rounded"><MessageSquare className="w-3.5 h-3.5" /></button>}
+            <div className="flex justify-between items-center"><span className="w-28 text-[#6B7280] text-xs">Customer Type</span><span className={`text-[10px] font-bold px-2 py-0.5 rounded ${inquiry.customerType === 'REGISTERED' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>{inquiry.customerType}</span></div>
+            <div className="flex justify-between items-center"><span className="w-28 text-[#6B7280] text-xs">Name</span><span className="font-semibold text-[#111111]">{inquiry.customerName || inquiry.customer?.name || 'N/A'}</span></div>
+            <div className="flex justify-between items-center"><span className="w-28 text-[#6B7280] text-xs">Company</span><span className="font-semibold text-[#374151]">{inquiry.companyName || inquiry.company?.name || inquiry.customer?.company || 'N/A'}</span></div>
+            <div className="flex justify-between items-center"><span className="w-28 text-[#6B7280] text-xs">Phone</span>
+              <span className="font-semibold text-[#374151] flex items-center gap-1.5">
+                {inquiry.phone || inquiry.customer?.phone || 'N/A'}
+                {(inquiry.phone || inquiry.customer?.phone) && <button onClick={openWhatsApp} title="WhatsApp Customer" className="text-green-500 hover:bg-green-50 p-1 rounded transition-colors"><MessageSquare className="w-3.5 h-3.5" /></button>}
+              </span>
             </div>
-            <div className="flex"><span className="w-24 text-[#6B7280] text-xs">Email</span><span className="font-semibold text-[#3B6FEB]">{inquiry.email || inquiry.customer?.email}</span></div>
+            <div className="flex justify-between items-center"><span className="w-28 text-[#6B7280] text-xs">Email</span><span className="font-semibold text-[#3B6FEB] truncate max-w-[180px]">{inquiry.email || inquiry.customer?.email || 'N/A'}</span></div>
+            {inquiry.location && (
+              <div className="flex justify-between items-center"><span className="w-28 text-[#6B7280] text-xs">Location / City</span><span className="font-semibold text-[#374151]">{inquiry.location}</span></div>
+            )}
           </div>
         </div>
 
         {/* Inquiry Information */}
         <div>
-          <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2 mb-3"><FileText className="w-4 h-4"/> Inquiry Information</h3>
+          <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2 mb-3"><FileText className="w-4 h-4 text-[#3B6FEB]"/> Inquiry Specifications</h3>
           <div className="space-y-3 text-sm">
-            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Product Interested</span><span className="font-semibold text-[#111111] text-right">{inquiry.productInterest || 'N/A'}</span></div>
+            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Product Interest</span><span className="font-semibold text-[#111111] text-right">{inquiry.productInterest || 'N/A'}</span></div>
             <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Quantity</span><span className="font-semibold text-[#111111] text-right">{inquiry.quantity ? `${inquiry.quantity} Pieces` : 'N/A'}</span></div>
             <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Printing Type</span><span className="font-semibold text-[#374151] text-right">{inquiry.printingType || 'N/A'}</span></div>
+            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Print Position</span><span className="font-semibold text-[#374151] text-right">{inquiry.printPosition || 'N/A'}</span></div>
             <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Colors</span><span className="font-semibold text-[#374151] text-right">{inquiry.colors || 'N/A'}</span></div>
-            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Budget</span><span className="font-semibold text-[#374151] text-right">{inquiry.budget || 'N/A'}</span></div>
-            <div className="flex justify-between pb-2"><span className="text-[#6B7280] text-xs">Message</span><span className="font-medium text-[#4B5563] text-right text-xs max-w-[200px] leading-relaxed">{inquiry.message || 'No message provided.'}</span></div>
+            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Sizes Breakdown</span><span className="font-semibold text-[#374151] text-right">{inquiry.sizes || 'N/A'}</span></div>
+            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Budget Range</span><span className="font-semibold text-[#10B981] text-right">{inquiry.budget || 'N/A'}</span></div>
+            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Delivery Date</span><span className="font-semibold text-[#374151] text-right">{inquiry.deliveryDate ? new Date(inquiry.deliveryDate).toLocaleDateString() : 'N/A'}</span></div>
+            {inquiry.artworkUrl && (
+              <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Artwork Link</span><a href={inquiry.artworkUrl} target="_blank" rel="noreferrer" className="text-[#3B6FEB] font-bold text-xs underline truncate max-w-[160px]">View Artwork</a></div>
+            )}
+            <div className="flex justify-between pb-2"><span className="text-[#6B7280] text-xs">Customization Notes</span><span className="font-medium text-[#4B5563] text-right text-xs max-w-[200px] leading-relaxed">{inquiry.customizationRequirements || inquiry.message || 'No requirements specified.'}</span></div>
           </div>
         </div>
 
