@@ -6,6 +6,10 @@
   "description": "Zobra - Modern B2B Merchandise Management SaaS Monorepo",
   "scripts": {
     "build": "turbo build",
+    "build:server": "pnpm --filter zobra-server build",
+    "build:web": "pnpm --filter web build",
+    "start:server": "pnpm --filter zobra-server start",
+    "start:web": "pnpm --filter web start",
     "dev": "turbo dev",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
@@ -13,9 +17,10 @@
     "test:vitest": "turbo test:vitest",
     "test:jest": "turbo test:jest",
     "test:cypress": "pnpm --filter web test:cypress",
-    "db:generate": "pnpm --filter database generate",
-    "db:migrate": "pnpm --filter database migrate",
-    "db:seed": "pnpm --filter database seed",
+    "db:generate": "prisma generate --schema=prisma/schema.prisma",
+    "db:push": "prisma db push --schema=prisma/schema.prisma",
+    "db:migrate": "prisma migrate deploy --schema=prisma/schema.prisma",
+    "db:seed": "tsx prisma/seed.ts",
     "prepare": "husky || true"
   },
   "devDependencies": {
