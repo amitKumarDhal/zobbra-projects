@@ -1,5 +1,5 @@
 # Production Dockerfile for ZOBBRA Backend (zobra-server)
-FROM node:20 AS base
+FROM node:20-alpine AS base
 RUN npm install -g pnpm turbo
 
 WORKDIR /app
@@ -16,9 +16,7 @@ COPY apps/web/ ./apps/web/
 # 3. Install dependencies using frozen lockfile
 RUN pnpm install --frozen-lockfile
 
-# 4. Generate Prisma client & build server
-ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/zobra_db?schema=public"
-RUN pnpm run db:generate
+# 4. Build server
 RUN pnpm --filter zobra-server build
 
 ENV NODE_ENV=production
