@@ -1,6 +1,5 @@
 # Production Dockerfile for ZOBBRA Backend (zobra-server)
-FROM node:20-slim AS base
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+FROM node:20-alpine AS base
 RUN npm install -g pnpm turbo
 
 WORKDIR /app
@@ -8,7 +7,7 @@ WORKDIR /app
 # 1. Copy Monorepo root configuration & lockfile
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 
-# 2. Copy shared packages, prisma schema, server, and web application
+# 2. Copy shared packages, prisma schema, server, and Next.js frontend application
 COPY packages/ ./packages/
 COPY prisma/ ./prisma/
 COPY server/ ./server/
@@ -17,8 +16,7 @@ COPY apps/web/ ./apps/web/
 # 3. Install dependencies using frozen lockfile
 RUN pnpm install --frozen-lockfile
 
-# 4. Generate Prisma client from canonical schema & build server
-ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/zobra_db?schema=public"
+# 4. Generate Prisma client & build server
 RUN pnpm run db:generate
 RUN pnpm --filter zobra-server build
 
