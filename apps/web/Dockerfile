@@ -7,8 +7,10 @@ WORKDIR /app
 # 1. Copy Monorepo root configuration & lockfile
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 
-# 2. Copy shared packages and Next.js frontend application
+# 2. Copy shared packages, prisma schema, server, and Next.js frontend application
 COPY packages/ ./packages/
+COPY prisma/ ./prisma/
+COPY server/ ./server/
 COPY apps/web/ ./apps/web/
 
 # 3. Install dependencies using frozen lockfile
