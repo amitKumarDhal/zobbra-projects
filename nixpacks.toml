@@ -1,0 +1,12 @@
+# Nixpacks configuration for ZOBBRA Backend API
+[phases.setup]
+nixPkgs = ["nodejs_20", "pnpm-9_x", "openssl"]
+
+[phases.install]
+cmds = ["pnpm install --frozen-lockfile"]
+
+[phases.build]
+cmds = ["pnpm run db:generate", "pnpm --filter zobra-server build"]
+
+[start]
+cmd = "pnpm --filter zobra-server start"
