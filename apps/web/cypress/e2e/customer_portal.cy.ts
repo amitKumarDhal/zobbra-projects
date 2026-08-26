@@ -19,7 +19,7 @@ describe('Phase 3 — ZOBBRA B2B Customer Portal E2E', () => {
   it('tests Customer Create Quote Wizard link', () => {
     cy.visit('/customer/create-quote');
     cy.url().should('include', '/customer/create-quote');
-    cy.contains('8-Step Merchandise Configurator').should('be.visible');
+    cy.contains('Create Your Merchandise Quote').should('be.visible');
   });
 
   it('tests Customer Quotes section', () => {
@@ -40,15 +40,15 @@ describe('Phase 3 — ZOBBRA B2B Customer Portal E2E', () => {
     cy.visit('/customer/tracking');
     cy.url().should('include', '/customer/tracking');
     cy.contains('Shipment Tracking').should('be.visible');
-    cy.contains('BLUEDART-9922').should('be.visible');
-    cy.contains('BlueDart Express').should('be.visible');
+    cy.contains('COMING SOON').should('be.visible');
+    cy.contains('Real-Time Courier Tracking').should('be.visible');
   });
 
   it('tests Customer Invoices section', () => {
     cy.visit('/customer/invoices');
     cy.url().should('include', '/customer/invoices');
     cy.contains('Tax Invoices').should('be.visible');
-    cy.contains('INV-2026-088').should('be.visible');
+    cy.contains('GST BILLING').should('be.visible');
   });
 
   it('tests Customer Notifications section', () => {

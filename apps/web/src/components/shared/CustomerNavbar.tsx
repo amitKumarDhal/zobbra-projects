@@ -86,23 +86,36 @@ export function CustomerNavbar() {
               }}
               className="p-2 rounded-xl text-[#6B7280] hover:text-[#111111] hover:bg-[#F9FAFB] transition-colors relative"
               title="Notifications"
+              data-cy="customer-bell-btn"
             >
               <Bell className="w-4 h-4" />
-              <span className="w-2 h-2 bg-[#3B6FEB] rounded-full absolute top-1.5 right-1.5 animate-pulse" />
             </button>
 
             {notificationsOpen && (
-              <div className="absolute right-0 mt-2 w-72 bg-white border border-[#E5E7EB] rounded-2xl shadow-xl p-4 text-xs space-y-3 z-50 animate-in fade-in zoom-in-95">
+              <div
+                className="absolute right-0 mt-2 w-72 bg-white border border-[#E5E7EB] rounded-2xl shadow-xl p-4 text-xs space-y-3 z-50 animate-in fade-in zoom-in-95"
+                data-cy="customer-notifications-dropdown"
+              >
                 <div className="flex justify-between items-center pb-2 border-b border-[#E5E7EB]">
-                  <span className="font-bold text-[#111111]">Customer Notifications</span>
-                  <span className="text-[10px] text-[#3B6FEB] font-semibold bg-[#EEF2FF] px-2 py-0.5 rounded-full">1 New</span>
+                  <span className="font-bold text-[#111111]">Notifications</span>
+                  <span className="text-[10px] text-[#3B6FEB] font-bold bg-[#EEF2FF] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    Coming Soon
+                  </span>
                 </div>
-                <div className="space-y-2">
-                  <div className="p-2.5 rounded-xl bg-[#F9FAFB] border border-[#E5E7EB]">
-                    <p className="font-bold text-[#111111]">Quote #ZQB-1024 Approved</p>
-                    <p className="text-[10px] text-[#6B7280]">Your Polo T-Shirt quote has been approved.</p>
-                  </div>
+                <div className="p-3 rounded-xl bg-[#F9FAFB] border border-[#E5E7EB] text-center space-y-1">
+                  <p className="font-bold text-[#111111]">Notification Center</p>
+                  <p className="text-[11px] text-[#6B7280]">
+                    Real-time alerts for quotes, orders, and shipments will be available soon.
+                  </p>
                 </div>
+                <Link
+                  href="/customer/notifications"
+                  onClick={() => setNotificationsOpen(false)}
+                  className="text-xs text-[#3B6FEB] font-bold block text-center pt-1 hover:underline"
+                  data-cy="customer-view-all-notifications-link"
+                >
+                  Open Notification Center →
+                </Link>
               </div>
             )}
           </div>

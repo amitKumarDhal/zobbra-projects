@@ -251,6 +251,11 @@ export const handleWebhook = async (req: AuthRequest, res: Response) => {
             where: { id: existingPayment.orderId },
             data: { paymentStatus: 'PAID' },
           });
+
+          await prisma.invoice.updateMany({
+            where: { orderId: existingPayment.orderId },
+            data: { status: 'PAID' },
+          });
         }
       }
     } else if (event === 'payment.failed' && payload?.payment?.entity) {
@@ -458,7 +463,7 @@ export const recordManualPayment = async (req: AuthRequest, res: Response) => {
             amount: parseFloat(amount),
             status: 'SUCCESS',
             method,
-            razorpayPaymentId: reference || null, // Storing reference here for MVP compatibility
+            razorpayPaymentId: reference ? `MANUAL_${reference}_${Date.now()}` : `MANUAL_${Date.now()}`,
             createdAt: date ? new Date(date) : new Date()
          }
       });
@@ -471,6 +476,13 @@ export const recordManualPayment = async (req: AuthRequest, res: Response) => {
          where: { id: orderId },
          data: { paymentStatus: newStatus }
       });
+
+      if (newStatus === 'PAID') {
+         await prisma.invoice.updateMany({
+            where: { orderId },
+            data: { status: 'PAID' }
+         });
+      }
 
       return res.json({ success: true, payment, message: 'Payment recorded successfully' });
 

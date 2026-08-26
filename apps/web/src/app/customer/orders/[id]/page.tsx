@@ -16,12 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { API_URL } from '@/lib/api';
-
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
+import { buildWhatsAppUrl, getOrderWhatsAppMessage } from '@/lib/whatsapp';
 
 interface OrderDetail {
   id: string;
@@ -33,7 +28,7 @@ interface OrderDetail {
   gstTotal: number;
   totalAmount: number;
   createdAt: string;
-  customer?: { name: string; email: string; phone?: string };
+  customer?: { id: string; name: string; email: string; phone?: string };
   company?: { name: string; gstin?: string; address?: string };
   items?: Array<{
     id: string;
@@ -62,8 +57,7 @@ export default function CustomerOrderDetailPage() {
 
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [processingPayment, setProcessingPayment] = useState<boolean>(false);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [storedPhone, setStoredPhone] = useState<string | null>(null);
 
   const fetchOrderDetail = async () => {
     try {
@@ -85,21 +79,19 @@ export default function CustomerOrderDetailPage() {
   };
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const uStr = localStorage.getItem('user') || localStorage.getItem('zobra_user');
+      if (uStr) {
+        try {
+          const u = JSON.parse(uStr);
+          if (u.phone) setStoredPhone(u.phone);
+        } catch (_err) {
+          // ignore
+        }
+      }
+    }
     if (id) fetchOrderDetail();
   }, [id]);
-
-  const openWhatsApp = async () => {
-    if (!order?.quoteId) return alert('No quote attached to this order for WhatsApp link generation.');
-    try {
-      const res = await fetch(`${API_URL}/quotes/${order.quoteId}/whatsapp`, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-      }).then(r => r.json());
-      if(res.link) window.open(res.link, '_blank');
-    } catch (err: any) {
-      console.error('Failed to generate link');
-    }
-  };
 
   if (loading) {
     return (
@@ -124,6 +116,17 @@ export default function CustomerOrderDetailPage() {
   }
 
   const isPaid = order.paymentStatus === 'PAID';
+  const effectivePhone = order.customer?.phone || storedPhone;
+  const whatsappUrl = effectivePhone
+    ? buildWhatsAppUrl(
+        effectivePhone,
+        getOrderWhatsAppMessage({
+          customerName: order.customer?.name,
+          orderNumber: order.orderNumber,
+          totalAmount: order.totalAmount,
+        })
+      )
+    : null;
 
   return (
     <div className="space-y-8 pb-12">
@@ -142,7 +145,7 @@ export default function CustomerOrderDetailPage() {
 
         {/* Action Button */}
         {!isPaid ? (
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-center">
             <Button
               variant="outline"
               size="lg"
@@ -152,15 +155,23 @@ export default function CustomerOrderDetailPage() {
               <CreditCard className="w-5 h-5" />
               ONLINE PAYMENT — COMING SOON
             </Button>
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={openWhatsApp}
-              className="gap-2 font-bold px-6 shadow-md bg-[#25D366] hover:bg-[#128C7E] text-white border-none"
-            >
-              <MessageSquare className="w-5 h-5" />
-              CONTACT SALES ON WHATSAPP
-            </Button>
+            {whatsappUrl ? (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-cy="contact-sales-header-btn"
+                className="inline-flex items-center gap-2 font-bold px-6 py-2.5 shadow-md bg-[#25D366] hover:bg-[#128C7E] text-white border-none rounded-lg transition-colors text-sm"
+              >
+                <MessageSquare className="w-5 h-5" />
+                CONTACT SALES ON WHATSAPP
+              </a>
+            ) : (
+              <div className="text-xs text-rose-600 font-semibold flex items-center gap-1.5 p-2 bg-rose-50 border border-rose-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-rose-500" />
+                <span>Customer phone number is unavailable.</span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2 rounded-xl text-xs font-bold shadow-sm">
@@ -169,13 +180,6 @@ export default function CustomerOrderDetailPage() {
           </div>
         )}
       </div>
-
-      {paymentError && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-          <span>{paymentError}</span>
-        </div>
-      )}
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -254,14 +258,22 @@ export default function CustomerOrderDetailPage() {
                      Payment will be arranged with our sales team after order confirmation.
                    </p>
                 </div>
-                <Button
-                  data-cy="contact-sales-btn"
-                  variant="primary"
-                  onClick={openWhatsApp}
-                  className="w-full font-bold py-3 shadow-sm bg-[#25D366] hover:bg-[#128C7E] text-white border-none flex items-center justify-center gap-2"
-                >
-                  <MessageSquare className="w-4 h-4" /> CONTACT SALES ON WHATSAPP
-                </Button>
+                {whatsappUrl ? (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-cy="contact-sales-btn"
+                    className="w-full font-bold py-3 shadow-sm bg-[#25D366] hover:bg-[#128C7E] text-white border-none flex items-center justify-center gap-2 rounded-lg transition-colors text-sm"
+                  >
+                    <MessageSquare className="w-4 h-4" /> CONTACT SALES ON WHATSAPP
+                  </a>
+                ) : (
+                  <div className="text-xs text-rose-600 font-semibold flex items-center gap-1.5 p-3 bg-rose-50 border border-rose-200 rounded-lg">
+                    <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                    <span>Customer phone number is unavailable.</span>
+                  </div>
+                )}
                 <Button
                   variant="outline"
                   disabled

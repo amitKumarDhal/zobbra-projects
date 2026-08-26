@@ -7,6 +7,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 import { API_URL } from '@/lib/api';
+import { buildWhatsAppUrl, getQuoteWhatsAppMessage } from '@/lib/whatsapp';
 
 // Types
 type QuoteStatus = 'DRAFT' | 'SENT' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
@@ -92,7 +93,19 @@ export default function QuotesPage() {
         headers: { 'Authorization': `Bearer ${token}` }
       }).then(r => r.json());
       if (res.whatsappUrl || res.link) {
-        window.open(res.whatsappUrl || res.link, '_blank');
+        window.open(res.whatsappUrl || res.link, '_blank', 'noopener,noreferrer');
+      } else {
+        const q = quotes.find(item => item.id === quoteId);
+        const phone = q?.customer?.phone;
+        if (phone) {
+          const text = getQuoteWhatsAppMessage({
+            customerName: q?.customer?.name,
+            quoteNumber: q?.quoteNumber || '',
+            totalAmount: q?.totalAmount,
+          });
+          const url = buildWhatsAppUrl(phone, text);
+          if (url) window.open(url, '_blank', 'noopener,noreferrer');
+        }
       }
       fetchData();
     } catch (err: any) {
@@ -325,14 +338,31 @@ function QuoteDrawer({ quote, onClose, onRefresh }: { quote: Quote, onClose: () 
 
   const openWhatsApp = async () => {
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/quotes/${quote.id}/whatsapp`, {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
       }).then(r => r.json());
-      if(res.link) window.open(res.link, '_blank');
+      if (res.whatsappUrl || res.link) {
+        window.open(res.whatsappUrl || res.link, '_blank', 'noopener,noreferrer');
+      } else {
+        const phone = quote.customer?.phone;
+        if (!phone) return alert('Customer phone number is unavailable.');
+        const text = getQuoteWhatsAppMessage({
+          customerName: quote.customer?.name,
+          quoteNumber: quote.quoteNumber || '',
+          totalAmount: quote.totalAmount,
+        });
+        const url = buildWhatsAppUrl(phone, text);
+        if (url) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        } else {
+          alert('Customer phone number is invalid.');
+        }
+      }
       onRefresh();
     } catch (err: any) {
-      console.error('Failed to generate link');
+      console.error('Failed to generate link', err);
     }
   };
 

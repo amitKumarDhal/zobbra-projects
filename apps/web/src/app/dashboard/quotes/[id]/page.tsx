@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { API_URL } from '@/lib/api';
+import { buildWhatsAppUrl, getQuoteWhatsAppMessage } from '@/lib/whatsapp';
 import {
   MessageSquare,
   Send,
@@ -44,7 +45,7 @@ interface QuoteDetail {
   notes?: string;
   createdAt: string;
   customer?: { id: string; name: string; email: string; phone?: string };
-  company?: { id: string; name: string; gstin?: string; address?: string };
+  company?: { id: string; name: string; gstin?: string; address?: string; city?: string; state?: string; pincode?: string };
   items?: Array<{
     id: string;
     productId: string;
@@ -143,12 +144,22 @@ export default function AdminQuoteDetailPage() {
       });
       const data = await res.json();
       if (res.ok && data.success && data.whatsappUrl) {
-        window.open(data.whatsappUrl, '_blank');
+        window.open(data.whatsappUrl, '_blank', 'noopener,noreferrer');
         fetchQuoteDetail();
       } else {
-        const cleanPhone = (quote?.customer?.phone || '919876543210').replace(/\D/g, '');
-        const text = encodeURIComponent(`Hello ${quote?.customer?.name || 'Customer'}! Regarding Quote #${quote?.quoteNumber}: ${quote?.totalAmount}.`);
-        window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
+        const phone = quote?.customer?.phone;
+        if (!phone) return alert('Customer phone number is unavailable.');
+        const text = getQuoteWhatsAppMessage({
+          customerName: quote?.customer?.name,
+          quoteNumber: quote?.quoteNumber || '',
+          totalAmount: quote?.totalAmount,
+        });
+        const url = buildWhatsAppUrl(phone, text);
+        if (url) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        } else {
+          alert('Customer phone number is invalid.');
+        }
       }
     } catch (err) {
       console.error('Failed to trigger WhatsApp click:', err);
@@ -342,26 +353,26 @@ export default function AdminQuoteDetailPage() {
           {/* Customer Profile Card */}
           <Card className="bg-white border-[#E7E3DD] p-6 space-y-4 shadow-sm">
             <h3 className="text-sm uppercase tracking-wider font-bold text-[#5F6368] flex items-center gap-2">
-              <User className="w-4 h-4 text-[#C75B39]" /> Customer Information
+              <User className="w-4 h-4 text-[#C75B39]" /> Customer & Company Profile
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
               <div>
                 <span className="text-[#5F6368] block text-[11px]">Customer Name</span>
-                <span className="text-[#1C1C1C] font-bold text-sm">{quote.customer?.name || 'Rahul Mishra'}</span>
+                <span className="text-[#1C1C1C] font-bold text-sm" data-cy="quote-detail-customer-name">{quote.customer?.name || 'Rahul Mishra'}</span>
               </div>
               <div>
                 <span className="text-[#5F6368] block text-[11px]">Company Name</span>
-                <span className="text-[#1C1C1C] font-bold text-sm">{quote.company?.name || 'Acme Tech Pvt Ltd'}</span>
+                <span className="text-[#1C1C1C] font-bold text-sm" data-cy="quote-detail-company-name">{quote.company?.name || 'Acme Tech Pvt Ltd'}</span>
               </div>
               <div>
                 <span className="text-[#5F6368] block text-[11px]">Phone Number</span>
-                <span className="text-[#1A5653] font-mono font-bold flex items-center gap-1">
+                <span className="text-[#1A5653] font-mono font-bold flex items-center gap-1" data-cy="quote-detail-phone">
                   <Phone className="w-3.5 h-3.5" /> {quote.customer?.phone || '+91 98765 43210'}
                 </span>
               </div>
               <div>
                 <span className="text-[#5F6368] block text-[11px]">Email Address</span>
-                <span className="text-[#1C1C1C] font-mono flex items-center gap-1">
+                <span className="text-[#1C1C1C] font-mono flex items-center gap-1" data-cy="quote-detail-email">
                   <Mail className="w-3.5 h-3.5 text-[#5F6368]" /> {quote.customer?.email || 'rahul@acme.com'}
                 </span>
               </div>
@@ -370,11 +381,37 @@ export default function AdminQuoteDetailPage() {
                 <span className="text-[#1C1C1C] font-mono">{quote.company?.gstin || '21AAACA1234A1Z5'}</span>
               </div>
               <div>
-                <span className="text-[#5F6368] block text-[11px]">Delivery Address</span>
-                <span className="text-[#1C1C1C]">{quote.notes || 'Plot 402, Fortune Tower, Bhubaneswar'}</span>
+                <span className="text-[#5F6368] block text-[11px]">Location</span>
+                <span className="text-[#1C1C1C]">{quote.company?.city || quote.company?.address || 'Bhubaneswar, Odisha'}</span>
               </div>
             </div>
           </Card>
+
+          {/* Specifications & Customization Requirements Card */}
+          {quote.notes && (
+            <Card className="bg-white border-[#E7E3DD] p-6 space-y-4 shadow-sm" data-cy="quote-specifications-card">
+              <h3 className="text-sm uppercase tracking-wider font-bold text-[#5F6368] flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#C75B39]" /> Customization & Order Specifications
+              </h3>
+              <div className="bg-[#F7F5F2] p-4 rounded-xl space-y-2 text-xs font-medium">
+                {quote.notes.includes('|') ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {quote.notes.split('|').map((part, idx) => {
+                      const [label, ...val] = part.split(':');
+                      return (
+                        <div key={idx} className="bg-white p-2.5 rounded-lg border border-[#E7E3DD]">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#5F6368] block">{label?.trim()}</span>
+                          <span className="text-[#1C1C1C] font-semibold">{val.join(':').trim()}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-[#1C1C1C] leading-relaxed whitespace-pre-wrap">{quote.notes}</p>
+                )}
+              </div>
+            </Card>
+          )}
 
           {/* Edit Form Drawer if active */}
           {isEditing && (

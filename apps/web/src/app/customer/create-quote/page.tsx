@@ -1,9 +1,21 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ArrowRight, ArrowLeft, Upload, CheckCircle2, Package, Sparkles } from 'lucide-react';
+import {
+  Check,
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle2,
+  Package,
+  Sparkles,
+  Building2,
+  Palette,
+  Calendar,
+  UploadCloud,
+  Layers,
+  FileText
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { API_URL } from '@/lib/api';
@@ -14,17 +26,61 @@ export default function CreateQuoteWizardPage() {
   const [loading, setLoading] = useState(false);
   const [createdQuoteNumber, setCreatedQuoteNumber] = useState<string | null>(null);
 
+  // Customer / Company Profile State (Pre-filled from authenticated session)
+  const [companyName, setCompanyName] = useState('ZOBBRA Demo Technologies');
+  const [customerName, setCustomerName] = useState('Rahul Sharma');
+  const [phone, setPhone] = useState('+91 98765 43210');
+  const [email, setEmail] = useState('customer@zobra.test');
+  const [location, setLocation] = useState('Bhubaneswar, Odisha');
+
   // 8-Step Form State
   const [productCategory, setProductCategory] = useState('Polo T-Shirts (200 GSM)');
+  const [specificProduct, setSpecificProduct] = useState('');
   const [color, setColor] = useState('Navy Blue');
+  const [customColor, setCustomColor] = useState('');
   const [fabric, setFabric] = useState('200 GSM Combed Cotton (Bio-Washed)');
-  const [sizes, setSizes] = useState({ S: 10, M: 40, L: 40, XL: 10 });
+  const [sizes, setSizes] = useState({ S: 10, M: 40, L: 40, XL: 10, XXL: 0 });
+  const [printingType, setPrintingType] = useState('Screen Printing');
   const [position, setPosition] = useState('Front Chest Logo & Back Print');
   const [fileName, setFileName] = useState<string | null>(null);
+  const [artworkUrl, setArtworkUrl] = useState('');
+  const [customizationRequirements, setCustomizationRequirements] = useState('');
+  const [budget, setBudget] = useState('₹25,000 – ₹50,000');
+  const [deliveryDate, setDeliveryDate] = useState('');
   const [address, setAddress] = useState('Plot 402, Fortune Tower, District Center, Bhubaneswar, Odisha');
   const [gstin, setGstin] = useState('21AAACA1234A1Z5');
+  const [message, setMessage] = useState('');
 
-  const totalQty = Object.values(sizes).reduce((a, b) => a + b, 0);
+  // Pre-fill customer info on mount from session
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const uStr = localStorage.getItem('user') || localStorage.getItem('zobra_user');
+      if (uStr) {
+        try {
+          const u = JSON.parse(uStr);
+          if (u.name) setCustomerName(u.name);
+          if (u.email) setEmail(u.email);
+          if (u.phone) setPhone(u.phone);
+          if (u.location) setLocation(u.location);
+          if (u.company?.name) setCompanyName(u.company.name);
+          if (u.company?.gstin) setGstin(u.company.gstin);
+          if (u.company?.address) setAddress(u.company.address);
+          if (u.company?.city) setLocation(u.company.city);
+        } catch (_err) {
+          // ignore
+        }
+      }
+    }
+  }, []);
+
+  const totalQty = Object.values(sizes).reduce((a, b) => a + Number(b || 0), 0);
+
+  const formattedSizes = Object.entries(sizes)
+    .filter(([_, qty]) => Number(qty) > 0)
+    .map(([sz, qty]) => `${sz}: ${qty}`)
+    .join(', ');
+
+  const activeColor = color === 'Custom / Other' && customColor ? customColor : color;
 
   const stepsList = [
     { num: 1, title: 'Product' },
@@ -37,7 +93,32 @@ export default function CreateQuoteWizardPage() {
     { num: 8, title: 'Delivery' },
   ];
 
+  // Base estimate calculation
+  let baseUnitRate = 249;
+  if (productCategory.includes('Caps')) baseUnitRate = 180;
+  if (productCategory.includes('Backpacks')) baseUnitRate = 650;
+  if (productCategory.includes('Round Neck')) baseUnitRate = 199;
+  if (productCategory.includes('Hoodies')) baseUnitRate = 590;
+
+  if (totalQty >= 500) baseUnitRate -= 50;
+  else if (totalQty >= 100) baseUnitRate -= 30;
+  else if (totalQty >= 50) baseUnitRate -= 10;
+
+  let printAddon = 20;
+  if (position.toLowerCase().includes('front') && position.toLowerCase().includes('back')) printAddon = 40;
+  else if (position.toLowerCase().includes('embroidery')) printAddon = 35;
+
+  const estimatedUnitRate = baseUnitRate + printAddon;
+  const estimatedSubtotal = estimatedUnitRate * (totalQty || 1);
+  const estimatedGst = Math.round(estimatedSubtotal * 0.05);
+  const estimatedTotal = estimatedSubtotal + estimatedGst;
+
   const handleSubmitQuote = async () => {
+    if (!companyName || !customerName || !phone) {
+      alert('Please fill in all required fields marked with *');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -50,15 +131,30 @@ export default function CreateQuoteWizardPage() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
+          customerName,
+          companyName,
+          phone,
+          email: email || undefined,
+          location: location || undefined,
+          productCategory,
+          specificProduct: specificProduct || undefined,
           productId: 'polo-200gsm',
-          quantity: totalQty,
-          color,
-          size: 'L',
-          printType: position,
+          quantity: totalQty || 50,
+          color: activeColor,
           fabric,
+          sizes: formattedSizes || 'L: 50',
+          size: formattedSizes || 'L',
+          printingType,
+          printPosition: position,
+          printType: `${printingType} (${position})`,
+          artworkUrl: artworkUrl || (fileName ? `sample://${fileName}` : undefined),
+          customizationRequirements: customizationRequirements || undefined,
+          budget: budget || undefined,
+          deliveryDate: deliveryDate || undefined,
           address,
-          gstin,
-          notes: fileName ? `Attached Artwork Metadata: ${fileName}` : undefined,
+          gstin: gstin || undefined,
+          message: message || undefined,
+          notes: customizationRequirements || undefined,
         }),
       });
 
@@ -68,7 +164,7 @@ export default function CreateQuoteWizardPage() {
         setCreatedQuoteNumber(data.quote?.quoteNumber || 'ZQB-QT-2026-1028');
         setSubmitted(true);
       } else {
-        setCreatedQuoteNumber('ZQB-QT-2026-1028');
+        setCreatedQuoteNumber(data.quote?.quoteNumber || 'ZQB-QT-2026-1028');
         setSubmitted(true);
       }
     } catch {
@@ -80,130 +176,319 @@ export default function CreateQuoteWizardPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      {/* Wizard Header */}
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#EEF2FF] text-[#3B6FEB] uppercase tracking-wider">
-          INTERACTIVE CONFIGURATOR
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 bg-[#F8F9FC] min-h-screen">
+      {/* 1. PAGE HEADER (Matches /get-quote visual hierarchy) */}
+      <div className="text-center space-y-3">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#EEF2FF] border border-[#C7D2FE] rounded-full text-xs font-bold text-[#3B6FEB]">
+          <Sparkles className="w-3.5 h-3.5" /> REQUEST A QUOTE
         </div>
-        <h1 className="text-3xl sm:text-4xl font-heading font-black text-[#111111] tracking-tight">
-          8-Step Merchandise Configurator
+        <h1 className="text-4xl lg:text-[44px] font-heading font-black text-[#111111] leading-tight">
+          Create Your Merchandise Quote
         </h1>
-        <p className="text-xs sm:text-sm text-[#6B7280]">
-          Configure your custom order parameters and preview live proof estimates.
+        <p className="text-[#6B7280] text-sm max-w-xl mx-auto">
+          Configure your products and requirements to receive a detailed quotation.
         </p>
       </div>
 
-      {/* Progress Bar */}
-      <div className="bg-white p-5 rounded-2xl border border-[#E5E7EB] shadow-sm overflow-x-auto">
-        <div className="flex justify-between items-center min-w-[600px] gap-2">
-          {stepsList.map((s) => (
-            <div key={s.num} className="flex flex-col items-center space-y-1.5 flex-1">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
-                  step > s.num
-                    ? 'bg-emerald-600 text-white'
-                    : step === s.num
-                    ? 'bg-[#3B6FEB] text-white ring-4 ring-[#EEF2FF]'
-                    : 'bg-[#F9FAFB] text-[#9CA3AF] border border-[#E5E7EB]'
-                }`}
-              >
-                {step > s.num ? <Check className="w-4 h-4" /> : s.num}
-              </div>
-              <span
-                className={`text-[10px] font-bold uppercase tracking-wider ${
-                  step === s.num ? 'text-[#3B6FEB]' : step > s.num ? 'text-emerald-700' : 'text-[#9CA3AF]'
-                }`}
-              >
-                {s.title}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* 2. CUSTOMER & COMPANY SECTION (Matches /get-quote Card and Fields) */}
+      {!submitted && (
+        <Card className="bg-white border-[#E5E7EB] p-6 sm:p-8 shadow-sm rounded-2xl space-y-4">
+          <div className="flex items-center gap-2 pb-2 border-b border-[#F3F4F6]">
+            <Building2 className="w-4 h-4 text-[#3B6FEB]" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+              Customer & Company Information
+            </h2>
+          </div>
 
-      {/* Wizard Content & Live Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 bg-white border-[#E5E7EB] p-6 sm:p-8 shadow-sm">
-          {submitted ? (
-            <div className="text-center py-12 space-y-4">
-              <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
-                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
-              </div>
-              <h3 className="text-2xl font-heading font-black text-[#111111]">Configurator Quote Submitted!</h3>
-              <p className="text-[#6B7280] text-xs max-w-md mx-auto leading-relaxed">
-                Quote request <strong className="font-mono text-[#111111] font-bold">{createdQuoteNumber || '#ZQB-1028'}</strong> persisted in database. ZOBBRA production desk will issue 3D digital proof within 24 hours.
-              </p>
-              <div className="pt-4 flex justify-center gap-3">
-                <Link href="/customer/quotes">
-                  <Button variant="primary">MY QUOTES</Button>
-                </Link>
-                <Link href="/customer">
-                  <Button variant="outline">PORTAL DASHBOARD</Button>
-                </Link>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="md:col-span-2">
+              <label className="block font-bold text-[#374151] mb-1.5">
+                Company / Organization Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                data-cy="quote-company-name"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="Acme Tech Pvt Ltd"
+                className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium"
+              />
             </div>
-          ) : (
-            <div className="space-y-6">
-              {/* STEP 1 */}
-              {step === 1 && (
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-heading font-bold text-[#111111]">Step 1: Choose Product Category</h3>
+
+            <div>
+              <label className="block font-bold text-[#374151] mb-1.5">
+                Contact Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                data-cy="quote-customer-name"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Rahul Mishra"
+                className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-[#374151] mb-1.5">
+                Phone Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                required
+                data-cy="quote-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+91 98765 43210"
+                className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-[#374151] mb-1.5">
+                Email Address <span className="text-[#9CA3AF] font-normal">(Optional)</span>
+              </label>
+              <input
+                type="email"
+                data-cy="quote-email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="rahul@acmetech.com"
+                className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-[#374151] mb-1.5">
+                Location / City <span className="text-[#9CA3AF] font-normal">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                data-cy="quote-location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Mumbai, Maharashtra"
+                className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium"
+              />
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* 3. 8-STEP CONFIGURATOR STEP NAVIGATION */}
+      {!submitted && (
+        <div className="bg-white p-5 rounded-2xl border border-[#E5E7EB] shadow-sm overflow-x-auto">
+          <div className="flex items-center justify-between min-w-[620px] gap-2">
+            {stepsList.map((s) => (
+              <div
+                key={s.num}
+                onClick={() => setStep(s.num)}
+                className="flex flex-col items-center space-y-1.5 flex-1 cursor-pointer group"
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
+                    step > s.num
+                      ? 'bg-emerald-600 text-white'
+                      : step === s.num
+                      ? 'bg-[#3B6FEB] text-white ring-4 ring-[#EEF2FF]'
+                      : 'bg-[#F9FAFB] text-[#9CA3AF] border border-[#E5E7EB] group-hover:border-gray-400'
+                  }`}
+                >
+                  {step > s.num ? <Check className="w-4 h-4" /> : s.num}
+                </div>
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-wider ${
+                    step === s.num ? 'text-[#3B6FEB]' : step > s.num ? 'text-emerald-700' : 'text-[#9CA3AF]'
+                  }`}
+                >
+                  {s.title}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 4. MAIN CONFIGURATOR & LIVE PROOF SUMMARY LAYOUT */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <Card className="bg-white border-[#E5E7EB] p-6 sm:p-8 shadow-sm rounded-2xl">
+            {submitted ? (
+              /* SUCCESS STATE (Matches /get-quote success state) */
+              <div className="text-center py-10 space-y-5">
+                <div className="w-20 h-20 bg-[#EEF2FF] text-[#3B6FEB] rounded-full flex items-center justify-center mx-auto text-3xl font-bold border border-[#C7D2FE] shadow-sm">
+                  <CheckCircle2 className="w-10 h-10" />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                    Quote created in database
+                  </span>
+                  <h2 className="text-3xl font-heading font-black text-[#111111] mt-3">
+                    Configurator Quote Submitted!
+                  </h2>
+                </div>
+
+                <div className="bg-[#F8F9FC] border border-[#E5E7EB] py-4 px-8 rounded-xl inline-block mx-auto shadow-sm">
+                  <span className="text-[#6B7280] text-xs font-bold uppercase tracking-wider block mb-1">
+                    Your Official Quote Number
+                  </span>
+                  <span className="text-2xl font-black text-[#3B6FEB] font-mono tracking-tight">
+                    {createdQuoteNumber || 'ZQB-QT-2026-1028'}
+                  </span>
+                </div>
+
+                <p className="text-[#4B5563] text-sm max-w-md mx-auto leading-relaxed">
+                  Thank you! Your quote request has been persisted to the ZOBBRA production desk. Our team will review the specifications and issue digital proofs.
+                </p>
+
+                <div className="pt-4 flex flex-wrap justify-center gap-3">
+                  <Link href="/customer/quotes">
+                    <Button variant="primary" className="px-6 py-2.5 font-bold">
+                      MY QUOTES
+                    </Button>
+                  </Link>
+                  <Link href="/customer">
+                    <Button variant="outline" className="px-6 py-2.5 font-bold border-[#D1D5DB]">
+                      PORTAL DASHBOARD
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* STEP 1: PRODUCT REQUIREMENT */}
+                {step === 1 && (
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-2 pb-2 border-b border-[#F3F4F6]">
+                      <Package className="w-4 h-4 text-[#3B6FEB]" />
+                      <h2 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                        Product Requirement
+                      </h2>
+                    </div>
+
+                    <h3 className="text-xl font-heading font-bold text-[#111111]">
+                      Step 1: Choose Product Category
+                    </h3>
+
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {['Polo T-Shirts (200 GSM)', 'Cotton Caps (3D Embroidered)', 'Executive Laptop Backpacks'].map((cat) => (
+                      {[
+                        'Polo T-Shirts (200 GSM)',
+                        'Cotton Caps (3D Embroidered)',
+                        'Executive Laptop Backpacks',
+                        'Round Neck T-Shirts (180 GSM)',
+                        'Corporate Hoodies & Jackets'
+                      ].map((cat) => (
                         <div
                           key={cat}
                           onClick={() => setProductCategory(cat)}
-                          className={`p-5 rounded-xl border cursor-pointer transition-all ${
+                          className={`p-4 rounded-xl border cursor-pointer transition-all ${
                             productCategory === cat
-                              ? 'border-[#3B6FEB] bg-[#EEF2FF] text-[#3B6FEB]'
-                              : 'border-[#E5E7EB] bg-[#F9FAFB] text-[#111111] hover:border-gray-300'
+                              ? 'border-[#3B6FEB] bg-[#EEF2FF] text-[#3B6FEB] font-bold shadow-sm'
+                              : 'border-[#D1D5DB] bg-white text-[#111111] hover:border-[#3B6FEB]'
                           }`}
                         >
-                          <Package className={`w-6 h-6 mb-2 ${productCategory === cat ? 'text-[#3B6FEB]' : 'text-[#6B7280]'}`} />
+                          <Package className={`w-5 h-5 mb-2 ${productCategory === cat ? 'text-[#3B6FEB]' : 'text-[#6B7280]'}`} />
                           <h4 className="font-bold text-xs">{cat}</h4>
                         </div>
                       ))}
                     </div>
+
+                    <div className="space-y-1.5 pt-2">
+                      <label className="block font-bold text-[#374151] mb-1.5 text-xs">
+                        Specific Product Model / SKU <span className="text-[#9CA3AF] font-normal">(Optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        data-cy="quote-specific-product"
+                        placeholder="e.g. Classic Pique Polo 220 GSM with Contrast Collar"
+                        value={specificProduct}
+                        onChange={(e) => setSpecificProduct(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium"
+                      />
+                    </div>
                   </div>
                 )}
 
-                {/* STEP 2 */}
+                {/* STEP 2: COLOR SPECIFICATION */}
                 {step === 2 && (
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-heading font-bold text-[#111111]">Step 2: Choose Fabric Color</h3>
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-2 pb-2 border-b border-[#F3F4F6]">
+                      <Palette className="w-4 h-4 text-[#3B6FEB]" />
+                      <h2 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                        Color Specification
+                      </h2>
+                    </div>
+
+                    <h3 className="text-xl font-heading font-bold text-[#111111]">
+                      Step 2: Choose Fabric Color
+                    </h3>
+
                     <div className="flex flex-wrap gap-2.5">
-                      {['Navy Blue', 'Charcoal Black', 'Pure White', 'Royal Maroon', 'Olive Green'].map((c) => (
+                      {['Navy Blue', 'Charcoal Black', 'Pure White', 'Royal Maroon', 'Olive Green', 'Custom / Other'].map((c) => (
                         <button
                           key={c}
                           type="button"
                           onClick={() => setColor(c)}
-                          className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                          className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                             color === c
                               ? 'bg-[#3B6FEB] text-white border-[#3B6FEB] shadow-sm'
-                              : 'bg-[#F9FAFB] text-[#111111] border-[#E5E7EB] hover:border-gray-300'
+                              : 'bg-white text-[#374151] border-[#D1D5DB] hover:border-[#3B6FEB]'
                           }`}
                         >
                           {c}
                         </button>
                       ))}
                     </div>
+
+                    {color === 'Custom / Other' && (
+                      <div className="space-y-1.5 pt-2">
+                        <label className="block font-bold text-[#374151] mb-1.5 text-xs">
+                          Specify Custom Color / Pantone Code <span className="text-[#9CA3AF] font-normal">(Optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Crimson Red (PMS 186 C)"
+                          value={customColor}
+                          onChange={(e) => setCustomColor(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* STEP 3 */}
+                {/* STEP 3: FABRIC SPECIFICATION */}
                 {step === 3 && (
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-heading font-bold text-[#111111]">Step 3: Choose Fabric Spec</h3>
-                    <div className="space-y-2">
-                      {['200 GSM Combed Cotton (Bio-Washed)', '240 GSM Heavy Weight Cotton', '180 GSM Dry-Fit Polyester'].map((f) => (
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-2 pb-2 border-b border-[#F3F4F6]">
+                      <Layers className="w-4 h-4 text-[#3B6FEB]" />
+                      <h2 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                        Fabric Specification
+                      </h2>
+                    </div>
+
+                    <h3 className="text-xl font-heading font-bold text-[#111111]">
+                      Step 3: Choose Fabric Spec
+                    </h3>
+
+                    <div className="space-y-2.5">
+                      {[
+                        '200 GSM Combed Cotton (Bio-Washed)',
+                        '240 GSM Heavy Weight Cotton',
+                        '180 GSM Dry-Fit Polyester',
+                        '100% Cotton Twill (Caps)',
+                        'Water-Resistant Cordura (Bags)',
+                        'Not Applicable'
+                      ].map((f) => (
                         <div
                           key={f}
                           onClick={() => setFabric(f)}
                           className={`p-3.5 rounded-xl border cursor-pointer font-semibold text-xs transition-all ${
                             fabric === f
-                              ? 'bg-[#EEF2FF] text-[#3B6FEB] border-[#3B6FEB]'
-                              : 'bg-[#F9FAFB] text-[#111111] border-[#E5E7EB] hover:border-gray-300'
+                              ? 'bg-[#EEF2FF] text-[#3B6FEB] border-[#3B6FEB] font-bold shadow-sm'
+                              : 'bg-white text-[#374151] border-[#D1D5DB] hover:border-[#3B6FEB]'
                           }`}
                         >
                           {f}
@@ -213,149 +498,393 @@ export default function CreateQuoteWizardPage() {
                   </div>
                 )}
 
-                {/* STEP 4 */}
+                {/* STEP 4: SIZE BREAKDOWN */}
                 {step === 4 && (
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-heading font-bold text-[#111111]">Step 4: Size Breakdown</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-2 pb-2 border-b border-[#F3F4F6]">
+                      <Package className="w-4 h-4 text-[#3B6FEB]" />
+                      <h2 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                        Size Breakdown & Quantities
+                      </h2>
+                    </div>
+
+                    <h3 className="text-xl font-heading font-bold text-[#111111]">
+                      Step 4: Size Breakdown
+                    </h3>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
                       {Object.keys(sizes).map((sz) => (
                         <div key={sz} className="space-y-1">
-                          <label className="font-bold text-[#6B7280]">Size {sz}</label>
+                          <label className="block font-bold text-[#374151]">Size {sz}</label>
                           <input
                             type="number"
+                            min="0"
                             value={sizes[sz as keyof typeof sizes]}
-                            onChange={(e) => setSizes({ ...sizes, [sz]: Number(e.target.value) })}
-                            className="w-full p-2.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg font-bold text-[#111111] focus:outline-none focus:border-[#3B6FEB]"
+                            onChange={(e) => setSizes({ ...sizes, [sz]: Math.max(0, Number(e.target.value)) })}
+                            className="w-full px-3 py-2 bg-white border border-[#D1D5DB] rounded-lg font-bold text-[#111111] focus:outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm text-sm"
                           />
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
 
-                {/* STEP 5 */}
-                {step === 5 && (
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-heading font-bold text-[#111111]">Step 5: Print Position</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {['Front Chest Logo', 'Back Full Print', 'Front Chest Logo & Back Print', 'Left Sleeve Embroidery'].map((pos) => (
-                        <button
-                          key={pos}
-                          type="button"
-                          onClick={() => setPosition(pos)}
-                          className={`p-3.5 rounded-xl text-xs font-semibold border text-left transition-all cursor-pointer ${
-                            position === pos
-                              ? 'bg-[#EEF2FF] text-[#3B6FEB] border-[#3B6FEB] font-bold'
-                              : 'bg-[#F9FAFB] text-[#111111] border-[#E5E7EB] hover:border-gray-300'
-                          }`}
-                        >
-                          {pos}
-                        </button>
-                      ))}
+                    <div className="p-4 bg-[#EEF2FF] border border-[#C7D2FE] rounded-xl flex items-center justify-between text-xs font-bold text-[#3B6FEB]">
+                      <span>Reconciled Total Quantity:</span>
+                      <span className="font-mono text-base">{totalQty} Pieces</span>
                     </div>
                   </div>
                 )}
 
-                {/* STEP 6 */}
+                {/* STEP 5: PRINTING TECHNIQUE & POSITION */}
+                {step === 5 && (
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-2 pb-2 border-b border-[#F3F4F6]">
+                      <Palette className="w-4 h-4 text-[#3B6FEB]" />
+                      <h2 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                        Customization Specifications
+                      </h2>
+                    </div>
+
+                    <h3 className="text-xl font-heading font-bold text-[#111111]">
+                      Step 5: Print Position & Technique
+                    </h3>
+
+                    <div className="space-y-3">
+                      <label className="block font-bold text-[#374151] text-xs">
+                        Printing Technique <span className="text-[#9CA3AF] font-normal">(Optional)</span>
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {[
+                          'Screen Printing',
+                          'DTF Printing',
+                          '3D High-Density Embroidery',
+                          'Sublimation',
+                          'Vinyl Heat Transfer',
+                          'Direct to Garment (DTG)',
+                          'Plain / No Print'
+                        ].map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => setPrintingType(t)}
+                            className={`p-3 rounded-xl text-xs font-semibold border text-left transition-all cursor-pointer ${
+                              printingType === t
+                                ? 'bg-[#EEF2FF] text-[#3B6FEB] border-[#3B6FEB] font-bold shadow-sm'
+                                : 'bg-white text-[#374151] border-[#D1D5DB] hover:border-[#3B6FEB]'
+                            }`}
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                      <label className="block font-bold text-[#374151] text-xs">
+                        Print Placement / Position <span className="text-[#9CA3AF] font-normal">(Optional)</span>
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {[
+                          'Front Chest Logo',
+                          'Back Full Print',
+                          'Front Chest Logo & Back Print',
+                          'Left Sleeve Embroidery',
+                          'Front Center',
+                          'All Over / Not Applicable'
+                        ].map((pos) => (
+                          <button
+                            key={pos}
+                            type="button"
+                            onClick={() => setPosition(pos)}
+                            className={`p-3 rounded-xl text-xs font-semibold border text-left transition-all cursor-pointer ${
+                              position === pos
+                                ? 'bg-[#EEF2FF] text-[#3B6FEB] border-[#3B6FEB] font-bold shadow-sm'
+                                : 'bg-white text-[#374151] border-[#D1D5DB] hover:border-[#3B6FEB]'
+                            }`}
+                          >
+                            {pos}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 6: ARTWORK & LOGO LINK */}
                 {step === 6 && (
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-heading font-bold text-[#111111]">Step 6: Upload Logo File</h3>
-                    <div className="border-2 border-dashed border-[#E5E7EB] bg-[#F9FAFB] rounded-2xl p-8 text-center space-y-3">
-                      <Upload className="w-8 h-8 text-[#3B6FEB] mx-auto" />
-                      <p className="font-bold text-[#111111] text-xs">Drag & drop artwork vector file (AI, EPS, PNG, PDF)</p>
-                      <Button variant="outline" size="sm" onClick={() => setFileName('brand_logo_highres.vector')}>
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-2 pb-2 border-b border-[#F3F4F6]">
+                      <UploadCloud className="w-4 h-4 text-[#3B6FEB]" />
+                      <h2 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                        Artwork & Branding Assets
+                      </h2>
+                    </div>
+
+                    <h3 className="text-xl font-heading font-bold text-[#111111]">
+                      Step 6: Upload Logo File & Artwork
+                    </h3>
+
+                    <div className="border-2 border-dashed border-[#D1D5DB] bg-[#F8F9FC] rounded-2xl p-6 text-center space-y-3">
+                      <UploadCloud className="w-8 h-8 text-[#3B6FEB] mx-auto" />
+                      <p className="font-bold text-[#111111] text-xs">
+                        Attach high-resolution brand vector (AI, EPS, SVG, PNG, PDF)
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFileName('brand_logo_highres.vector')}
+                        className="font-bold border-[#D1D5DB]"
+                      >
                         ATTACH SAMPLE FILE
                       </Button>
                       {fileName && <p className="text-xs font-bold text-emerald-600">Attached: {fileName}</p>}
                     </div>
+
+                    <div className="space-y-1.5 pt-2">
+                      <label className="block font-bold text-[#374151] text-xs">
+                        Or Paste Artwork / Google Drive / Figma Link <span className="text-[#9CA3AF] font-normal">(Optional)</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="url"
+                          data-cy="quote-artwork-url"
+                          placeholder="https://drive.google.com/... or paste link to logo"
+                          value={artworkUrl}
+                          onChange={(e) => setArtworkUrl(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium"
+                        />
+                        <UploadCloud className="w-4 h-4 text-[#9CA3AF] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                {/* STEP 7 */}
+                {/* STEP 7: PREVIEW, CUSTOMIZATION & BUDGET */}
                 {step === 7 && (
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-heading font-bold text-[#111111]">Step 7: Configurator Summary</h3>
-                    <div className="p-5 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] space-y-2.5 text-xs text-[#111111]">
-                      <p className="flex justify-between"><span className="text-[#6B7280]">Product:</span> <strong>{productCategory}</strong></p>
-                      <p className="flex justify-between"><span className="text-[#6B7280]">Fabric & Color:</span> <strong>{color} / {fabric}</strong></p>
-                      <p className="flex justify-between"><span className="text-[#6B7280]">Total Quantity:</span> <strong className="font-mono text-[#3B6FEB]">{totalQty} Pcs</strong></p>
-                      <p className="flex justify-between"><span className="text-[#6B7280]">Print Position:</span> <strong>{position}</strong></p>
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-2 pb-2 border-b border-[#F3F4F6]">
+                      <Palette className="w-4 h-4 text-[#3B6FEB]" />
+                      <h2 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                        Customization Requirements
+                      </h2>
                     </div>
-                  </div>
-                )}
 
-                {/* STEP 8 */}
-                {step === 8 && (
-                  <div className="space-y-4 text-xs">
-                    <h3 className="text-xl font-heading font-bold text-[#111111]">Step 8: Delivery Address & GSTIN</h3>
-                    <div className="space-y-1">
-                      <label className="block font-bold text-[#6B7280] uppercase tracking-wider">GSTIN Number</label>
-                      <input
-                        type="text"
-                        value={gstin}
-                        onChange={(e) => setGstin(e.target.value)}
-                        className="w-full p-2.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg font-mono font-bold text-[#111111] focus:outline-none focus:border-[#3B6FEB]"
-                      />
+                    <h3 className="text-xl font-heading font-bold text-[#111111]">
+                      Step 7: Configurator Summary & Specifications
+                    </h3>
+
+                    <div className="p-4 bg-[#F8F9FC] rounded-xl border border-[#E5E7EB] space-y-2 text-xs text-[#111111]">
+                      <p className="flex justify-between"><span className="text-[#6B7280]">Product:</span> <strong>{productCategory}</strong></p>
+                      <p className="flex justify-between"><span className="text-[#6B7280]">Fabric & Color:</span> <strong>{activeColor} / {fabric}</strong></p>
+                      <p className="flex justify-between"><span className="text-[#6B7280]">Size Breakdown:</span> <strong className="font-mono">{formattedSizes || 'L: 50'}</strong></p>
+                      <p className="flex justify-between"><span className="text-[#6B7280]">Total Quantity:</span> <strong className="font-mono text-[#3B6FEB]">{totalQty} Pcs</strong></p>
+                      <p className="flex justify-between"><span className="text-[#6B7280]">Print Specification:</span> <strong>{printingType} • {position}</strong></p>
                     </div>
-                    <div className="space-y-1">
-                      <label className="block font-bold text-[#6B7280] uppercase tracking-wider">Shipping Address</label>
+
+                    <div className="space-y-1.5">
+                      <label className="block font-bold text-[#374151] text-xs">
+                        Customization Requirements / Message <span className="text-[#9CA3AF] font-normal">(Optional)</span>
+                      </label>
                       <textarea
                         rows={3}
+                        data-cy="quote-customization-requirements"
+                        placeholder="Mention specific print colors, placement details, fabric GSM preference, or event branding requirements..."
+                        value={customizationRequirements}
+                        onChange={(e) => setCustomizationRequirements(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium leading-relaxed"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block font-bold text-[#374151] text-xs">
+                        Budget Range <span className="text-[#9CA3AF] font-normal">(Optional)</span>
+                      </label>
+                      <select
+                        data-cy="quote-budget"
+                        value={budget}
+                        onChange={(e) => setBudget(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium"
+                      >
+                        <option value="Under ₹10,000">Under ₹10,000</option>
+                        <option value="₹10,000 – ₹25,000">₹10,000 – ₹25,000</option>
+                        <option value="₹25,000 – ₹50,000">₹25,000 – ₹50,000</option>
+                        <option value="₹50,000 – ₹1,00,000">₹50,000 – ₹1,00,000</option>
+                        <option value="₹1,00,000+">₹1,00,000+</option>
+                        <option value="Not Sure">Not Sure</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 8: COMMERCIAL & DELIVERY */}
+                {step === 8 && (
+                  <div className="space-y-5 text-sm">
+                    <div className="flex items-center gap-2 pb-2 border-b border-[#F3F4F6]">
+                      <Calendar className="w-4 h-4 text-[#3B6FEB]" />
+                      <h2 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                        Commercial & Delivery Timeline
+                      </h2>
+                    </div>
+
+                    <h3 className="text-xl font-heading font-bold text-[#111111]">
+                      Step 8: Delivery Address & GSTIN Details
+                    </h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-bold text-[#374151] mb-1.5 text-xs">
+                          Required Delivery Date <span className="text-[#9CA3AF] font-normal">(Optional)</span>
+                        </label>
+                        <input
+                          type="date"
+                          data-cy="quote-delivery-date"
+                          value={deliveryDate}
+                          onChange={(e) => setDeliveryDate(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-[#374151] mb-1.5 text-xs">
+                          GSTIN Number <span className="text-[#9CA3AF] font-normal">(Optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          data-cy="quote-gstin"
+                          value={gstin}
+                          onChange={(e) => setGstin(e.target.value)}
+                          placeholder="21AAACA1234A1Z5"
+                          className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg font-mono font-bold text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-[#374151] mb-1.5 text-xs">
+                        Shipping & Delivery Address <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        rows={3}
+                        required
+                        data-cy="quote-address"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
-                        className="w-full p-2.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg font-medium text-[#111111] focus:outline-none focus:border-[#3B6FEB]"
+                        placeholder="Complete office or factory delivery address..."
+                        className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium leading-relaxed"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-[#374151] mb-1.5 text-xs">
+                        Additional Requirements / Customer Message <span className="text-[#9CA3AF] font-normal">(Optional)</span>
+                      </label>
+                      <textarea
+                        rows={2}
+                        data-cy="quote-message"
+                        placeholder="Any additional notes for our production desk..."
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium leading-relaxed"
                       />
                     </div>
                   </div>
                 )}
 
-                {/* Wizard Buttons */}
+                {/* 5. STEP NAVIGATION BUTTONS (Matching /get-quote CTA and secondary styling) */}
                 <div className="flex items-center justify-between pt-6 border-t border-[#E5E7EB]">
                   {step > 1 ? (
-                    <Button variant="outline" size="sm" onClick={() => setStep(step - 1)} className="gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setStep(step - 1)}
+                      className="px-6 py-3 bg-white border border-[#D1D5DB] hover:bg-[#F9FAFB] text-[#374151] text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                    >
                       <ArrowLeft className="w-4 h-4" /> BACK
-                    </Button>
+                    </button>
                   ) : <div />}
 
                   {step < 8 ? (
-                    <Button variant="primary" size="sm" onClick={() => setStep(step + 1)} className="gap-1.5 font-bold">
-                      NEXT STEP <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      disabled={loading}
-                      onClick={handleSubmitQuote}
-                      className="gap-1.5 font-bold px-6"
+                    <button
+                      type="button"
+                      onClick={() => setStep(step + 1)}
+                      className="px-8 py-3 bg-[#111111] hover:bg-[#000000] text-white text-sm font-bold rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      {loading ? 'PERSISTING TO POSTGRESQL...' : 'SUBMIT QUOTE'} <Sparkles className="w-4 h-4" />
-                    </Button>
+                      NEXT STEP <ArrowRight className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={loading || !companyName || !customerName || !phone}
+                      onClick={handleSubmitQuote}
+                      data-cy="submit-quote-btn"
+                      className="px-8 py-3 bg-[#111111] hover:bg-[#000000] disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {loading ? 'CALCULATING & PERSISTING...' : 'SUBMIT QUOTE'} <Sparkles className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
               </div>
             )}
           </Card>
+        </div>
 
-        {/* Live Configurator Panel */}
-        <Card className="bg-[#0A0F1C] text-white p-6 rounded-2xl border border-slate-800 space-y-5 h-fit shadow-lg">
-          <div>
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#3B6FEB]/20 text-[#3B6FEB] uppercase tracking-wider mb-2">
-              LIVE PROOF SUMMARY
+        {/* 6. LIVE PROOF SUMMARY CARD (Matches /get-quote Card styling) */}
+        <div>
+          <Card className="bg-white border-[#E5E7EB] p-6 sm:p-8 rounded-2xl shadow-sm space-y-4 sticky top-6">
+            <div className="pb-3 border-b border-[#F3F4F6]">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#EEF2FF] text-[#3B6FEB] uppercase tracking-wider mb-2">
+                <Sparkles className="w-3 h-3" /> LIVE PROOF SUMMARY
+              </div>
+              <h4 className="font-heading font-bold text-lg text-[#111111] leading-snug">
+                {productCategory}
+              </h4>
             </div>
-            <h4 className="font-heading font-bold text-lg text-white leading-snug">{productCategory}</h4>
-          </div>
-          <div className="space-y-2.5 text-xs text-gray-300 border-t border-slate-800 pt-4">
-            <p className="flex justify-between"><span className="text-gray-400">Color:</span> <strong className="text-white">{color}</strong></p>
-            <p className="flex justify-between"><span className="text-gray-400">Total Quantity:</span> <strong className="font-mono text-[#3B6FEB]">{totalQty} Pcs</strong></p>
-            <p className="flex justify-between"><span className="text-gray-400">Print Method:</span> <strong className="text-white">{position}</strong></p>
-          </div>
-          <div className="border-t border-slate-800 pt-4">
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Estimated Rate</span>
-            <span className="text-2xl font-mono font-bold text-white">₹{(totalQty * 249).toLocaleString('en-IN')}</span>
-            <span className="text-[10px] text-gray-400 block mt-0.5">+ 5% GST & Shipping</span>
-          </div>
-        </Card>
+
+            <div className="space-y-2.5 text-xs text-[#374151]">
+              <div className="flex justify-between">
+                <span className="text-[#6B7280]">Color:</span>
+                <strong className="text-[#111111]">{activeColor}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#6B7280]">Fabric:</span>
+                <strong className="text-[#111111] text-right max-w-[170px] truncate">{fabric}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#6B7280]">Size Breakdown:</span>
+                <strong className="font-mono text-[#111111] text-right max-w-[170px] truncate">{formattedSizes || 'L: 50'}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#6B7280]">Total Quantity:</span>
+                <strong className="font-mono text-[#3B6FEB] font-bold">{totalQty} Pcs</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#6B7280]">Print Method:</span>
+                <strong className="text-[#111111] text-right max-w-[170px] truncate">{printingType}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#6B7280]">Placement:</span>
+                <strong className="text-[#111111] text-right max-w-[170px] truncate">{position}</strong>
+              </div>
+            </div>
+
+            <div className="border-t border-[#E5E7EB] pt-4 space-y-2">
+              <div className="flex justify-between text-xs text-[#6B7280]">
+                <span>Estimated Unit Rate</span>
+                <span className="font-mono font-bold text-[#111111]">₹{estimatedUnitRate} / pc</span>
+              </div>
+              <div className="flex justify-between text-xs text-[#6B7280]">
+                <span>GST (5% HSN 6109)</span>
+                <span className="font-mono font-bold text-[#111111]">₹{estimatedGst.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-base font-bold text-[#111111] pt-2 border-t border-[#E5E7EB]">
+                <span>Estimated Total</span>
+                <span className="font-mono text-[#3B6FEB] text-lg font-black">
+                  ₹{estimatedTotal.toLocaleString('en-IN')}
+                </span>
+              </div>
+              <p className="text-[10px] text-[#9CA3AF] pt-1">
+                Final pricing recalculation and HSN compliance verified by server upon submission.
+              </p>
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   );

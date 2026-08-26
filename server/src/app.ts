@@ -19,6 +19,7 @@ import taskRoutes from './modules/tasks/tasks.routes.js';
 import agentRoutes from './modules/agents/agents.routes.js';
 import couponRoutes from './modules/coupons/coupons.routes.js';
 import testimonialRoutes from './modules/testimonials/testimonials.routes.js';
+import invoiceRoutes from './modules/invoices/invoices.routes.js';
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/v1/tasks', taskRoutes);
 app.use('/api/v1/agents', agentRoutes);
 app.use('/api/v1/coupons', couponRoutes);
 app.use('/api/v1/testimonials', testimonialRoutes);
+app.use('/api/v1/invoices', invoiceRoutes);
 
 
 // Error Handler

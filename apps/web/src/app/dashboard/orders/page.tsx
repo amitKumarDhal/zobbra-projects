@@ -7,6 +7,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 import { API_URL } from '@/lib/api';
+import { buildWhatsAppUrl, getOrderWhatsAppMessage } from '@/lib/whatsapp';
 
 // Types
 type OrderStatus = 'PENDING' | 'CONFIRMED' | 'IN_PRODUCTION' | 'READY_FOR_DISPATCH' | 'DISPATCHED' | 'DELIVERED' | 'CANCELLED';
@@ -301,17 +302,21 @@ function OrderDrawer({ order, onClose, onRefresh }: { order: Order, onClose: () 
     }
   };
 
-  const openWhatsApp = async () => {
-    // Reusing quote's whatsapp endpoint since it generates a generic message for the customer
-    if (!order.quoteId) return alert('No quote attached to this order for WhatsApp link generation.');
-    try {
-      const res = await fetch(`${API_URL}/quotes/${order.quoteId}/whatsapp`, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-      }).then(r => r.json());
-      if(res.link) window.open(res.link, '_blank');
-    } catch (err: any) {
-      console.error('Failed to generate link');
+  const openWhatsApp = () => {
+    const phone = order.customer?.phone;
+    if (!phone) return alert('Customer phone number is unavailable.');
+    const url = buildWhatsAppUrl(
+      phone,
+      getOrderWhatsAppMessage({
+        customerName: order.customer?.name,
+        orderNumber: order.orderNumber,
+        totalAmount: order.totalAmount,
+      })
+    );
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      alert('Customer phone number is invalid.');
     }
   };
 

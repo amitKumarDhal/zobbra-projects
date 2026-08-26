@@ -200,23 +200,92 @@ export const getQuoteById = async (req: AuthRequest, res: Response) => {
 };
 
 export const createQuote = async (req: AuthRequest, res: Response) => {
-  const { customerId, companyId, productId, items, quantity = 50, color = 'Navy Blue', size = 'L', printType = 'Front Only', notes, validDays = 15, address, status } = req.body;
+  const {
+    customerId,
+    companyId,
+    productId,
+    productCategory,
+    items,
+    quantity = 50,
+    color = 'Navy Blue',
+    fabric,
+    size = 'L',
+    sizes,
+    printingType,
+    printPosition,
+    printType,
+    artworkUrl,
+    customizationRequirements,
+    budget,
+    deliveryDate,
+    customerName,
+    companyName,
+    phone,
+    email,
+    location,
+    address,
+    gstin,
+    message,
+    notes,
+    validDays = 15,
+    status
+  } = req.body;
 
   const targetCustomerId = customerId || req.user?.id;
   if (!targetCustomerId) {
     return res.status(400).json({ success: false, message: 'Customer ID is required' });
   }
 
+  // Update customer and company profile if updated contact details are supplied
+  if (targetCustomerId) {
+    try {
+      const userUpdateData: any = {};
+      if (customerName) userUpdateData.name = customerName;
+      if (phone) userUpdateData.phone = phone;
+      if (location) userUpdateData.location = location;
+
+      if (Object.keys(userUpdateData).length > 0) {
+        await prisma.user.update({
+          where: { id: targetCustomerId },
+          data: userUpdateData,
+        });
+      }
+
+      const existingUser = await prisma.user.findUnique({
+        where: { id: targetCustomerId },
+        include: { company: true },
+      });
+
+      if (existingUser?.companyId && (companyName || gstin || address)) {
+        const companyUpdateData: any = {};
+        if (companyName) companyUpdateData.name = companyName;
+        if (gstin) companyUpdateData.gstin = gstin;
+        if (address) companyUpdateData.address = address;
+
+        await prisma.company.update({
+          where: { id: existingUser.companyId },
+          data: companyUpdateData,
+        });
+      }
+    } catch (_err) {
+      // Non-blocking profile enrichment
+    }
+  }
+
   const quoteCount = await prisma.quote.count();
   const quoteNumber = `ZQB-QT-${new Date().getFullYear()}-${String(quoteCount + 1001).padStart(4, '0')}`;
 
   let product = null;
-  const targetProductId = productId || (items && items[0]?.productId);
+  const targetProductId = productId || (items && items[0]?.productId) || productCategory;
 
   if (targetProductId) {
     product = await prisma.product.findFirst({
       where: {
-        OR: [{ id: targetProductId }, { slug: targetProductId }],
+        OR: [
+          { id: targetProductId },
+          { slug: targetProductId },
+          { name: { contains: String(targetProductId), mode: 'insensitive' } },
+        ],
       },
     });
   }
@@ -242,13 +311,18 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
     });
   }
 
+  const resolvedPrintType = printType || [printingType, printPosition].filter(Boolean).join(' - ') || 'Front Only';
+  const resolvedSize = sizes || size || 'L';
+  const resolvedColor = color || 'Navy Blue';
+  const resolvedQty = Number(quantity) || 50;
+
   const normalizedItems = Array.isArray(items) && items.length > 0 ? items : [
     {
       productId: product.id,
-      printType: printType || 'Front Only',
-      color: color || 'Navy Blue',
-      size: size || 'L',
-      quantity: Number(quantity) || 50,
+      printType: resolvedPrintType,
+      color: resolvedColor,
+      size: resolvedSize,
+      quantity: resolvedQty,
     },
   ];
 
@@ -257,7 +331,6 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
   const quoteItemsData = [];
 
   for (const item of normalizedItems) {
-    // If the items array has its own product ID, we should technically resolve it, but we fallback to main product for simplicity if not provided.
     let itemProduct = product;
     if (item.productId && item.productId !== product.id) {
        const found = await prisma.product.findUnique({ where: { id: item.productId }});
@@ -265,16 +338,17 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
     }
 
     const itemQty = Number(item.quantity) || 50;
-    const pricing = calculateServerPricing(itemProduct.basePrice, itemQty, item.printType || printType, itemProduct.gstRate);
+    const itemPrintType = item.printType || resolvedPrintType;
+    const pricing = calculateServerPricing(itemProduct.basePrice, itemQty, itemPrintType, itemProduct.gstRate);
 
     subtotal += pricing.subtotal;
     totalGst += pricing.gstTotal;
 
     quoteItemsData.push({
       productId: itemProduct.id,
-      printType: item.printType || printType || 'Front Only',
-      color: item.color || color || 'Navy Blue',
-      size: item.size || size || 'L',
+      printType: itemPrintType,
+      color: item.color || resolvedColor,
+      size: item.size || resolvedSize,
       quantity: itemQty,
       unitPrice: pricing.unitPrice,
       totalPrice: pricing.subtotal,
@@ -287,6 +361,22 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
   
   const finalStatus = status || (req.user?.role === 'CUSTOMER' ? 'DRAFT' : 'SENT');
 
+  // Build comprehensive structured specifications note
+  const specs = [];
+  if (fabric) specs.push(`Fabric: ${fabric}`);
+  if (sizes) specs.push(`Sizes: ${sizes}`);
+  if (printingType || printPosition) specs.push(`Print: ${[printingType, printPosition].filter(Boolean).join(' - ')}`);
+  if (artworkUrl) specs.push(`Artwork: ${artworkUrl}`);
+  if (budget) specs.push(`Budget: ${budget}`);
+  if (deliveryDate) specs.push(`Delivery Date: ${new Date(deliveryDate).toLocaleDateString('en-IN')}`);
+  if (address) specs.push(`Delivery Address: ${address}`);
+  if (gstin) specs.push(`GSTIN: ${gstin}`);
+  if (customizationRequirements) specs.push(`Customization: ${customizationRequirements}`);
+  if (message) specs.push(`Customer Message: ${message}`);
+  if (notes && !specs.some(s => s.includes(notes))) specs.push(`Notes: ${notes}`);
+
+  const combinedNotes = specs.length > 0 ? specs.join(' | ') : (notes || undefined);
+
   const quote = await prisma.quote.create({
     data: {
       quoteNumber,
@@ -297,19 +387,19 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
       gstTotal: totalGst,
       discount: 0,
       totalAmount: grandTotal,
-      notes: notes || (address ? `Delivery Address: ${address}` : undefined),
+      notes: combinedNotes,
       validUntil,
       items: { createMany: { data: quoteItemsData } },
       activities: {
         create: {
           userId: req.user?.id || null,
           type: 'STATUS_CHANGE',
-          message: 'Quote created',
+          message: 'Quote created via Customer Configurator',
         },
       },
     },
     include: {
-      items: true,
+      items: { include: { product: true } },
       customer: { select: { id: true, name: true, email: true, phone: true } },
       company: true,
       activities: { include: { user: { select: { id: true, name: true, role: true } } } },

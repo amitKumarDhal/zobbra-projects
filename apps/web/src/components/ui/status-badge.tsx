@@ -29,6 +29,7 @@ const STATUS_MAP: Record<string, { variant: SemanticVariant; label: string }> = 
   SHIPPED:     { variant: 'info',     label: 'Shipped'     },
 
   // ── Payment ────────────────────────────────────────────────────
+  UNPAID:      { variant: 'warning',  label: 'Unpaid'      },
   PARTIAL:     { variant: 'warning',  label: 'Partial'     },
   PAID:        { variant: 'success',  label: 'Paid'        },
   FAILED:      { variant: 'danger',   label: 'Failed'      },

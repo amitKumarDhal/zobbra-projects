@@ -355,6 +355,7 @@ export default function RegisterPage() {
                 <div className="relative flex items-center justify-center mt-0.5">
                   <input 
                     type="checkbox" 
+                    data-cy="register-terms-checkbox"
                     className="peer sr-only" 
                     checked={agreed}
                     onChange={(e) => setAgreed(e.target.checked)}
@@ -369,9 +370,10 @@ export default function RegisterPage() {
             </div>
 
             <button
-              type="submit"
+              type="button"
               data-cy="register-submit-button"
               disabled={loading}
+              onClick={handleRegister}
               className="w-full py-3.5 mt-4 bg-[#3B6FEB] hover:bg-[#2563EB] text-white rounded-xl text-[15px] font-bold shadow-[0_4px_14px_rgba(59,111,235,0.3)] hover:shadow-[0_6px_20px_rgba(59,111,235,0.4)] transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100"
             >
               {loading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}

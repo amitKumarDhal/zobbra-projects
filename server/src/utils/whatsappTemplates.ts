@@ -1,10 +1,13 @@
 export function normalizePhoneForWhatsApp(phone: string | null | undefined): string {
   if (!phone) return '919876543210';
   let cleaned = phone.replace(/[^\d]/g, '');
+  if (!cleaned) return '919876543210';
   if (cleaned.length === 10) {
     cleaned = `91${cleaned}`;
   } else if (cleaned.length === 11 && cleaned.startsWith('0')) {
     cleaned = `91${cleaned.substring(1)}`;
+  } else if (cleaned.length === 13 && cleaned.startsWith('091')) {
+    cleaned = cleaned.substring(1);
   }
   return cleaned;
 }

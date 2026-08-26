@@ -51,29 +51,36 @@ export function AdminNavbar() {
               }}
               className="p-2 rounded-full text-[#6B7280] hover:text-[#111111] hover:bg-[#F3F4F6] transition-colors relative"
               title="Notifications"
+              data-cy="admin-bell-btn"
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white">
-                5
-              </span>
             </button>
 
             {notificationsOpen && (
-              <div className="absolute right-0 mt-3 w-80 bg-white border border-[#E5E7EB] rounded-2xl shadow-xl p-4 text-sm space-y-3 z-50">
-                <div className="flex justify-between items-center pb-3 border-b border-[#E5E7EB]">
+              <div
+                className="absolute right-0 mt-3 w-80 bg-white border border-[#E5E7EB] rounded-2xl shadow-xl p-4 text-xs space-y-3 z-50 animate-in fade-in zoom-in-95"
+                data-cy="admin-notifications-dropdown"
+              >
+                <div className="flex justify-between items-center pb-2 border-b border-[#E5E7EB]">
                   <span className="font-bold text-[#111111]">Notifications</span>
-                  <span className="text-xs text-[#3B6FEB] font-semibold cursor-pointer hover:underline">Mark all read</span>
+                  <span className="text-[10px] text-[#3B6FEB] font-bold bg-[#EEF2FF] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    Coming Soon
+                  </span>
                 </div>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  <div className="p-3 rounded-xl bg-[#EEF2FF] border border-[#C7D2FE]">
-                    <p className="font-bold text-[#111111] text-xs">New Inquiry Received</p>
-                    <p className="text-xs text-[#6B7280] mt-0.5">Rakesh Kumar requested a quote for Corporate T-Shirts.</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-white border border-[#E5E7EB]">
-                    <p className="font-bold text-[#111111] text-xs">Order Confirmed</p>
-                    <p className="text-xs text-[#6B7280] mt-0.5">Order #ZB-2024-032 payment received successfully.</p>
-                  </div>
+                <div className="p-3.5 rounded-xl bg-[#F9FAFB] border border-[#E5E7EB] text-center space-y-1">
+                  <p className="font-bold text-[#111111]">Admin Alerts</p>
+                  <p className="text-[11px] text-[#6B7280]">
+                    Real-time alerts for new inquiries, quote approvals, payments, and orders will be available soon.
+                  </p>
                 </div>
+                <Link
+                  href="/dashboard/notifications"
+                  onClick={() => setNotificationsOpen(false)}
+                  className="text-xs text-[#3B6FEB] font-bold block text-center pt-1 hover:underline"
+                  data-cy="admin-view-all-notifications-link"
+                >
+                  Open Notification Center →
+                </Link>
               </div>
             )}
           </div>

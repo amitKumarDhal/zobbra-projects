@@ -7,6 +7,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 import { API_URL } from '@/lib/api';
+import { buildWhatsAppUrl } from '@/lib/whatsapp';
 
 // --- TYPES ---
 type InquiryStatus = 'NEW' | 'CONTACTED' | 'FOLLOW_UP' | 'QUOTED' | 'CONVERTED' | 'LOST' | 'CLOSED';
@@ -317,16 +318,16 @@ function InquiryDrawer({ inquiry, onClose, onRefresh }: { inquiry: Inquiry, onCl
     }
   };
 
-  const openWhatsApp = async () => {
-    try {
-      const res = await fetch(`${API_URL}/inquiries/${inquiry.id}/whatsapp`, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-      }).then(r => r.json());
-      if(res.link) window.open(res.link, '_blank');
+  const openWhatsApp = () => {
+    const phone = inquiry.phone || inquiry.customer?.phone;
+    if (!phone) return alert('Customer phone number is unavailable.');
+    const text = `Hello ${inquiry.customerName || inquiry.customer?.name || 'Customer'},\n\nThis is ZOBBRA Sales regarding your inquiry ${inquiry.inquiryNumber} (${inquiry.productInterest || 'Custom Merchandise'}, ${inquiry.quantity || 100} units).\n\nWe would like to discuss your requirements and share an official quote.\n\nThank you,\nZOBBRA Team`;
+    const url = buildWhatsAppUrl(phone, text);
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
       onRefresh();
-    } catch (err: any) {
-      console.error('Failed to generate link');
+    } else {
+      alert('Customer phone number is invalid.');
     }
   };
 

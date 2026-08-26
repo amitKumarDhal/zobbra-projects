@@ -4,7 +4,7 @@ describe('Phase 2 — Interactive Quote Builder E2E', () => {
     cy.login('customer@zobra.test', 'customer123');
     cy.visit('/customer/create-quote');
     cy.url().should('include', '/customer/create-quote');
-    cy.contains('8-Step Merchandise Configurator').should('be.visible');
+    cy.contains('Create Your Merchandise Quote').should('be.visible');
 
     // Step 1: Product
     cy.contains('Step 1: Choose Product Category').should('be.visible');
@@ -32,23 +32,23 @@ describe('Phase 2 — Interactive Quote Builder E2E', () => {
     cy.contains('button', 'NEXT STEP').click();
 
     // Step 5: Print Position
-    cy.contains('Step 5: Print Position').should('be.visible');
+    cy.contains('Step 5: Print Position & Technique').should('be.visible');
     cy.contains('button', 'Back Full Print').click();
     cy.contains('button', 'NEXT STEP').click();
 
     // Step 6: Artwork File Upload UI
-    cy.contains('Step 6: Upload Logo File').should('be.visible');
+    cy.contains('Step 6: Upload Logo File & Artwork').should('be.visible');
     cy.contains('ATTACH SAMPLE FILE').click();
     cy.contains('Attached: brand_logo_highres.vector').should('be.visible');
     cy.contains('button', 'NEXT STEP').click();
 
     // Step 7: Configurator Summary
-    cy.contains('Step 7: Configurator Summary').should('be.visible');
+    cy.contains('Step 7: Configurator Summary & Specifications').should('be.visible');
     cy.contains('Configurator Summary').should('be.visible');
     cy.contains('button', 'NEXT STEP').click();
 
     // Step 8: Delivery & GSTIN Details
-    cy.contains('Step 8: Delivery Address & GSTIN').should('be.visible');
+    cy.contains('Step 8: Delivery Address & GSTIN Details').should('be.visible');
     cy.get('input[value*="21AAACA1234A1Z5"]').should('exist');
     cy.contains('button', 'SUBMIT QUOTE').click();
 

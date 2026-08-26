@@ -7,6 +7,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 import { API_URL } from '@/lib/api';
+import { buildWhatsAppUrl } from '@/lib/whatsapp';
 
 interface Company {
   id: string;
@@ -298,10 +299,14 @@ function CustomerDrawer({ customer, onClose, onRefresh }: { customer: Company, o
   };
 
   const openWhatsApp = () => {
-    if (!mainUser.phone) return alert('No phone number attached to this customer.');
-    // Simple wa.me generic redirect matching MVP requirement
-    const text = encodeURIComponent(`Hi ${mainUser.name},\n\nThis is Zobra regarding your account. Please let us know if you need any assistance.\n\nRegards,\nZOBBRA Team`);
-    window.open(`https://wa.me/${mainUser.phone.replace(/\D/g, '')}?text=${text}`, '_blank');
+    if (!mainUser.phone) return alert('Customer phone number is unavailable.');
+    const text = `Hello ${mainUser.name},\n\nThis is ZOBBRA Sales regarding your account. Please let us know if you need any assistance.\n\nThank you,\nZOBBRA Team`;
+    const url = buildWhatsAppUrl(mainUser.phone, text);
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      alert('Customer phone number is invalid.');
+    }
   };
 
   return (
