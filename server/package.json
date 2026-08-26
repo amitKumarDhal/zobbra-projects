@@ -4,6 +4,7 @@
   "main": "dist/app.js",
   "scripts": {
     "dev": "tsx watch src/app.ts",
+    "prebuild": "prisma generate --schema=../prisma/schema.prisma",
     "build": "tsc",
     "start": "node dist/app.js",
     "test": "jest --detectOpenHandles"
