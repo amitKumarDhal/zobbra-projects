@@ -17,7 +17,7 @@ COPY apps/ ./apps/
 RUN pnpm install --frozen-lockfile
 
 # Generate Prisma client from canonical schema
-RUN npx prisma generate --schema=prisma/schema.prisma
+RUN pnpm run db:generate
 
 # Build all workspace packages
 RUN pnpm build

@@ -16,7 +16,7 @@ COPY server/ ./server/
 RUN pnpm install --frozen-lockfile
 
 # 4. Generate Prisma client from canonical schema & build server
-RUN npx prisma generate --schema=prisma/schema.prisma
+RUN pnpm run db:generate
 RUN pnpm --filter zobra-server build
 
 ENV NODE_ENV=production
