@@ -1,5 +1,6 @@
 # Production Monorepo Dockerfile for ZOBBRA
 FROM node:20-alpine AS base
+RUN apk add --no-cache openssl libc6-compat
 RUN npm install -g pnpm turbo
 
 WORKDIR /app
