@@ -12,12 +12,13 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/ ./packages/
 COPY prisma/ ./prisma/
 COPY server/ ./server/
-COPY apps/ ./apps/
+COPY apps/web/ ./apps/web/
 
 # Install dependencies using frozen lockfile
 RUN pnpm install --frozen-lockfile
 
 # Generate Prisma client from canonical schema
+ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/zobra_db?schema=public"
 RUN pnpm run db:generate
 
 # Build all workspace packages
