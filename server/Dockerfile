@@ -17,6 +17,7 @@ COPY apps/ ./apps/
 RUN pnpm install --frozen-lockfile
 
 # 4. Generate Prisma client from canonical schema & build server
+ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/zobra_db?schema=public"
 RUN pnpm run db:generate
 RUN pnpm --filter zobra-server build
 
