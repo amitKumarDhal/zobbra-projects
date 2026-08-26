@@ -196,7 +196,7 @@ export const downloadInvoicePdf = async (req: AuthRequest, res: Response) => {
         totalPrice: item.totalPrice,
       })),
       taxableValue: invoice.amount,
-      gstRate: 5,
+      gstRate: invoice.order.items[0]?.product?.gstRate ?? (invoice.amount > 0 ? Math.round((invoice.gstAmount / invoice.amount) * 100) : 5),
       gstAmount: invoice.gstAmount,
       grandTotal: invoice.totalAmount,
     };
