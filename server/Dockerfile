@@ -16,8 +16,7 @@ COPY apps/web/ ./apps/web/
 # 3. Install dependencies using frozen lockfile
 RUN pnpm install --frozen-lockfile
 
-# 4. Generate Prisma client & build server
-RUN pnpm run db:generate
+# 4. Build server
 RUN pnpm --filter zobra-server build
 
 ENV NODE_ENV=production
