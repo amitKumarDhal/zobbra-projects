@@ -16,8 +16,8 @@ COPY apps/web/ ./apps/web/
 # 3. Install dependencies using frozen lockfile
 RUN pnpm install --frozen-lockfile
 
-# 4. Build server
-RUN pnpm --filter zobra-server build
+# 4. Compile workspace packages
+RUN pnpm build
 
 ENV NODE_ENV=production
 ENV PORT=5000
