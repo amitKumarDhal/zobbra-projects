@@ -1,6 +1,6 @@
 # Nixpacks configuration for ZOBBRA Backend API
 [phases.setup]
-nixPkgs = ["nodejs_20", "openssl"]
+nixPkgs = ["nodejs_20", "openssl", "openssl_1_1"]
 
 [phases.install]
 cmds = [
