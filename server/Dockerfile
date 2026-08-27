@@ -1,6 +1,6 @@
 # Production Dockerfile for ZOBBRA Backend (zobra-server)
 FROM node:20-alpine AS base
-RUN apk add --no-cache openssl1.1-compat libc6-compat openssl
+RUN apk add --no-cache libc6-compat openssl
 RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
 RUN npm install -g turbo
 
