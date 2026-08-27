@@ -55,8 +55,8 @@ app.use('/api/v1/invoices', invoiceRoutes);
 app.use(errorHandler);
 
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(config.port, () => {
-    console.log(`🚀 ZOBBRA B2B Server listening on http://localhost:${config.port}`);
+  app.listen(config.port, '0.0.0.0', () => {
+    console.log(`🚀 ZOBBRA B2B Server listening on http://0.0.0.0:${config.port}`);
   });
 }
 
