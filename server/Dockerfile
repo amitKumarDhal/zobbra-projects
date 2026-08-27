@@ -13,7 +13,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/ ./packages/
 COPY prisma/ ./prisma/
 COPY server/ ./server/
-COPY apps/web/ ./apps/web/
+COPY apps/web/package.json ./apps/web/
 # 3. Install dependencies using frozen lockfile
 RUN pnpm install --frozen-lockfile
 
