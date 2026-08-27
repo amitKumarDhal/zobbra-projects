@@ -399,6 +399,6 @@ export class InquiryService {
       });
 
       return { inquiry: updatedInquiry, quote };
-    });
+    }, { maxWait: 15000, timeout: 30000 });
   }
 }

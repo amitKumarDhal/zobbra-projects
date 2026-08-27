@@ -72,9 +72,10 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
     const orderCount = await prisma.order.count();
     const orderNumber = `ZQB-ORD-${new Date().getFullYear()}-${String(orderCount + 5001).padStart(4, '0')}`;
 
-    const result = await prisma.$transaction(async (tx) => {
-      // Create Order record with preserved quote pricing
-      const newOrder = await tx.order.create({
+    const result = await prisma.$transaction(
+      async (tx) => {
+        // Create Order record with preserved quote pricing
+        const newOrder = await tx.order.create({
         data: {
           orderNumber,
           quoteId: quote.id,
@@ -124,8 +125,10 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
         },
       });
 
-      return newOrder;
-    });
+        return newOrder;
+      },
+      { maxWait: 15000, timeout: 30000 }
+    );
 
     return res.status(201).json({ success: true, order: result });
   } catch (error: any) {

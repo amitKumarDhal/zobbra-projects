@@ -1,6 +1,7 @@
 # Production Dockerfile for ZOBBRA Frontend (web)
 FROM node:20-alpine AS base
-RUN npm install -g pnpm turbo
+RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
+RUN npm install -g turbo
 
 WORKDIR /app
 
