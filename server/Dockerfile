@@ -9,13 +9,13 @@ WORKDIR /app
 # 1. Copy Monorepo root configuration & lockfile
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 
-# 2. Copy shared packages, prisma schema, server, and Next.js frontend application
+# 2. Copy shared packages, prisma schema, and server
 COPY packages/ ./packages/
 COPY prisma/ ./prisma/
 COPY server/ ./server/
-COPY apps/web/package.json ./apps/web/
-# 3. Install dependencies using frozen lockfile
-RUN pnpm install --frozen-lockfile
+
+# 3. Install dependencies using frozen lockfile for zobra-server only
+RUN pnpm install --filter zobra-server... --frozen-lockfile
 
 # 4. Compile workspace packages
 RUN pnpm run db:generate
