@@ -22,8 +22,6 @@ RUN pnpm run db:generate
 RUN pnpm --filter zobra-server build
 
 ENV NODE_ENV=production
-ENV PORT=5000
-EXPOSE 5000
 
 # 5. Start production server
 CMD ["pnpm", "--filter", "zobra-server", "start"]
