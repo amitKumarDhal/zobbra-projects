@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useCustomerUser } from '@/hooks/useCustomerUser';
 import {
   Check,
   ArrowRight,
@@ -27,11 +28,11 @@ export default function CreateQuoteWizardPage() {
   const [createdQuoteNumber, setCreatedQuoteNumber] = useState<string | null>(null);
 
   // Customer / Company Profile State (Pre-filled from authenticated session)
-  const [companyName, setCompanyName] = useState('ZOBBRA Demo Technologies');
-  const [customerName, setCustomerName] = useState('Rahul Sharma');
-  const [phone, setPhone] = useState('+91 98765 43210');
-  const [email, setEmail] = useState('customer@zobra.test');
-  const [location, setLocation] = useState('Bhubaneswar, Odisha');
+  const [companyName, setCompanyName] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [location, setLocation] = useState('');
 
   // 8-Step Form State
   const [productCategory, setProductCategory] = useState('Polo T-Shirts (200 GSM)');
@@ -47,31 +48,23 @@ export default function CreateQuoteWizardPage() {
   const [customizationRequirements, setCustomizationRequirements] = useState('');
   const [budget, setBudget] = useState('₹25,000 – ₹50,000');
   const [deliveryDate, setDeliveryDate] = useState('');
-  const [address, setAddress] = useState('Plot 402, Fortune Tower, District Center, Bhubaneswar, Odisha');
-  const [gstin, setGstin] = useState('21AAACA1234A1Z5');
+  const [address, setAddress] = useState('');
+  const [gstin, setGstin] = useState('');
   const [message, setMessage] = useState('');
 
-  // Pre-fill customer info on mount from session
+  // Pre-fill customer info from authenticated session via shared hook
+  const { user: authUser } = useCustomerUser();
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const uStr = localStorage.getItem('user') || localStorage.getItem('zobra_user');
-      if (uStr) {
-        try {
-          const u = JSON.parse(uStr);
-          if (u.name) setCustomerName(u.name);
-          if (u.email) setEmail(u.email);
-          if (u.phone) setPhone(u.phone);
-          if (u.location) setLocation(u.location);
-          if (u.company?.name) setCompanyName(u.company.name);
-          if (u.company?.gstin) setGstin(u.company.gstin);
-          if (u.company?.address) setAddress(u.company.address);
-          if (u.company?.city) setLocation(u.company.city);
-        } catch (_err) {
-          // ignore
-        }
-      }
+    if (authUser) {
+      if (authUser.name) setCustomerName(authUser.name);
+      if (authUser.email) setEmail(authUser.email);
+      if (authUser.phone) setPhone(authUser.phone);
+      if (authUser.company?.name) setCompanyName(authUser.company.name);
+      if (authUser.company?.gstin) setGstin(authUser.company.gstin);
+      if (authUser.company?.address) setAddress(authUser.company.address);
+      if (authUser.company?.city) setLocation(authUser.company.city);
     }
-  }, []);
+  }, [authUser]);
 
   const totalQty = Object.values(sizes).reduce((a, b) => a + Number(b || 0), 0);
 
@@ -226,7 +219,7 @@ export default function CreateQuoteWizardPage() {
                 data-cy="quote-customer-name"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Rahul Mishra"
+                placeholder="Your full name"
                 className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all text-sm font-medium"
               />
             </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   FileText,
@@ -17,27 +17,14 @@ import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { API_URL } from '@/lib/api';
+import { useCustomerUser } from '@/hooks/useCustomerUser';
 
 export default function CustomerDashboardPage() {
-  const [userName, setUserName] = useState('Rahul Sharma');
-  const [companyName, setCompanyName] = useState('ZOBBRA Demo Technologies Pvt Ltd');
+  const { userName, companyName } = useCustomerUser();
   const [quotes, setQuotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedUserStr = localStorage.getItem('user') || localStorage.getItem('zobra_user');
-      if (storedUserStr) {
-        try {
-          const u = JSON.parse(storedUserStr);
-          if (u.name) setUserName(u.name);
-          if (u.company?.name) setCompanyName(u.company.name);
-        } catch (_err) {
-          // ignore
-        }
-      }
-    }
-
     fetchCustomerData();
   }, []);
 
@@ -76,11 +63,11 @@ export default function CustomerDashboardPage() {
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#EEF2FF] text-[#3B6FEB] uppercase tracking-wider mb-2">
             CLIENT PORTAL
           </div>
-          <h1 className="text-3xl sm:text-4xl font-heading font-black text-[#111111] tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-heading font-black text-[#111111] tracking-tight" data-cy="customer-dashboard-company">
             {companyName}
           </h1>
           <p className="text-xs sm:text-sm text-[#6B7280] mt-1 font-medium">
-            Welcome back, {userName}! Track quotes, merchandise orders & invoices.
+            Welcome back, <span data-cy="customer-dashboard-welcome-name">{userName}</span>! Track quotes, merchandise orders &amp; invoices.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">

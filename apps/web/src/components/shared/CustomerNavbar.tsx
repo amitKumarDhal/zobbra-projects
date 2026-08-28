@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { Button } from '@/components/ui/button';
+import { useCustomerUser } from '@/hooks/useCustomerUser';
 
 export function CustomerNavbar() {
   const pathname = usePathname();
@@ -24,6 +25,8 @@ export function CustomerNavbar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
+
+  const { userName, companyName, initials } = useCustomerUser();
 
   // Generate breadcrumb path
   const pathSegments = pathname.split('/').filter(Boolean);
@@ -128,19 +131,20 @@ export function CustomerNavbar() {
                 setNotificationsOpen(false);
               }}
               className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-[#F9FAFB] transition-colors"
+              data-cy="customer-profile-menu-btn"
             >
-              <div className="w-8 h-8 bg-[#111111] text-white font-heading font-bold text-xs flex items-center justify-center rounded-lg shadow-sm">
-                RM
+              <div className="w-8 h-8 bg-[#111111] text-white font-heading font-bold text-xs flex items-center justify-center rounded-lg shadow-sm" data-cy="customer-avatar-initials">
+                {initials}
               </div>
-              <span className="text-xs font-bold text-[#111111] hidden sm:block">Rahul M.</span>
+              <span className="text-xs font-bold text-[#111111] hidden sm:block" data-cy="customer-navbar-name">{userName}</span>
               <ChevronDown className="w-3.5 h-3.5 text-[#6B7280]" />
             </button>
 
             {profileOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white border border-[#E5E7EB] rounded-2xl shadow-xl p-2 text-xs space-y-1 z-50 animate-in fade-in zoom-in-95">
                 <div className="px-3 py-2 border-b border-[#E5E7EB]">
-                  <p className="font-bold text-[#111111]">Rahul Mishra</p>
-                  <p className="text-[10px] text-[#6B7280]">Acme Tech Pvt Ltd</p>
+                  <p className="font-bold text-[#111111]" data-cy="customer-profile-dropdown-name">{userName}</p>
+                  <p className="text-[10px] text-[#6B7280]">{companyName}</p>
                 </div>
                 <Link href="/customer/profile" className="flex items-center gap-2 px-3 py-2 rounded-xl text-[#6B7280] hover:text-[#111111] hover:bg-[#F9FAFB]">
                   <User className="w-3.5 h-3.5" /> Company Profile

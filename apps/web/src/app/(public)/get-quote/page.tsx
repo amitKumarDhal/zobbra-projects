@@ -213,7 +213,7 @@ export default function GetQuotePage() {
                     data-cy="contact-name-input"
                     value={formData.customerName} 
                     onChange={e => setFormData({ ...formData, customerName: e.target.value })} 
-                    placeholder="Rahul Mishra" 
+                    placeholder="Your full name" 
                     className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all" 
                   />
                 </div>

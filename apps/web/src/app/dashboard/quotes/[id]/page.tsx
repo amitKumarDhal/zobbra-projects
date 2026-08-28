@@ -358,7 +358,7 @@ export default function AdminQuoteDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
               <div>
                 <span className="text-[#5F6368] block text-[11px]">Customer Name</span>
-                <span className="text-[#1C1C1C] font-bold text-sm" data-cy="quote-detail-customer-name">{quote.customer?.name || 'Rahul Mishra'}</span>
+                <span className="text-[#1C1C1C] font-bold text-sm" data-cy="quote-detail-customer-name">{quote.customer?.name || '—'}</span>
               </div>
               <div>
                 <span className="text-[#5F6368] block text-[11px]">Company Name</span>

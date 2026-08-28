@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -18,28 +18,14 @@ import {
   ChevronRight,
   LogOut,
 } from 'lucide-react';
+import { useCustomerUser } from '@/hooks/useCustomerUser';
 
 export function CustomerSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
-  const [userName, setUserName] = useState('Rahul Sharma');
-  const [companyName, setCompanyName] = useState('ZOBBRA Demo Technologies');
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const uStr = localStorage.getItem('user') || localStorage.getItem('zobra_user');
-      if (uStr) {
-        try {
-          const u = JSON.parse(uStr);
-          if (u.name) setUserName(u.name);
-          if (u.company?.name) setCompanyName(u.company.name);
-        } catch (_err) {
-          // ignore
-        }
-      }
-    }
-  }, []);
+  const { userName, companyName } = useCustomerUser();
 
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
@@ -124,15 +110,15 @@ export function CustomerSidebar() {
         {!collapsed ? (
           <div className="flex items-center justify-between px-3">
             <div className="text-[11px] truncate max-w-[140px]">
-              <p className="font-bold text-white leading-tight truncate">{userName}</p>
-              <p className="text-slate-400 text-[10px] font-medium truncate">{companyName}</p>
+              <p className="font-bold text-white leading-tight truncate" data-cy="customer-sidebar-name">{userName}</p>
+              <p className="text-slate-400 text-[10px] font-medium truncate" data-cy="customer-sidebar-company">{companyName}</p>
             </div>
-            <button onClick={handleLogout} className="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-white/5 transition-colors" title="Sign Out">
+            <button onClick={handleLogout} className="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-white/5 transition-colors" title="Sign Out" data-cy="customer-sidebar-logout">
               <LogOut className="w-4 h-4" />
             </button>
           </div>
         ) : (
-          <button onClick={handleLogout} className="flex justify-center w-full p-2 text-slate-400 hover:text-rose-400 transition-colors" title="Sign Out">
+          <button onClick={handleLogout} className="flex justify-center w-full p-2 text-slate-400 hover:text-rose-400 transition-colors" title="Sign Out" data-cy="customer-sidebar-logout">
             <LogOut className="w-4 h-4" />
           </button>
         )}
