@@ -103,7 +103,7 @@ export default function PaymentsPage() {
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <StatCard icon={<CreditCard className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-50" title="Total Collection" value={formatINR(stats.totalCollection)} sub="This Month" />
         <StatCard icon={<CheckCircle2 className="w-5 h-5 text-green-600" />} iconBg="bg-green-50" title="Received" value={formatINR(stats.received)} sub={`${stats.percentages.received?.toFixed(2) || 0}% of total`} />
         <StatCard icon={<Clock className="w-5 h-5 text-orange-600" />} iconBg="bg-orange-50" title="Pending" value={formatINR(stats.pending)} sub={`${stats.percentages.pending?.toFixed(2) || 0}% of total`} />
@@ -117,7 +117,7 @@ export default function PaymentsPage() {
         <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-sm transition-all duration-300 flex-1 overflow-hidden flex flex-col">
           {/* Toolbar */}
           <div className="p-4 border-b border-[#E5E7EB] flex flex-wrap gap-3 justify-between items-center bg-[#FDFDFD]">
-            <div className="relative flex-1 min-w-[250px] max-w-sm">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
               <input 
                 type="text" 

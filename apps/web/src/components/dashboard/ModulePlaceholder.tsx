@@ -40,18 +40,18 @@ export function ModulePlaceholder({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Badge variant="terracotta" className="mb-2">MODULE</Badge>
-          <h1 className="text-4xl font-serif font-black text-[#1C1C1C] tracking-tight">{title}</h1>
+          <h1 className="text-2xl sm:text-4xl font-serif font-black text-[#1C1C1C] tracking-tight">{title}</h1>
           <p className="text-xs text-[#5F6368] mt-1">{description}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={simulateLoading}
-            className="p-3 rounded-xl bg-white border border-[#E7E3DD] text-[#5F6368] hover:text-[#1C1C1C] transition-colors shadow-sm"
+            className="p-3 rounded-xl bg-white border border-[#E7E3DD] text-[#5F6368] hover:text-[#1C1C1C] transition-colors shadow-sm min-h-[44px] min-w-[44px] flex items-center justify-center"
             title="Simulate Loading Skeleton"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#C75B39]' : ''}`} />
           </button>
-          <Button variant="terracotta" className="font-bold gap-2">
+          <Button variant="terracotta" className="font-bold gap-2 min-h-[44px]">
             <Plus className="w-4 h-4" /> {actionLabel}
           </Button>
         </div>

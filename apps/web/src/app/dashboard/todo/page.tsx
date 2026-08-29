@@ -138,18 +138,18 @@ export default function TodoPage() {
             Dashboard <span className="text-[#D1D5DB]">&gt;</span> To Do
           </div>
         </div>
-        <div className="flex gap-3">
-           <button className="bg-white border border-[#E5E7EB] text-[#374151] px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-[#F9FAFB] transition-colors flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+           <button className="bg-white border border-[#E5E7EB] text-[#374151] px-4 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#F9FAFB] transition-colors flex items-center gap-2 min-h-[44px]">
              <Download className="w-4 h-4"/> Export
            </button>
-           <button onClick={openAdd} className="bg-[#3B6FEB] text-white px-5 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2">
+           <button onClick={openAdd} className="bg-[#3B6FEB] text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2 min-h-[44px]">
              <Plus className="w-4 h-4"/> New Task
            </button>
         </div>
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <StatCard icon={<CheckCircle2 className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-50" title="Total Tasks" value={stats.total} sub="All tasks" />
         <StatCard icon={<Clock className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-50" title="Pending" value={stats.pending} sub={`${stats.total ? Math.round((stats.pending/stats.total)*100) : 0}% of total`} />
         <StatCard icon={<CalendarIcon className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-50" title="Due Today" value={stats.dueToday} sub="Tasks due today" />
@@ -163,7 +163,7 @@ export default function TodoPage() {
         <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-sm transition-all duration-300 flex-1 overflow-hidden flex flex-col">
           {/* Toolbar */}
           <div className="p-4 border-b border-[#E5E7EB] flex flex-wrap gap-3 justify-between items-center bg-[#FDFDFD]">
-            <div className="relative flex-1 min-w-[250px] max-w-sm">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
               <input 
                 type="text" 

@@ -117,10 +117,10 @@ export default function LoginPage() {
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex flex-col justify-between p-8 sm:p-12 lg:p-16 bg-white overflow-y-auto"
+        className="flex flex-col justify-between p-4 sm:p-8 lg:p-16 bg-white overflow-y-auto"
       >
         <div className="flex justify-between items-center">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#050505] font-bold transition-colors">
+          <Link href="/" className="inline-flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#050505] font-bold transition-colors min-h-[44px]">
             <ArrowLeft className="w-4 h-4" /> Back
           </Link>
           <div className="lg:hidden flex items-center gap-2">
@@ -131,7 +131,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="max-w-[420px] w-full mx-auto space-y-8 py-12">
+        <div className="max-w-[420px] w-full mx-auto space-y-6 sm:space-y-8 py-6 sm:py-12">
           <div className="space-y-2">
             <h2 className="text-3xl font-black tracking-tight text-[#050505] font-heading">Welcome back</h2>
             <p className="text-[#6B7280] font-medium">Sign in to manage your Zobra account.</p>

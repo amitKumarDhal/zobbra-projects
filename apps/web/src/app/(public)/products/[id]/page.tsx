@@ -133,7 +133,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <div className="lg:col-span-7 space-y-8">
           {/* Featured Large Image View */}
           <div className="relative bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden p-2 shadow-sm">
-            <div className="bg-[#F8F9FC] rounded-xl flex items-center justify-center w-full h-[460px]">
+            <div className="bg-[#F8F9FC] rounded-xl flex items-center justify-center w-full h-[280px] sm:h-[460px]">
                 {product.images && product.images.length > 0 ? (
                   <img
                     src={product.images[selectedImage]}
@@ -144,19 +144,19 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                   <PackageX className="w-20 h-20 text-[#D1D5DB]" />
                 )}
             </div>
-            <div className="absolute top-6 left-6 gap-1.5 py-1.5 px-3 bg-white/90 backdrop-blur-sm border border-[#E5E7EB] rounded-full flex items-center shadow-sm text-xs font-bold text-[#111111]">
+            <div className="absolute top-4 sm:top-6 left-4 sm:left-6 gap-1.5 py-1.5 px-3 bg-white/90 backdrop-blur-sm border border-[#E5E7EB] rounded-full flex items-center shadow-sm text-xs font-bold text-[#111111]">
               <Sparkles className="w-3.5 h-3.5 text-[#3B6FEB] mr-1.5" /> Premium Zobra Quality
             </div>
           </div>
 
           {/* Thumbnail Gallery */}
           {product.images && product.images.length > 1 && (
-            <div className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
+            <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 hide-scrollbar">
               {product.images.map((img: string, idx: number) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImage(idx)}
-                  className={`relative rounded-xl overflow-hidden border-2 transition-all w-24 h-24 flex-shrink-0 ${
+                  className={`relative rounded-xl overflow-hidden border-2 transition-all w-16 h-16 sm:w-24 sm:h-24 flex-shrink-0 ${
                     selectedImage === idx ? 'border-[#111111] shadow-sm' : 'border-transparent opacity-70 hover:opacity-100'
                   }`}
                 >

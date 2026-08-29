@@ -99,10 +99,10 @@ export default function ForgotPasswordPage() {
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex flex-col justify-between p-8 sm:p-12 lg:p-16 bg-white overflow-y-auto"
+        className="flex flex-col justify-between p-4 sm:p-8 lg:p-16 bg-white overflow-y-auto"
       >
         <div className="flex justify-between items-center">
-          <Link href="/login" className="inline-flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#050505] font-bold transition-colors">
+          <Link href="/login" className="inline-flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#050505] font-bold transition-colors min-h-[44px]">
             <ArrowLeft className="w-4 h-4" /> Back to Login
           </Link>
           <div className="lg:hidden flex items-center gap-2">
@@ -113,7 +113,7 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
 
-        <div className="max-w-[420px] w-full mx-auto space-y-8 py-12">
+        <div className="max-w-[420px] w-full mx-auto space-y-6 sm:space-y-8 py-6 sm:py-12">
           {success ? (
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-6">
               <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">

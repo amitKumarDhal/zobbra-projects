@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -16,6 +16,21 @@ export function PublicHeader() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
+
+  // Close menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.classList.add('drawer-open');
+    } else {
+      document.body.classList.remove('drawer-open');
+    }
+    return () => document.body.classList.remove('drawer-open');
+  }, [mobileMenuOpen]);
 
   const navLinks = [
     { name: 'Home', href: '/' },
@@ -109,19 +124,19 @@ export function PublicHeader() {
           </div>
         </div>
 
-        {/* 2. MAIN NAVIGATION (White bar with clean layout) */}
+        {/* 2. MAIN NAVIGATION */}
         <div className="border-b border-[#E5E5E5] bg-white">
-          <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-[66px] flex items-center justify-between">
+          <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-[60px] sm:h-[66px] flex items-center justify-between">
             {/* Left: Square logo + ZOBBRA */}
             <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
               <div className="w-8 h-8 bg-[#050505] text-white font-heading font-black text-lg flex items-center justify-center rounded-[3px] shadow-sm">
                 Z
               </div>
               <div className="leading-tight">
-                <span className="text-[16px] font-heading font-black tracking-[-0.02em] text-[#050505] block">
+                <span className="text-[15px] sm:text-[16px] font-heading font-black tracking-[-0.02em] text-[#050505] block">
                   ZOBBRA
                 </span>
-                <span className="text-[8.5px] uppercase font-bold tracking-[0.14em] text-[#666666] block">
+                <span className="text-[8px] sm:text-[8.5px] uppercase font-bold tracking-[0.14em] text-[#666666] block">
                   WEAR YOUR BRAND
                 </span>
               </div>
@@ -198,23 +213,32 @@ export function PublicHeader() {
             {/* Mobile Menu Toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded text-[#050505] hover:bg-[#F3F4F6] transition-colors"
-              aria-label="Toggle menu"
+              className="md:hidden p-2 rounded text-[#050505] hover:bg-[#F3F4F6] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
+        {/* Mobile Menu Backdrop */}
+        {mobileMenuOpen && (
+          <div
+            className="md:hidden fixed inset-0 top-[60px] sm:top-[66px] bg-black/40 backdrop-blur-sm z-40"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
         {/* Mobile Menu Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-b border-[#E5E5E5] px-4 pb-5 pt-3 space-y-1">
+          <div className="md:hidden fixed top-[60px] sm:top-[66px] left-0 right-0 max-h-[calc(100vh-66px)] overflow-y-auto bg-white border-b border-[#E5E5E5] px-4 pb-6 pt-3 space-y-1 z-50 shadow-xl animate-in slide-in-from-top-2 duration-200">
             <div className="flex flex-wrap gap-3 text-xs text-[#666666] pb-3 border-b border-[#E5E5E5] mb-3">
-              <span className="flex items-center gap-1">
-                <Phone className="w-3 h-3" /> +91 91244 49666
+              <span className="flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-gray-500" /> +91 91244 49666
               </span>
-              <span className="flex items-center gap-1">
-                <Mail className="w-3 h-3" /> hello@zobbra.com
+              <span className="flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-gray-500" /> hello@zobbra.com
               </span>
             </div>
             {navLinks.map((link) => (
@@ -230,7 +254,7 @@ export function PublicHeader() {
                           key={child.href}
                           href={child.href}
                           onClick={() => setMobileMenuOpen(false)}
-                          className="block py-1.5 px-3 text-sm font-medium text-[#444444] hover:text-[#050505] rounded transition-colors"
+                          className="block py-2 px-3 text-sm font-medium text-[#444444] hover:text-[#050505] hover:bg-[#F7F7F5] rounded transition-colors min-h-[40px] flex items-center"
                         >
                           {child.name}
                         </Link>
@@ -241,7 +265,7 @@ export function PublicHeader() {
                   <Link
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`block py-2 px-2 text-sm font-medium rounded transition-colors ${
+                    className={`block py-2.5 px-3 text-sm font-medium rounded transition-colors min-h-[44px] flex items-center ${
                       pathname === link.href
                         ? 'text-[#050505] bg-[#F7F7F5] font-bold'
                         : 'text-[#333333] hover:text-[#050505] hover:bg-[#F7F7F5]'
@@ -252,18 +276,18 @@ export function PublicHeader() {
                 )}
               </div>
             ))}
-            <div className="pt-3 border-t border-[#E5E5E5] space-y-2 mt-2">
+            <div className="pt-3 border-t border-[#E5E5E5] space-y-2.5 mt-3">
               <Link
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-center py-2.5 px-3 text-sm font-semibold text-[#333333] hover:text-black hover:bg-[#F7F7F5] rounded border border-[#E5E5E5] transition-colors"
+                className="block text-center py-2.5 px-3 text-sm font-semibold text-[#333333] hover:text-black hover:bg-[#F7F7F5] rounded border border-[#E5E5E5] transition-colors min-h-[44px] flex items-center justify-center"
               >
                 Login
               </Link>
               <Link
                 href="/get-quote"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-center px-4 py-2.5 bg-[#050505] text-white text-xs font-bold uppercase tracking-wider rounded-[3px]"
+                className="block text-center px-4 py-3 bg-[#050505] text-white text-xs font-bold uppercase tracking-wider rounded-[3px] min-h-[44px] flex items-center justify-center active:scale-[0.98]"
               >
                 GET A FREE QUOTE
               </Link>

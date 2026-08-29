@@ -117,13 +117,13 @@ export default function ProductsPage() {
             Dashboard <span className="text-[#D1D5DB]">&gt;</span> Products
           </div>
         </div>
-        <button onClick={openAdd} className="bg-[#3B6FEB] text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2">
+        <button onClick={openAdd} className="bg-[#3B6FEB] text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2 min-h-[44px]">
           <Plus className="w-4 h-4"/> Add New Product
         </button>
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <StatCard icon={<FileText className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-50" title="Total Products" value={stats.totalProducts} sub="All products" />
         <StatCard icon={<CheckCircle2 className="w-5 h-5 text-green-600" />} iconBg="bg-green-50" title="Active Products" value={stats.activeProducts} sub="Published" />
         <StatCard icon={<FileText className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-50" title="Draft Products" value={stats.draftProducts} sub="Unpublished" />
@@ -137,7 +137,7 @@ export default function ProductsPage() {
         <div className={`bg-white border border-[#E5E7EB] rounded-2xl shadow-sm transition-all duration-300 flex-1 ${isDrawerOpen ? 'w-2/3 hidden lg:block' : 'w-full'}`}>
           {/* Toolbar */}
           <div className="p-4 border-b border-[#E5E7EB] flex flex-wrap gap-3 justify-between items-center bg-[#FDFDFD] rounded-t-2xl">
-            <div className="relative flex-1 min-w-[250px] max-w-sm">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
               <input 
                 type="text" 
@@ -147,7 +147,7 @@ export default function ProductsPage() {
                 className="w-full pl-9 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-lg text-sm text-[#111111] focus:outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-shadow"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="px-3 py-2 bg-white border border-[#E5E7EB] rounded-lg text-sm font-medium text-[#374151] outline-none hover:bg-[#F9FAFB]">
                 <option>All Categories</option>
                 {categories.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
@@ -171,7 +171,7 @@ export default function ProductsPage() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[850px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#E5E7EB]">
                   <th className="px-4 py-3 w-10 text-center"><input type="checkbox" className="rounded border-gray-300" /></th>
@@ -333,7 +333,7 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
   };
 
   return (
-    <div className="w-full lg:w-1/3 min-w-[380px] max-w-[420px] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
+    <div className="w-full lg:w-1/3 min-w-0 lg:min-w-[380px] max-w-[420px] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
       {/* Header */}
       <div className="px-5 pt-5 pb-0 border-b border-[#E5E7EB] bg-[#FDFDFD]">
         <div className="flex items-center justify-between mb-4">

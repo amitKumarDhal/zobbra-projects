@@ -78,14 +78,14 @@ export default function AgentsPage() {
           </div>
         </div>
         <div className="flex gap-3">
-           <Link href="/dashboard/settings" className="bg-[#3B6FEB] text-white px-5 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2">
+           <Link href="/dashboard/settings" className="bg-[#3B6FEB] text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2 min-h-[44px]">
              <Plus className="w-4 h-4"/> Add New Agent
            </Link>
         </div>
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <StatCard icon={<Users className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-50" title="Total Agents" value={stats.totalAgents} sub="All agents" />
         <StatCard icon={<UserCheck className="w-5 h-5 text-green-600" />} iconBg="bg-green-50" title="Active Agents" value={stats.activeAgents} sub={`${stats.totalAgents ? Math.round((stats.activeAgents/stats.totalAgents)*100) : 0}% of total`} />
         <StatCard icon={<UserPlus className="w-5 h-5 text-orange-600" />} iconBg="bg-orange-50" title="New This Month" value={stats.newThisMonth} sub="Joined this month" />
@@ -99,7 +99,7 @@ export default function AgentsPage() {
         <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-sm transition-all duration-300 flex-1 overflow-hidden flex flex-col">
           {/* Toolbar */}
           <div className="p-4 border-b border-[#E5E7EB] flex flex-wrap gap-3 justify-between items-center bg-[#FDFDFD]">
-            <div className="relative flex-1 min-w-[250px] max-w-sm">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
               <input 
                 type="text" 
@@ -109,7 +109,7 @@ export default function AgentsPage() {
                 className="w-full pl-9 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-lg text-sm text-[#111111] focus:outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-shadow"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 bg-white border border-[#E5E7EB] rounded-lg text-sm font-medium text-[#374151] outline-none hover:bg-[#F9FAFB]">
                 <option>All Status</option>
                 <option value="ACTIVE">Active</option>

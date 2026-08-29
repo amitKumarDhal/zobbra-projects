@@ -63,7 +63,7 @@ export function HowItWorks() {
             <div className="pt-2">
               <Link
                 href="/get-quote"
-                className="inline-flex items-center gap-2 px-5 py-3 bg-[#050505] hover:bg-[#222222] text-white text-[12px] font-bold tracking-wider uppercase rounded-[3px] transition-all shadow-sm active:scale-[0.98] group"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#050505] hover:bg-[#222222] text-white text-[12px] font-bold tracking-wider uppercase rounded-[3px] transition-all shadow-sm active:scale-[0.98] min-h-[44px] group"
               >
                 <span>SEE HOW IT WORKS</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform duration-200" />

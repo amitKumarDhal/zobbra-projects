@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import {
   Search,
   Bell,
@@ -14,32 +13,48 @@ import {
 } from 'lucide-react';
 import { CommandPalette } from '@/components/ui/command-palette';
 
-export function AdminNavbar() {
-  const pathname = usePathname();
+interface AdminNavbarProps {
+  onMenuToggle?: () => void;
+}
+
+export function AdminNavbar({ onMenuToggle }: AdminNavbarProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
 
   return (
     <>
-      <header className="bg-white border-b border-[#E5E7EB] h-[72px] px-6 flex items-center justify-between text-[#111111] sticky top-0 z-30">
-        {/* Left: Mobile Menu Trigger (hidden on desktop normally, handled by sidebar) */}
-        <div className="flex items-center gap-4">
-          <button className="p-2 -ml-2 rounded-lg text-[#6B7280] hover:text-[#111111] hover:bg-[#F3F4F6] transition-colors md:hidden">
+      <header className="bg-white border-b border-[#E5E7EB] h-[60px] lg:h-[72px] px-4 lg:px-6 flex items-center justify-between text-[#111111] sticky top-0 z-30 shadow-sm">
+        {/* Left: Mobile Hamburger + optional page context */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onMenuToggle}
+            className="p-2 -ml-1 rounded-lg text-[#6B7280] hover:text-[#111111] hover:bg-[#F3F4F6] transition-colors lg:hidden min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Open navigation menu"
+          >
             <Menu className="w-5 h-5" />
+          </button>
+
+          {/* Desktop: Global Search */}
+          <button
+            onClick={() => setCmdOpen(true)}
+            className="hidden md:flex items-center gap-2 px-4 py-2 w-52 lg:w-64 rounded-lg border border-[#E5E7EB] text-sm text-[#9CA3AF] hover:text-[#111111] hover:border-[#D1D5DB] transition-all cursor-pointer bg-white"
+            aria-label="Open search"
+          >
+            <Search className="w-4 h-4 text-[#9CA3AF] shrink-0" />
+            <span className="flex-1 text-left truncate">Search anything...</span>
           </button>
         </div>
 
-        {/* Right: Search + Notifications + Profile */}
-        <div className="flex items-center gap-5 ml-auto">
-          {/* Global Search */}
+        {/* Right: Search (mobile icon) + Notifications + Profile */}
+        <div className="flex items-center gap-2 lg:gap-5 ml-auto">
+          {/* Mobile search icon only */}
           <button
             onClick={() => setCmdOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 w-64 rounded-lg border border-[#E5E7EB] text-sm text-[#9CA3AF] hover:text-[#111111] hover:border-[#D1D5DB] transition-all cursor-pointer bg-white"
+            className="md:hidden p-2 rounded-lg text-[#6B7280] hover:text-[#111111] hover:bg-[#F3F4F6] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Search"
           >
-            <Search className="w-4 h-4 text-[#9CA3AF]" />
-            <span className="flex-1 text-left">Search anything...</span>
-            <Search className="w-3.5 h-3.5 opacity-0" /> {/* Spacer for balance */}
+            <Search className="w-5 h-5" />
           </button>
 
           {/* Notifications Dropdown */}
@@ -49,7 +64,7 @@ export function AdminNavbar() {
                 setNotificationsOpen(!notificationsOpen);
                 setProfileOpen(false);
               }}
-              className="p-2 rounded-full text-[#6B7280] hover:text-[#111111] hover:bg-[#F3F4F6] transition-colors relative"
+              className="p-2 rounded-full text-[#6B7280] hover:text-[#111111] hover:bg-[#F3F4F6] transition-colors relative min-h-[44px] min-w-[44px] flex items-center justify-center"
               title="Notifications"
               data-cy="admin-bell-btn"
             >
@@ -58,7 +73,7 @@ export function AdminNavbar() {
 
             {notificationsOpen && (
               <div
-                className="absolute right-0 mt-3 w-80 bg-white border border-[#E5E7EB] rounded-2xl shadow-xl p-4 text-xs space-y-3 z-50 animate-in fade-in zoom-in-95"
+                className="absolute right-0 mt-3 w-[min(320px,90vw)] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl p-4 text-xs space-y-3 z-50 animate-in fade-in zoom-in-95"
                 data-cy="admin-notifications-dropdown"
               >
                 <div className="flex justify-between items-center pb-2 border-b border-[#E5E7EB]">
@@ -85,8 +100,8 @@ export function AdminNavbar() {
             )}
           </div>
 
-          {/* Divider */}
-          <div className="w-px h-8 bg-[#E5E7EB]"></div>
+          {/* Divider — hidden on small screens */}
+          <div className="hidden sm:block w-px h-8 bg-[#E5E7EB]" />
 
           {/* Profile Menu Dropdown */}
           <div className="relative">
@@ -95,9 +110,9 @@ export function AdminNavbar() {
                 setProfileOpen(!profileOpen);
                 setNotificationsOpen(false);
               }}
-              className="flex items-center gap-3 p-1 rounded-xl hover:bg-[#F3F4F6] transition-colors"
+              className="flex items-center gap-2 p-1 rounded-xl hover:bg-[#F3F4F6] transition-colors min-h-[44px]"
             >
-              <div className="w-9 h-9 bg-[#111111] text-white font-heading font-bold text-sm flex items-center justify-center rounded-full">
+              <div className="w-8 h-8 lg:w-9 lg:h-9 bg-[#111111] text-white font-heading font-bold text-sm flex items-center justify-center rounded-full">
                 Z
               </div>
               <div className="hidden sm:flex flex-col text-left">
@@ -113,13 +128,13 @@ export function AdminNavbar() {
                   <p className="font-bold text-[#111111]">ZOBBRA Admin</p>
                   <p className="text-xs text-[#6B7280]">admin@zobbra.com</p>
                 </div>
-                <Link href="/dashboard/settings" className="flex items-center gap-2 px-4 py-2 text-[#6B7280] hover:text-[#111111] hover:bg-[#F9FAFB]">
+                <Link href="/dashboard/settings" onClick={() => setProfileOpen(false)} className="flex items-center gap-2 px-4 py-2 text-[#6B7280] hover:text-[#111111] hover:bg-[#F9FAFB]">
                   <User className="w-4 h-4" /> My Profile
                 </Link>
-                <Link href="/dashboard/settings" className="flex items-center gap-2 px-4 py-2 text-[#6B7280] hover:text-[#111111] hover:bg-[#F9FAFB]">
+                <Link href="/dashboard/settings" onClick={() => setProfileOpen(false)} className="flex items-center gap-2 px-4 py-2 text-[#6B7280] hover:text-[#111111] hover:bg-[#F9FAFB]">
                   <Settings className="w-4 h-4" /> Account Settings
                 </Link>
-                <div className="my-1 border-t border-[#E5E7EB]"></div>
+                <div className="my-1 border-t border-[#E5E7EB]" />
                 <Link href="/login" className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 font-medium">
                   <LogOut className="w-4 h-4" /> Sign Out
                 </Link>

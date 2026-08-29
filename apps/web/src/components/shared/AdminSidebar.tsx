@@ -21,9 +21,15 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  X,
 } from 'lucide-react';
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -44,9 +50,9 @@ export function AdminSidebar() {
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
   ];
 
-  return (
+  const sidebarContent = (
     <aside
-      className={`bg-[#0A0F1C] text-white flex flex-col justify-between p-3 min-h-screen transition-all duration-300 ${
+      className={`bg-[#0A0F1C] text-white flex flex-col justify-between p-3 h-full transition-all duration-300 ${
         collapsed ? 'w-20' : 'w-64'
       }`}
     >
@@ -69,16 +75,29 @@ export function AdminSidebar() {
             </div>
           )}
 
+          {/* Desktop collapse button */}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors hidden md:block"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors hidden lg:block"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
+
+          {/* Mobile close button */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors lg:hidden"
+              aria-label="Close menu"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Navigation Items */}
-        <nav className="space-y-1">
+        <nav className="space-y-1" aria-label="Admin navigation">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
@@ -87,7 +106,7 @@ export function AdminSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group ${
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group min-h-[44px] ${
                   isActive
                     ? 'bg-[#3B6FEB] text-white shadow-md'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -134,5 +153,24 @@ export function AdminSidebar() {
         )}
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Desktop: Always visible sidebar */}
+      <div className="hidden lg:flex h-screen sticky top-0">
+        {sidebarContent}
+      </div>
+
+      {/* Mobile: Fixed overlay drawer */}
+      <div
+        className={`lg:hidden fixed inset-y-0 left-0 z-40 flex h-full transition-transform duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        aria-hidden={!isOpen}
+      >
+        {sidebarContent}
+      </div>
+    </>
   );
 }

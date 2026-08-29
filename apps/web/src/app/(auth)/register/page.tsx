@@ -142,10 +142,10 @@ export default function RegisterPage() {
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex flex-col p-8 sm:p-12 lg:p-16 bg-white overflow-y-auto"
+        className="flex flex-col p-4 sm:p-8 lg:p-16 bg-white overflow-y-auto"
       >
-        <div className="flex justify-between items-center mb-12">
-          <Link href="/login" className="inline-flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#050505] font-bold transition-colors">
+        <div className="flex justify-between items-center mb-6 sm:mb-12">
+          <Link href="/login" className="inline-flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#050505] font-bold transition-colors min-h-[44px]">
             <ArrowLeft className="w-4 h-4" /> Back to Login
           </Link>
           <div className="lg:hidden flex items-center gap-2">
@@ -156,7 +156,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <div className="max-w-[500px] w-full mx-auto space-y-8 pb-12">
+        <div className="max-w-[500px] w-full mx-auto space-y-6 sm:space-y-8 pb-12">
           <div className="space-y-2">
             <h2 className="text-3xl font-black tracking-tight text-[#050505] font-heading">Create your Zobra account</h2>
             <p className="text-[#6B7280] font-medium">Set up your company profile and start requesting quotes.</p>

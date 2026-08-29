@@ -122,19 +122,18 @@ export default function OrdersPage() {
             <span>Dashboard</span> <ChevronRight className="w-3.5 h-3.5" /> <span className="font-medium text-[#111111]">Orders</span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="bg-white border border-[#E5E7EB] text-[#111111] px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#F9FAFB] transition-colors flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+          <button className="bg-white border border-[#E5E7EB] text-[#111111] px-4 sm:px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#F9FAFB] transition-colors flex items-center gap-2 min-h-[44px]">
             <Download className="w-4 h-4"/> Export
           </button>
-          {/* New Order redirects to Approved Quotes per requirements */}
-          <Link href="/dashboard/quotes?status=APPROVED" className="bg-[#3B6FEB] text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2">
+          <Link href="/dashboard/quotes?status=APPROVED" className="bg-[#3B6FEB] text-white px-4 sm:px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2 min-h-[44px]">
             <Plus className="w-4 h-4" /> New Order
           </Link>
         </div>
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <StatCard icon={<ShoppingCart className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-50" title="Total Orders" value={stats.total} trend={14.3} />
         <StatCard icon={<Clock className="w-5 h-5 text-green-600" />} iconBg="bg-green-50" title="Pending" value={stats.pending} trend={12.5} />
         <StatCard icon={<CheckCircle2 className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-50" title="In Progress" value={stats.confirmed} trend={18.6} />
@@ -148,7 +147,7 @@ export default function OrdersPage() {
         <div className={`bg-white border border-[#E5E7EB] rounded-2xl shadow-sm transition-all duration-300 flex-1 ${isDrawerOpen ? 'w-2/3 hidden lg:block' : 'w-full'}`}>
           {/* Toolbar */}
           <div className="p-4 border-b border-[#E5E7EB] flex flex-wrap gap-3 justify-between items-center bg-[#FDFDFD] rounded-t-2xl">
-            <div className="relative flex-1 min-w-[250px] max-w-sm">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
               <input 
                 type="text" 
@@ -158,7 +157,7 @@ export default function OrdersPage() {
                 className="w-full pl-9 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-lg text-sm text-[#111111] focus:outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-shadow"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select className="px-3 py-2 bg-white border border-[#E5E7EB] rounded-lg text-sm font-medium text-[#374151] outline-none hover:bg-[#F9FAFB]">
                 <option>All Status</option>
                 <option>PENDING</option>
@@ -178,7 +177,7 @@ export default function OrdersPage() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[850px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#E5E7EB]">
                   <th className="px-4 py-3 w-10 text-center"><input type="checkbox" className="rounded border-gray-300" /></th>
@@ -368,7 +367,7 @@ function OrderDrawer({ order, onClose, onRefresh }: { order: Order, onClose: () 
   const isCompleted = order.status === 'DELIVERED' || order.status === 'CANCELLED';
 
   return (
-    <div className="w-full lg:w-1/3 min-w-[380px] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
+    <div className="w-full lg:w-1/3 min-w-0 lg:min-w-[380px] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
       
       {/* Drawer Header */}
       <div className="p-5 border-b border-[#E5E7EB] flex items-start justify-between bg-[#FDFDFD]">

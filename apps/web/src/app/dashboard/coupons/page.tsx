@@ -109,13 +109,13 @@ export default function CouponsPage() {
             Dashboard <span className="text-[#D1D5DB]">&gt;</span> Coupons
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-[#E5E7EB] bg-white rounded-lg text-sm font-bold text-[#374151] hover:bg-[#F9FAFB] transition-colors shadow-sm">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+          <button className="flex items-center gap-2 px-4 py-2.5 border border-[#E5E7EB] bg-white rounded-lg text-sm font-bold text-[#374151] hover:bg-[#F9FAFB] transition-colors shadow-sm min-h-[44px]">
             <Download className="w-4 h-4" /> Export
           </button>
           <button 
              onClick={() => { setEditingCoupon(null); setIsDrawerOpen(true); }}
-             className="flex items-center gap-2 px-4 py-2 bg-[#3B6FEB] hover:bg-[#2563EB] text-white rounded-lg text-sm font-bold transition-colors shadow-sm"
+             className="flex items-center gap-2 px-4 py-2.5 bg-[#3B6FEB] hover:bg-[#2563EB] text-white rounded-lg text-sm font-bold transition-colors shadow-sm min-h-[44px]"
           >
             <Plus className="w-4 h-4" /> Add New Coupon
           </button>
@@ -123,7 +123,7 @@ export default function CouponsPage() {
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <StatCard icon={<Tag className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-50" title="Total Coupons" value={stats.totalCoupons} sub="All coupons" />
         <StatCard icon={<CheckCircle2 className="w-5 h-5 text-green-600" />} iconBg="bg-green-50" title="Active Coupons" value={stats.activeCoupons} sub={`${stats.totalCoupons > 0 ? ((stats.activeCoupons/stats.totalCoupons)*100).toFixed(2) : 0}% of total`} />
         <StatCard icon={<AlertCircle className="w-5 h-5 text-orange-600" />} iconBg="bg-orange-50" title="Inactive Coupons" value={stats.inactiveCoupons} sub={`${stats.totalCoupons > 0 ? ((stats.inactiveCoupons/stats.totalCoupons)*100).toFixed(2) : 0}% of total`} />
@@ -137,7 +137,7 @@ export default function CouponsPage() {
         <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-sm transition-all duration-300 flex-1 overflow-hidden flex flex-col">
           {/* Toolbar */}
           <div className="p-4 border-b border-[#E5E7EB] flex flex-wrap gap-3 justify-between items-center bg-[#FDFDFD]">
-            <div className="relative flex-1 min-w-[250px] max-w-sm">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
               <input 
                 type="text" 

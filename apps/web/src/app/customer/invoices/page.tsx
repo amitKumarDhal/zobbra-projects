@@ -129,7 +129,7 @@ export default function CustomerInvoicesPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs" data-cy="invoices-table">
+            <table className="w-full min-w-[720px] text-left border-collapse text-xs" data-cy="invoices-table">
               <thead>
                 <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-[#6B7280] uppercase tracking-wider font-bold">
                   <th className="p-4">Invoice #</th>

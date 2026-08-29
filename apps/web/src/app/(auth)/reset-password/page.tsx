@@ -116,12 +116,12 @@ function ResetPasswordForm() {
       </div>
 
       {/* Right Form Panel */}
-      <div className="flex items-center justify-center p-6 sm:p-12 lg:p-16">
-        <div className="w-full max-w-md space-y-8">
+      <div className="flex items-center justify-center p-4 sm:p-8 lg:p-16 overflow-y-auto">
+        <div className="w-full max-w-md space-y-6 sm:space-y-8 py-6">
           <div>
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-black transition-colors mb-6 group"
+              className="inline-flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-black transition-colors mb-6 group min-h-[44px]"
             >
               <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
               Back to Login

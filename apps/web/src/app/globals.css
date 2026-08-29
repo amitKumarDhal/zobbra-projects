@@ -91,6 +91,8 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    /* Prevent page-level horizontal scroll on mobile */
+    overflow-x: hidden;
   }
 
   body {
@@ -98,6 +100,17 @@
     color: var(--color-text-primary);
     font-family: var(--font-sans), sans-serif;
     -webkit-font-smoothing: antialiased;
+    /* Prevent page-level horizontal scroll on mobile */
+    overflow-x: hidden;
+    /* Safe area support for notched phones (iOS, Android) */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Body scroll lock when mobile drawer is open */
+  body.drawer-open {
+    overflow: hidden;
+    height: 100%;
   }
 
   /* All headings default to Plus Jakarta Sans */
@@ -284,4 +297,40 @@
     ring-color: var(--color-brand-primary);
     ring-offset: 2px;
   }
+
+  /* Hide scrollbar (keep scroll functionality) — for filter chip rows */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Ensure buttons feel snappy on touch devices */
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Mobile drawer overlay backdrop */
+  .drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 39;
+    backdrop-filter: blur(2px);
+  }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   REDUCED-MOTION OVERRIDES
+   ═══════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

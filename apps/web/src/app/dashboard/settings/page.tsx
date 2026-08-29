@@ -101,7 +101,7 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Settings Navigation Sidebar */}
-        <div className="lg:col-span-3 space-y-1">
+        <div className="lg:col-span-3 flex lg:flex-col overflow-x-auto hide-scrollbar gap-1.5 pb-2 lg:pb-0">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -109,18 +109,18 @@ export default function SettingsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all text-left ${
+                className={`flex-shrink-0 lg:w-full flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl transition-all text-left min-h-[44px] ${
                   isActive
                     ? 'bg-[#EBF1FF] text-[#3B6FEB]'
-                    : 'text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111111]'
+                    : 'text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111111] bg-white lg:bg-transparent border lg:border-0 border-[#E5E7EB]'
                 }`}
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-white shadow-sm ${isActive ? 'text-[#3B6FEB]' : 'text-[#6B7280]'}`}>
-                  <Icon className="w-4 h-4" />
+                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-white shadow-sm flex-shrink-0 ${isActive ? 'text-[#3B6FEB]' : 'text-[#6B7280]'}`}>
+                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
                 <div>
-                  <p className={`text-[13px] font-bold ${isActive ? 'text-[#3B6FEB]' : 'text-[#111111]'}`}>{tab.label}</p>
-                  <p className={`text-[10px] ${isActive ? 'text-[#3B6FEB]/80' : 'text-[#6B7280]'}`}>{tab.desc}</p>
+                  <p className={`text-xs sm:text-[13px] font-bold whitespace-nowrap lg:whitespace-normal ${isActive ? 'text-[#3B6FEB]' : 'text-[#111111]'}`}>{tab.label}</p>
+                  <p className={`text-[10px] hidden lg:block ${isActive ? 'text-[#3B6FEB]/80' : 'text-[#6B7280]'}`}>{tab.desc}</p>
                 </div>
               </button>
             );

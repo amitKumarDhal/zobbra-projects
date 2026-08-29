@@ -117,18 +117,18 @@ export default function InquiriesPage() {
           <h1 className="text-3xl font-heading font-black text-[#111111]">Inquiry</h1>
           <p className="text-sm text-[#6B7280] font-medium mt-1">Manage all customer inquiries and follow-ups</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="bg-white border border-[#E5E7EB] text-[#111111] px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#F9FAFB] transition-colors">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+          <button className="bg-white border border-[#E5E7EB] text-[#111111] px-4 sm:px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#F9FAFB] transition-colors min-h-[44px]">
             Export
           </button>
-          <button onClick={() => setIsNewInquiryModalOpen(true)} className="bg-[#3B6FEB] text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2">
+          <button onClick={() => setIsNewInquiryModalOpen(true)} className="bg-[#3B6FEB] text-white px-4 sm:px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2 min-h-[44px]">
             <Plus className="w-4 h-4" /> Add New Inquiry
           </button>
         </div>
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <StatCard icon={<Users className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-50" title="Total Inquiries" value={stats.total} trend={18.6} />
         <StatCard icon={<UserCircle className="w-5 h-5 text-indigo-600" />} iconBg="bg-indigo-50" title="Registered" value={stats.registered} trend={12.3} />
         <StatCard icon={<Globe className="w-5 h-5 text-teal-600" />} iconBg="bg-teal-50" title="Guests" value={stats.guest} trend={4.1} />
@@ -152,7 +152,7 @@ export default function InquiriesPage() {
                 className="w-full pl-9 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-lg text-sm text-[#111111] focus:outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-shadow"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select className="px-3 py-2 bg-white border border-[#E5E7EB] rounded-lg text-sm font-medium text-[#374151] outline-none hover:bg-[#F9FAFB]">
                 <option>All Status</option>
               </select>
@@ -169,7 +169,7 @@ export default function InquiriesPage() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[850px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#E5E7EB]">
                   <th className="px-4 py-3 w-10 text-center"><input type="checkbox" className="rounded border-gray-300" /></th>
@@ -332,7 +332,7 @@ function InquiryDrawer({ inquiry, onClose, onRefresh }: { inquiry: Inquiry, onCl
   };
 
   return (
-    <div data-cy="inquiry-drawer" className="w-full lg:w-1/3 min-w-[360px] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
+    <div data-cy="inquiry-drawer" className="w-full lg:w-1/3 min-w-0 lg:min-w-[360px] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
       {/* Drawer Header */}
       <div className="p-5 border-b border-[#E5E7EB] flex items-start justify-between bg-[#FDFDFD]">
         <div>

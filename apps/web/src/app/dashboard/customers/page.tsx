@@ -119,7 +119,7 @@ export default function CustomersPage() {
         <div className={`bg-white border border-[#E5E7EB] rounded-2xl shadow-sm transition-all duration-300 flex-1 ${isDrawerOpen ? 'w-2/3 hidden lg:block' : 'w-full'}`}>
           {/* Toolbar */}
           <div className="p-4 border-b border-[#E5E7EB] flex flex-wrap gap-3 justify-between items-center bg-[#FDFDFD] rounded-t-2xl">
-            <div className="relative flex-1 min-w-[250px] max-w-sm">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
               <input 
                 type="text" 
@@ -129,7 +129,7 @@ export default function CustomersPage() {
                 className="w-full pl-9 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-lg text-sm text-[#111111] focus:outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-shadow"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select className="px-3 py-2 bg-white border border-[#E5E7EB] rounded-lg text-sm font-medium text-[#374151] outline-none hover:bg-[#F9FAFB]">
                 <option>All Status</option>
                 <option>Active</option>
@@ -149,7 +149,7 @@ export default function CustomersPage() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[850px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#E5E7EB]">
                   <th className="px-4 py-3 w-10 text-center"><input type="checkbox" className="rounded border-gray-300" /></th>
@@ -310,7 +310,7 @@ function CustomerDrawer({ customer, onClose, onRefresh }: { customer: Company, o
   };
 
   return (
-    <div className="w-full lg:w-1/3 min-w-[380px] max-w-[420px] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
+    <div className="w-full lg:w-1/3 min-w-0 lg:min-w-[380px] max-w-[420px] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
       
       {/* Drawer Header */}
       <div className="px-5 pt-5 pb-0 border-b border-[#E5E7EB] bg-[#FDFDFD]">
@@ -336,7 +336,7 @@ function CustomerDrawer({ customer, onClose, onRefresh }: { customer: Company, o
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mt-5 border-b border-[#E5E7EB]">
+        <div className="flex gap-4 mt-5 border-b border-[#E5E7EB] overflow-x-auto hide-scrollbar pb-1">
           {['Overview', 'Orders', 'Quotes', 'Payments', 'Notes'].map((tab) => (
              <button 
                 key={tab} 

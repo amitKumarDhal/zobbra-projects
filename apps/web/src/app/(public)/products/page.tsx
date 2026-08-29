@@ -122,7 +122,7 @@ function ProductsCatalog() {
           <p className="text-sm mt-1 text-center max-w-sm">We couldn't find any products matching your current category or search criteria.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {products.map((item) => (
             <Card key={item.id} className="bg-white border-[#E5E7EB] overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
               <div className="overflow-hidden bg-[#F8F9FC] h-64 flex items-center justify-center relative">
