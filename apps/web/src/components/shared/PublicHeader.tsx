@@ -10,7 +10,6 @@ import {
   MapPin,
   Mail,
   Phone,
-  ShoppingBag,
 } from 'lucide-react';
 
 export function PublicHeader() {
@@ -180,24 +179,13 @@ export function PublicHeader() {
               )}
             </nav>
 
-            {/* Right: CTA Button & Shopping Bag Icon */}
+            {/* Right: CTA Button */}
             <div className="hidden md:flex items-center gap-4">
               <Link
                 href="/get-quote"
                 className="px-4 py-2 bg-[#050505] hover:bg-[#1f1f1f] text-white text-[12px] font-bold tracking-wider uppercase rounded-[3px] transition-all shadow-sm active:scale-[0.98]"
               >
                 GET A FREE QUOTE
-              </Link>
-
-              <Link
-                href="/customer/orders"
-                className="relative p-1.5 text-[#111111] hover:text-black transition-colors"
-                title="Your Cart & Orders"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                <span className="absolute -top-1 -right-1 bg-white border border-[#111111] text-[#111111] text-[9px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">
-                  0
-                </span>
               </Link>
             </div>
 
