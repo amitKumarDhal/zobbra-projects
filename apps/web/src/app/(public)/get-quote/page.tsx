@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
-import { CheckCircle2, Building2, Package, Palette, Calendar, UploadCloud, Sparkles } from 'lucide-react';
+import { CheckCircle2, Building2, Package, Palette, Calendar, UploadCloud, Sparkles, Loader2 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 
-export default function GetQuotePage() {
+function GetQuoteForm() {
+  const searchParams = useSearchParams();
   const [submitted, setSubmitted] = useState(false);
   const [inquiryNumber, setInquiryNumber] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,6 +37,26 @@ export default function GetQuotePage() {
     budget: '₹25,000 – ₹50,000',
     deliveryDate: '',
   });
+
+  // Pre-fill from URL parameters (e.g. from /products/[id] quote configurator button)
+  useEffect(() => {
+    const productParam = searchParams.get('product');
+    const qtyParam = searchParams.get('qty');
+    const colorParam = searchParams.get('color');
+    const sizeParam = searchParams.get('size');
+    const categoryParam = searchParams.get('category');
+
+    if (productParam || qtyParam || colorParam || sizeParam || categoryParam) {
+      setFormData(prev => ({
+        ...prev,
+        specificProduct: productParam || prev.specificProduct,
+        quantity: qtyParam ? Number(qtyParam) : prev.quantity,
+        colors: colorParam || prev.colors,
+        sizes: sizeParam || prev.sizes,
+        productInterest: categoryParam || prev.productInterest,
+      }));
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) {
@@ -242,7 +264,7 @@ export default function GetQuotePage() {
                     data-cy="email-input"
                     value={formData.email} 
                     onChange={e => setFormData({ ...formData, email: e.target.value })} 
-                    placeholder="rahul@acmetech.com" 
+                    placeholder="you@company.com" 
                     className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all" 
                   />
                 </div>
@@ -498,5 +520,20 @@ export default function GetQuotePage() {
         )}
       </Card>
     </div>
+  );
+}
+
+export default function GetQuotePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[400px] flex flex-col items-center justify-center text-gray-500 py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-[#3B6FEB] mb-3" />
+          <p className="text-sm font-medium">Loading quote configurator...</p>
+        </div>
+      }
+    >
+      <GetQuoteForm />
+    </Suspense>
   );
 }

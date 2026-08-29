@@ -280,7 +280,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
             {/* Actions */}
             <div className="space-y-3 pt-2">
-              <Link href={`/customer/create-quote?product=${product.id}&qty=${qty}`} className="block">
+              <Link 
+                href={`/get-quote?product=${encodeURIComponent(product.name)}&qty=${qty}&color=${encodeURIComponent(selectedColor || '')}&size=${encodeURIComponent(selectedSize || '')}&id=${product.id}`} 
+                className="block"
+              >
                 <button className="w-full py-3.5 bg-[#111111] hover:bg-[#000000] text-white text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm">
                   START QUOTE CONFIGURATOR <ArrowRight className="w-4 h-4" />
                 </button>
