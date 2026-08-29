@@ -155,7 +155,7 @@ export default function ForgotPasswordPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="name@company.com"
-                      className="w-full pl-11 pr-4 py-3 bg-white border border-[#E5E7EB] rounded-xl text-[15px] text-[#050505] focus:outline-none focus:border-[#3B6FEB] focus:ring-4 focus:ring-[#3B6FEB]/10 transition-all placeholder:text-[#9CA3AF]"
+                      className="w-full pl-11 pr-4 py-3 bg-white border border-[#E5E7EB] rounded-xl text-[15px] text-[#050505] focus:outline-none focus:border-[#050505] focus:ring-4 focus:ring-[#050505]/10 transition-all placeholder:text-[#9CA3AF]"
                     />
                   </div>
                 </div>
@@ -164,7 +164,7 @@ export default function ForgotPasswordPage() {
                   type="submit"
                   data-cy="forgot-submit-button"
                   disabled={loading}
-                  className="w-full py-3.5 mt-4 bg-[#3B6FEB] hover:bg-[#2563EB] text-white rounded-xl text-[15px] font-bold shadow-[0_4px_14px_rgba(59,111,235,0.3)] hover:shadow-[0_6px_20px_rgba(59,111,235,0.4)] transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100"
+                  className="w-full py-3.5 mt-4 bg-[#050505] hover:bg-[#222222] text-white rounded-xl text-[15px] font-bold shadow-md hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100 uppercase tracking-wider"
                 >
                   {loading ? 'SENDING LINK...' : 'SEND RESET LINK'}
                 </button>

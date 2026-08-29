@@ -360,11 +360,11 @@ export default function RegisterPage() {
                     checked={agreed}
                     onChange={(e) => setAgreed(e.target.checked)}
                   />
-                  <div className="w-5 h-5 border border-[#E5E7EB] rounded bg-white peer-checked:bg-[#3B6FEB] peer-checked:border-[#3B6FEB] transition-colors"></div>
+                  <div className="w-5 h-5 border border-[#E5E7EB] rounded bg-white peer-checked:bg-[#050505] peer-checked:border-[#050505] transition-colors"></div>
                   <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 17 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 5.5L6 10.5L16 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
                 <span className="text-sm font-medium text-[#6B7280] group-hover:text-[#050505] transition-colors">
-                  I agree to the <a href="#" className="text-[#3B6FEB] hover:underline font-bold">Terms & Conditions</a> and <a href="#" className="text-[#3B6FEB] hover:underline font-bold">Privacy Policy</a>
+                  I agree to the <a href="/terms" className="text-[#050505] hover:underline font-bold">Terms &amp; Conditions</a> and <a href="/privacy" className="text-[#050505] hover:underline font-bold">Privacy Policy</a>
                 </span>
               </label>
             </div>
@@ -374,7 +374,7 @@ export default function RegisterPage() {
               data-cy="register-submit-button"
               disabled={loading}
               onClick={handleRegister}
-              className="w-full py-3.5 mt-4 bg-[#3B6FEB] hover:bg-[#2563EB] text-white rounded-xl text-[15px] font-bold shadow-[0_4px_14px_rgba(59,111,235,0.3)] hover:shadow-[0_6px_20px_rgba(59,111,235,0.4)] transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100"
+              className="w-full py-3.5 mt-4 bg-[#050505] hover:bg-[#222222] text-white rounded-xl text-[15px] font-bold shadow-md hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100 uppercase tracking-wider"
             >
               {loading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
             </button>

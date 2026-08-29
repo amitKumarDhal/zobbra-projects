@@ -179,14 +179,14 @@ export default function LoginPage() {
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-[#050505]">Email Address</label>
               <div className="relative group">
-                <Mail className="w-5 h-5 text-[#9CA3AF] absolute left-3.5 top-3.5 group-focus-within:text-[#3B6FEB] transition-colors" />
+                <Mail className="w-5 h-5 text-[#9CA3AF] absolute left-3.5 top-3.5 group-focus-within:text-[#050505] transition-colors" />
                 <input
                   type="email"
                   data-cy="email-input"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@company.com"
-                  className="w-full pl-11 pr-4 py-3 bg-white border border-[#E5E7EB] rounded-xl text-[15px] text-[#050505] focus:outline-none focus:border-[#3B6FEB] focus:ring-4 focus:ring-[#3B6FEB]/10 transition-all placeholder:text-[#9CA3AF]"
+                  className="w-full pl-11 pr-4 py-3 bg-white border border-[#E5E7EB] rounded-xl text-[15px] text-[#050505] focus:outline-none focus:border-[#050505] focus:ring-4 focus:ring-[#050505]/10 transition-all placeholder:text-[#9CA3AF]"
                 />
               </div>
             </div>
@@ -196,14 +196,14 @@ export default function LoginPage() {
                 <label className="text-sm font-bold text-[#050505]">Password</label>
               </div>
               <div className="relative group">
-                <Lock className="w-5 h-5 text-[#9CA3AF] absolute left-3.5 top-3.5 group-focus-within:text-[#3B6FEB] transition-colors" />
+                <Lock className="w-5 h-5 text-[#9CA3AF] absolute left-3.5 top-3.5 group-focus-within:text-[#050505] transition-colors" />
                 <input
                   type={showPassword ? "text" : "password"}
                   data-cy="password-input"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-11 pr-12 py-3 bg-white border border-[#E5E7EB] rounded-xl text-[15px] text-[#050505] focus:outline-none focus:border-[#3B6FEB] focus:ring-4 focus:ring-[#3B6FEB]/10 transition-all placeholder:text-[#9CA3AF]"
+                  className="w-full pl-11 pr-12 py-3 bg-white border border-[#E5E7EB] rounded-xl text-[15px] text-[#050505] focus:outline-none focus:border-[#050505] focus:ring-4 focus:ring-[#050505]/10 transition-all placeholder:text-[#9CA3AF]"
                 />
                 <button 
                   type="button" 
@@ -219,13 +219,13 @@ export default function LoginPage() {
               <label className="flex items-center gap-2 cursor-pointer group">
                 <div className="relative flex items-center justify-center">
                   <input type="checkbox" className="peer sr-only" />
-                  <div className="w-4 h-4 border border-[#E5E7EB] rounded bg-white peer-checked:bg-[#3B6FEB] peer-checked:border-[#3B6FEB] transition-colors"></div>
+                  <div className="w-4 h-4 border border-[#E5E7EB] rounded bg-white peer-checked:bg-[#050505] peer-checked:border-[#050505] transition-colors"></div>
                   <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 17 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 5.5L6 10.5L16 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
                 <span className="text-sm font-medium text-[#6B7280] group-hover:text-[#050505] transition-colors">Remember me</span>
               </label>
               
-              <Link href="/forgot-password" className="text-sm font-bold text-[#3B6FEB] hover:text-[#2563EB] transition-colors">
+              <Link href="/forgot-password" className="text-sm font-bold text-[#050505] hover:underline transition-colors">
                 Forgot Password?
               </Link>
             </div>
@@ -234,12 +234,15 @@ export default function LoginPage() {
               type="submit"
               data-cy="login-submit-button"
               disabled={loading}
-              className="w-full py-3.5 mt-4 bg-[#3B6FEB] hover:bg-[#2563EB] text-white rounded-xl text-[15px] font-bold shadow-[0_4px_14px_rgba(59,111,235,0.3)] hover:shadow-[0_6px_20px_rgba(59,111,235,0.4)] transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100"
+              className="w-full py-3.5 mt-4 bg-[#050505] hover:bg-[#222222] text-white rounded-xl text-[15px] font-bold shadow-md hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100 uppercase tracking-wider"
             >
               {loading ? 'SIGNING IN...' : 'SIGN IN'}
             </button>
             
-            <Link href="/register" className="flex items-center justify-center w-full py-3.5 mt-3 bg-white border border-[#E5E7EB] text-[#050505] hover:bg-[#F9FAFB] rounded-xl text-[15px] font-bold transition-all active:scale-[0.98]">
+            <Link 
+              href="/register" 
+              className="flex items-center justify-center w-full py-3.5 mt-3 bg-white border-2 border-[#050505] text-[#050505] hover:bg-[#050505] hover:text-white rounded-xl text-[15px] font-bold transition-all active:scale-[0.98] tracking-wide shadow-sm"
+            >
               Create an account
             </Link>
           </form>

@@ -178,7 +178,7 @@ function ResetPasswordForm() {
                   placeholder="Re-enter new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-3 bg-[#F9FAFB] border border-[#E5E7EB] text-sm text-gray-900 focus:outline-none focus:border-[#3B6FEB] focus:bg-white transition-all font-medium"
+                  className="w-full pl-10 pr-10 py-3 bg-[#F9FAFB] border border-[#E5E7EB] text-sm text-gray-900 focus:outline-none focus:border-[#050505] focus:bg-white transition-all font-medium"
                 />
               </div>
             </div>
@@ -186,7 +186,7 @@ function ResetPasswordForm() {
             <button
               type="submit"
               disabled={loading || !token}
-              className="w-full py-3.5 bg-[#3B6FEB] hover:bg-[#2563EB] text-white text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg mt-6"
+              className="w-full py-3.5 bg-[#050505] hover:bg-[#222222] text-white text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg mt-6"
             >
               {loading ? 'Updating Password...' : 'Save New Password'}
             </button>
