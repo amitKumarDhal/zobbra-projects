@@ -1,6 +1,12 @@
-import axios from 'axios';
+// LEGACY FILE — This directory (web/) is NOT the active Railway frontend.
+// The active deployed frontend is apps/web/. This file is preserved for
+// historical reference only. See apps/web/src/lib/api.ts for the production version.
+//
+// Fix applied: removed bare localhost fallback; uses env var or Railway URL.
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'https://zobra-server-production.up.railway.app/api/v1';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 export const apiClient = axios.create({
   baseURL: API_BASE,

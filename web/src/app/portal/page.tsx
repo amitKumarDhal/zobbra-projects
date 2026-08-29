@@ -198,7 +198,7 @@ export default function CustomerPortalPage() {
                     </div>
 
                     <div className="flex items-center justify-between pt-2">
-                      <a href={`http://localhost:5000/api/v1/quotes/${q.id}/pdf`} target="_blank" rel="noreferrer">
+                      <a href={`${apiClient.defaults.baseURL}/quotes/${q.id}/pdf`} target="_blank" rel="noreferrer">
                         <Button variant="outline" size="sm" className="gap-2">
                           <Download className="w-4 h-4" /> Download PDF Quote
                         </Button>

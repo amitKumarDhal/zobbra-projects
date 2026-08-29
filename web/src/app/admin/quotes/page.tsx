@@ -173,7 +173,7 @@ export default function AdminQuotesPage() {
                       <Button variant="outline" size="sm" className="gap-1" onClick={() => handleOpenEditModal(q)}>
                         <Edit3 className="w-3.5 h-3.5 text-blue-600" /> Reprice
                       </Button>
-                      <a href={`http://localhost:5000/api/v1/quotes/${q.id}/pdf`} target="_blank" rel="noreferrer">
+                      <a href={`${apiClient.defaults.baseURL}/quotes/${q.id}/pdf`} target="_blank" rel="noreferrer">
                         <Button variant="outline" size="sm" className="gap-1">
                           <Download className="w-3 h-3" /> PDF
                         </Button>
