@@ -179,8 +179,14 @@ export function PublicHeader() {
               )}
             </nav>
 
-            {/* Right: CTA Button */}
+            {/* Right: Login & CTA Button */}
             <div className="hidden md:flex items-center gap-4">
+              <Link
+                href="/login"
+                className="text-[13px] font-semibold text-[#444444] hover:text-[#050505] transition-colors py-1.5 px-2.5 rounded hover:bg-[#F7F7F5]"
+              >
+                Login
+              </Link>
               <Link
                 href="/get-quote"
                 className="px-4 py-2 bg-[#050505] hover:bg-[#1f1f1f] text-white text-[12px] font-bold tracking-wider uppercase rounded-[3px] transition-all shadow-sm active:scale-[0.98]"
@@ -246,13 +252,22 @@ export function PublicHeader() {
                 )}
               </div>
             ))}
-            <Link
-              href="/get-quote"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block mt-4 text-center px-4 py-2.5 bg-[#050505] text-white text-xs font-bold uppercase tracking-wider rounded-[3px]"
-            >
-              GET A FREE QUOTE
-            </Link>
+            <div className="pt-3 border-t border-[#E5E5E5] space-y-2 mt-2">
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block text-center py-2.5 px-3 text-sm font-semibold text-[#333333] hover:text-black hover:bg-[#F7F7F5] rounded border border-[#E5E5E5] transition-colors"
+              >
+                Login
+              </Link>
+              <Link
+                href="/get-quote"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block text-center px-4 py-2.5 bg-[#050505] text-white text-xs font-bold uppercase tracking-wider rounded-[3px]"
+              >
+                GET A FREE QUOTE
+              </Link>
+            </div>
           </div>
         )}
       </header>
