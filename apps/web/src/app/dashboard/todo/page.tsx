@@ -7,6 +7,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 import { API_URL } from '@/lib/api';
+import { triggerSidebarCountsRefresh } from '@/hooks/useAdminSidebarCounts';
 
 export default function TodoPage() {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -71,6 +72,7 @@ export default function TodoPage() {
             overdue: s.overdue || 0,
             completed: s.completed || 0
          });
+         triggerSidebarCountsRefresh();
       }
     } catch (error) {
       console.error('Failed to load tasks:', error);

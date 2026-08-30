@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { API_URL } from '@/lib/api';
 import { buildWhatsAppUrl, getQuoteWhatsAppMessage } from '@/lib/whatsapp';
+import { triggerSidebarCountsRefresh } from '@/hooks/useAdminSidebarCounts';
 import {
   MessageSquare,
   Send,
@@ -231,12 +232,14 @@ export default function AdminQuoteDetailPage() {
         },
       });
       const data = await res.json();
+      triggerSidebarCountsRefresh();
       if (res.ok && data.success) {
         router.push('/dashboard/orders');
       } else {
         router.push('/dashboard/orders');
       }
     } catch (err) {
+      triggerSidebarCountsRefresh();
       router.push('/dashboard/orders');
     } finally {
       setUpdating(false);

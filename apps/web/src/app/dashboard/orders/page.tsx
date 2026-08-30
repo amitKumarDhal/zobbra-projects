@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 
 import { API_URL } from '@/lib/api';
 import { buildWhatsAppUrl, getOrderWhatsAppMessage } from '@/lib/whatsapp';
+import { triggerSidebarCountsRefresh } from '@/hooks/useAdminSidebarCounts';
 
 // Types
 type OrderStatus = 'PENDING' | 'CONFIRMED' | 'IN_PRODUCTION' | 'READY_FOR_DISPATCH' | 'DISPATCHED' | 'DELIVERED' | 'CANCELLED';
@@ -66,6 +67,7 @@ export default function OrdersPage() {
       
       if(resStats.success) {
         setStats(resStats.stats || {});
+        triggerSidebarCountsRefresh();
       }
     } catch (error) {
       console.error('Failed to load orders:', error);
@@ -328,6 +330,7 @@ function OrderDrawer({ order, onClose, onRefresh }: { order: Order, onClose: () 
       }).then(r => r.json());
       
       if (res.success) {
+         triggerSidebarCountsRefresh();
          onRefresh();
       } else {
          alert(res.message);

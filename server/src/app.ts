@@ -49,6 +49,7 @@ app.use('/api/v1/agents', agentRoutes);
 app.use('/api/v1/coupons', couponRoutes);
 app.use('/api/v1/testimonials', testimonialRoutes);
 app.use('/api/v1/invoices', invoiceRoutes);
+app.use('/api/v1/admin', reportRoutes);
 
 
 // Error Handler

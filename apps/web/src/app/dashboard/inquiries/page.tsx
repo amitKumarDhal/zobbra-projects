@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 
 import { API_URL } from '@/lib/api';
 import { buildWhatsAppUrl } from '@/lib/whatsapp';
+import { triggerSidebarCountsRefresh } from '@/hooks/useAdminSidebarCounts';
 
 // --- TYPES ---
 type InquiryStatus = 'NEW' | 'CONTACTED' | 'FOLLOW_UP' | 'QUOTED' | 'CONVERTED' | 'LOST' | 'CLOSED';
@@ -70,6 +71,7 @@ export default function InquiriesPage() {
       ]);
       setInquiries(resList.data || []);
       setStats(resStats || {});
+      triggerSidebarCountsRefresh();
     } catch (err: any) {
       console.error('Failed to load inquiries:', err.message);
     } finally {

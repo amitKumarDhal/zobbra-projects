@@ -23,6 +23,8 @@ import {
   LogOut,
   X,
 } from 'lucide-react';
+import { useAdminSidebarCounts } from '@/hooks/useAdminSidebarCounts';
+import { useCustomerUser } from '@/hooks/useCustomerUser';
 
 interface AdminSidebarProps {
   isOpen?: boolean;
@@ -32,16 +34,21 @@ interface AdminSidebarProps {
 export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { counts, loading } = useAdminSidebarCounts();
+  const { user } = useCustomerUser();
+
+  const userName = user?.name || 'ZOBBRA Admin';
+  const userEmail = user?.email || 'admin@zobbra.com';
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Inquiry', href: '/dashboard/inquiries', icon: MessageSquare, badge: 23 },
-    { name: 'Quote', href: '/dashboard/quotes', icon: FileText, badge: 15 },
-    { name: 'Order', href: '/dashboard/orders', icon: ShoppingBag, badge: 18 },
+    { name: 'Inquiry', href: '/dashboard/inquiries', icon: MessageSquare, badge: counts.inquiries, hasBadge: true },
+    { name: 'Quote', href: '/dashboard/quotes', icon: FileText, badge: counts.quotes, hasBadge: true },
+    { name: 'Order', href: '/dashboard/orders', icon: ShoppingBag, badge: counts.orders, hasBadge: true },
     { name: 'Report', href: '/dashboard/reports', icon: BarChart3 },
     { name: 'Customers', href: '/dashboard/customers', icon: Users },
     { name: 'Products', href: '/dashboard/products', icon: Package },
-    { name: 'To Do', href: '/dashboard/todo', icon: CheckSquare, badge: 12 },
+    { name: 'To Do', href: '/dashboard/todo', icon: CheckSquare, badge: counts.todo, hasBadge: true },
     { name: 'Agents', href: '/dashboard/agents', icon: UserCircle },
     { name: 'Payments', href: '/dashboard/payments', icon: CreditCard },
     { name: 'Coupon', href: '/dashboard/coupons', icon: Ticket },
@@ -118,10 +125,14 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
                   {!collapsed && <span>{item.name}</span>}
                 </div>
                 
-                {!collapsed && item.badge && (
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isActive ? 'bg-white/20 text-white' : 'bg-[#1E293B] text-slate-300'}`}>
-                    {item.badge}
-                  </span>
+                {!collapsed && item.hasBadge && (
+                  loading ? (
+                    <span className="w-5 h-4 bg-slate-800/80 rounded animate-pulse" />
+                  ) : typeof item.badge === 'number' && item.badge > 0 ? (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isActive ? 'bg-white/20 text-white' : 'bg-[#1E293B] text-slate-300'}`}>
+                      {item.badge}
+                    </span>
+                  ) : null
                 )}
               </Link>
             );
@@ -130,16 +141,16 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
       </div>
 
       {/* Sidebar User Footer */}
-      <div className="pt-4 mt-4">
+      <div className="pt-4 mt-4 border-t border-slate-800/80">
         {!collapsed ? (
           <div className="flex items-center justify-between px-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-[#1E293B] text-white font-heading font-bold text-xs flex items-center justify-center rounded-full">
-                Z
+                {userName.charAt(0).toUpperCase()}
               </div>
               <div className="text-[11px]">
-                <p className="font-bold text-white leading-tight">ZOBBRA Admin</p>
-                <p className="text-slate-400 text-[10px] font-medium truncate max-w-[100px]">admin@zobbra.com</p>
+                <p className="font-bold text-white leading-tight truncate max-w-[120px]">{userName}</p>
+                <p className="text-slate-400 text-[10px] font-medium truncate max-w-[120px]">{userEmail}</p>
               </div>
             </div>
             <Link href="/login" className="text-slate-400 hover:text-rose-400 p-1 transition-colors" title="Sign Out">

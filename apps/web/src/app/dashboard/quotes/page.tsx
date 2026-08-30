@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 
 import { API_URL } from '@/lib/api';
 import { buildWhatsAppUrl, getQuoteWhatsAppMessage } from '@/lib/whatsapp';
+import { triggerSidebarCountsRefresh } from '@/hooks/useAdminSidebarCounts';
 
 // Types
 type QuoteStatus = 'DRAFT' | 'SENT' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
@@ -65,6 +66,7 @@ export default function QuotesPage() {
       
       if(resStats.success) {
         setStats(resStats.stats || {});
+        triggerSidebarCountsRefresh();
       }
     } catch (error) {
       console.error('Failed to load quotes:', error);
