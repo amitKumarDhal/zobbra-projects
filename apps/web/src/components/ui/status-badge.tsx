@@ -13,46 +13,50 @@ import { cn } from '@/lib/utils';
  */
 const STATUS_MAP: Record<string, { variant: SemanticVariant; label: string }> = {
   // ── Quote ─────────────────────────────────────────────────────
-  DRAFT:       { variant: 'neutral',  label: 'Draft'       },
-  SENT:        { variant: 'info',     label: 'Sent'        },
-  APPROVED:    { variant: 'success',  label: 'Approved'    },
-  REJECTED:    { variant: 'danger',   label: 'Rejected'    },
-  EXPIRED:     { variant: 'danger',   label: 'Expired'     },
+  DRAFT:              { variant: 'neutral',  label: 'Draft'              },
+  SENT:               { variant: 'info',     label: 'Sent'               },
+  APPROVED:           { variant: 'success',  label: 'Approved'           },
+  REJECTED:           { variant: 'danger',   label: 'Rejected'           },
+  EXPIRED:            { variant: 'danger',   label: 'Expired'            },
 
   // ── Order ──────────────────────────────────────────────────────
-  PENDING:     { variant: 'warning',  label: 'Pending'     },
-  CONFIRMED:   { variant: 'info',     label: 'Confirmed'   },
-  PROCESSING:  { variant: 'info',     label: 'Processing'  },
-  COMPLETED:   { variant: 'success',  label: 'Completed'   },
-  DELIVERED:   { variant: 'success',  label: 'Delivered'   },
-  CANCELLED:   { variant: 'danger',   label: 'Cancelled'   },
-  SHIPPED:     { variant: 'info',     label: 'Shipped'     },
+  PENDING:            { variant: 'warning',  label: 'Pending'            },
+  CONFIRMED:          { variant: 'info',     label: 'Confirmed'          },
+  PROCESSING:         { variant: 'info',     label: 'Processing'         },
+  IN_PRODUCTION:      { variant: 'primary',  label: 'In Production'      },
+  READY_FOR_DISPATCH: { variant: 'primary',  label: 'Ready to Dispatch'  },
+  DISPATCHED:         { variant: 'info',     label: 'Dispatched'         },
+  SHIPPED:            { variant: 'info',     label: 'Shipped'            },
+  DELIVERED:          { variant: 'success',  label: 'Delivered'          },
+  COMPLETED:          { variant: 'success',  label: 'Completed'          },
+  CANCELLED:          { variant: 'danger',   label: 'Cancelled'          },
+  CLOSED:             { variant: 'neutral',  label: 'Closed'             },
 
   // ── Payment ────────────────────────────────────────────────────
-  UNPAID:      { variant: 'warning',  label: 'Unpaid'      },
-  PARTIAL:     { variant: 'warning',  label: 'Partial'     },
-  PAID:        { variant: 'success',  label: 'Paid'        },
-  FAILED:      { variant: 'danger',   label: 'Failed'      },
-  OVERDUE:     { variant: 'danger',   label: 'Overdue'     },
-  REFUNDED:    { variant: 'neutral',  label: 'Refunded'    },
+  UNPAID:             { variant: 'warning',  label: 'Unpaid'             },
+  PARTIAL:            { variant: 'warning',  label: 'Partial'            },
+  PAID:               { variant: 'success',  label: 'Paid'               },
+  FAILED:             { variant: 'danger',   label: 'Failed'             },
+  OVERDUE:            { variant: 'danger',   label: 'Overdue'            },
+  REFUNDED:           { variant: 'neutral',  label: 'Refunded'           },
 
   // ── Inquiry ────────────────────────────────────────────────────
-  NEW:         { variant: 'info',     label: 'New'         },
-  CONTACTED:   { variant: 'info',     label: 'Contacted'   },
-  FOLLOW_UP:   { variant: 'warning',  label: 'Follow-up'   },
-  QUOTED:      { variant: 'warning',  label: 'Quoted'      },
-  CONVERTED:   { variant: 'success',  label: 'Converted'   },
-  LOST:        { variant: 'danger',   label: 'Lost'        },
+  NEW:                { variant: 'primary',  label: 'New'                },
+  CONTACTED:          { variant: 'warning',  label: 'Contacted'          },
+  FOLLOW_UP:          { variant: 'warning',  label: 'Follow-up'          },
+  QUOTED:             { variant: 'info',     label: 'Quoted'             },
+  CONVERTED:          { variant: 'success',  label: 'Converted'          },
+  LOST:               { variant: 'danger',   label: 'Lost'               },
 
   // ── Coupon ─────────────────────────────────────────────────────
-  ACTIVE:      { variant: 'success',  label: 'Active'      },
-  INACTIVE:    { variant: 'neutral',  label: 'Inactive'    },
+  ACTIVE:             { variant: 'success',  label: 'Active'             },
+  INACTIVE:           { variant: 'neutral',  label: 'Inactive'           },
 
   // ── Task ───────────────────────────────────────────────────────
-  IN_PROGRESS: { variant: 'info',     label: 'In Progress' },
+  IN_PROGRESS:        { variant: 'info',     label: 'In Progress'        },
 
   // ── General ───────────────────────────────────────────────────
-  ARCHIVED:    { variant: 'neutral',  label: 'Archived'    },
+  ARCHIVED:           { variant: 'neutral',  label: 'Archived'           },
 };
 
 type SemanticVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'primary';

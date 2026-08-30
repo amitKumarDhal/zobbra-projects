@@ -60,6 +60,37 @@
   --color-neutral-soft:    #F8FAFC;
   --color-neutral-border:  #E2E8F0;
 
+  /* ── Admin Sidebar ───────────────────────────────────────────── */
+  /* Inactive icon/text — readable blue-slate, enough contrast on #0A0F1C */
+  --color-sidebar-icon:          #8B9EC5;
+  /* Hover background — brand-tinted, 10% opacity */
+  --color-sidebar-hover-bg:      rgba(59, 111, 235, 0.10);
+  /* Active item glow */
+  --color-sidebar-active-shadow: rgba(59, 111, 235, 0.32);
+  /* Badge background for inactive items */
+  --color-sidebar-badge-bg:      #1A2540;
+  /* Avatar tinted background */
+  --color-sidebar-avatar-bg:     #1A2B4A;
+  /* Section/logo area separator */
+  --color-sidebar-border:        rgba(255, 255, 255, 0.07);
+
+  /* ── Admin KPI Semantic Families ────────────────────────────── */
+  /* Inquiry / Primary — brand blue */
+  --color-kpi-inquiry-bg:    #EEF2FF;
+  --color-kpi-inquiry-icon:  #3B6FEB;
+  /* Quotes — emerald green */
+  --color-kpi-quote-bg:      #ECFDF5;
+  --color-kpi-quote-icon:    #059669;
+  /* Orders — amber */
+  --color-kpi-order-bg:      #FFFBEB;
+  --color-kpi-order-icon:    #D97706;
+  /* Revenue / Finance — violet */
+  --color-kpi-revenue-bg:    #F5F3FF;
+  --color-kpi-revenue-icon:  #7C3AED;
+  /* Customers — teal */
+  --color-kpi-customer-bg:   #F0FDFA;
+  --color-kpi-customer-icon: #0D9488;
+
   /* ── Typography ─────────────────────────────────────────────── */
   --font-heading: 'Plus Jakarta Sans';
   --font-sans:    'Inter';
@@ -318,6 +349,17 @@
     background: rgba(0, 0, 0, 0.5);
     z-index: 39;
     backdrop-filter: blur(2px);
+  }
+
+  /* Sidebar nav item hover — brand-tinted, applied via data attribute
+     to avoid overriding the active state (which uses inline style) */
+  a[data-sidebar-item='true'][data-active='false']:hover {
+    background-color: var(--color-sidebar-hover-bg);
+    color: #ffffff;
+  }
+
+  a[data-sidebar-item='true'][data-active='false']:hover svg {
+    color: #ffffff !important;
   }
 }
 

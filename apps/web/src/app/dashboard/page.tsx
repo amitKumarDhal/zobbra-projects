@@ -17,6 +17,17 @@ import {
   MoreHorizontal,
   ChevronDown,
 } from 'lucide-react';
+import { StatusBadge } from '@/components/ui/status-badge';
+
+/* Deterministic avatar color palette — brand-consistent, 5 slots */
+const AVATAR_PALETTE = [
+  'bg-[#EEF2FF] text-[#3B6FEB]',   // brand blue
+  'bg-[#F0FDFA] text-[#0D9488]',   // teal
+  'bg-[#F5F3FF] text-[#7C3AED]',   // violet
+  'bg-[#FFFBEB] text-[#D97706]',   // amber
+  'bg-[#FFF1F2] text-[#BE123C]',   // rose
+];
+const avatarClass = (i: number) => AVATAR_PALETTE[i % AVATAR_PALETTE.length];
 
 export default function AdminDashboardPage() {
   return (
@@ -85,10 +96,10 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* KPI 4 */}
+        {/* KPI 4 — Revenue */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--color-kpi-revenue-bg)', color: 'var(--color-kpi-revenue-icon)' }}>
               <IndianRupee className="w-6 h-6" />
             </div>
             <div>
@@ -97,7 +108,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
           <div className="mt-4 flex items-center gap-2">
-            <span className="flex items-center text-xs font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+            <span className="flex items-center text-xs font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
               <ArrowUp className="w-3 h-3 mr-0.5" /> 22.7%
             </span>
             <span className="text-[10px] text-[#9CA3AF] font-medium">vs last 7 days</span>
@@ -193,14 +204,14 @@ export default function AdminDashboardPage() {
           </div>
           <div className="flex-1 flex flex-col gap-4">
             {[
-              { init: 'RK', name: 'Rakesh Kumar', prod: 'Corporate T-Shirts', time: '2m ago', stat: 'New', c1: 'bg-purple-100 text-purple-700', c2: 'text-green-600 bg-green-50' },
-              { init: 'SP', name: 'Sunita Patel', prod: 'School Uniform', time: '15m ago', stat: 'New', c1: 'bg-pink-100 text-pink-700', c2: 'text-green-600 bg-green-50' },
-              { init: 'AM', name: 'Amit Mohanty', prod: 'Caps & T-Shirts', time: '1h ago', stat: 'Contacted', c1: 'bg-blue-100 text-blue-700', c2: 'text-amber-600 bg-amber-50' },
-              { init: 'DB', name: 'Dream Builders Pvt. Ltd.', prod: 'Employee Welcome Kit', time: '2h ago', stat: 'Quoted', c1: 'bg-slate-100 text-slate-700', c2: 'text-blue-600 bg-blue-50' },
-              { init: 'PK', name: 'Pooja Khatri', prod: 'Bags & Accessories', time: '3h ago', stat: 'Closed', c1: 'bg-rose-100 text-rose-700', c2: 'text-slate-500 bg-slate-100' },
+              { init: 'RK', name: 'Rakesh Kumar', prod: 'Corporate T-Shirts', time: '2m ago', status: 'NEW' },
+              { init: 'SP', name: 'Sunita Patel', prod: 'School Uniform', time: '15m ago', status: 'NEW' },
+              { init: 'AM', name: 'Amit Mohanty', prod: 'Caps & T-Shirts', time: '1h ago', status: 'CONTACTED' },
+              { init: 'DB', name: 'Dream Builders Pvt. Ltd.', prod: 'Employee Welcome Kit', time: '2h ago', status: 'QUOTED' },
+              { init: 'PK', name: 'Pooja Khatri', prod: 'Bags & Accessories', time: '3h ago', status: 'CLOSED' },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${item.c1} flex-shrink-0`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${avatarClass(i)}`}>
                   {item.init}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -209,9 +220,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-[10px] text-[#9CA3AF] mb-1">{item.time}</p>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${item.c2}`}>
-                    {item.stat}
-                  </span>
+                  <StatusBadge status={item.status} />
                 </div>
               </div>
             ))}
@@ -237,25 +246,25 @@ export default function AdminDashboardPage() {
               </thead>
               <tbody className="divide-y divide-[#F3F4F6]">
                 {[
-                  { name: 'Rakesh Kumar', prod: 'Corporate T-Shirts', src: 'Website', date: '20 May, 2024', stat: 'New', sc: 'text-green-600 bg-green-50' },
-                  { name: 'Sunita Patel', prod: 'School Uniform', src: 'WhatsApp', date: '20 May, 2024', stat: 'New', sc: 'text-green-600 bg-green-50' },
-                  { name: 'Amit Mohanty', prod: 'Caps & T-Shirts', src: 'Call', date: '20 May, 2024', stat: 'Contacted', sc: 'text-amber-600 bg-amber-50' },
-                  { name: 'Dream Builders Pvt. Ltd.', prod: 'Welcome Kit', src: 'Website', date: '19 May, 2024', stat: 'Quoted', sc: 'text-blue-600 bg-blue-50' },
-                  { name: 'Pooja Khatri', prod: 'Bags & Accessories', src: 'Instagram', date: '19 May, 2024', stat: 'Closed', sc: 'text-slate-500 bg-slate-100' },
+                  { name: 'Rakesh Kumar', prod: 'Corporate T-Shirts', src: 'Website', date: '20 May, 2024', status: 'NEW' },
+                  { name: 'Sunita Patel', prod: 'School Uniform', src: 'WhatsApp', date: '20 May, 2024', status: 'NEW' },
+                  { name: 'Amit Mohanty', prod: 'Caps & T-Shirts', src: 'Call', date: '20 May, 2024', status: 'CONTACTED' },
+                  { name: 'Dream Builders Pvt. Ltd.', prod: 'Welcome Kit', src: 'Website', date: '19 May, 2024', status: 'QUOTED' },
+                  { name: 'Pooja Khatri', prod: 'Bags & Accessories', src: 'Instagram', date: '19 May, 2024', status: 'CLOSED' },
                 ].map((row, i) => (
                   <tr key={i} className="hover:bg-[#F9FAFB] transition-colors">
                     <td className="py-3 text-xs font-semibold text-[#111111]">{row.name}</td>
                     <td className="py-3 text-xs text-[#4B5563]">{row.prod}</td>
                     <td className="py-3 text-xs text-[#6B7280] flex items-center gap-1.5">
                       {row.src === 'Website' && <div className="w-3 h-3 rounded-full border border-slate-300 flex items-center justify-center"><Globe className="w-2 h-2 text-slate-500" /></div>}
-                      {row.src === 'WhatsApp' && <div className="w-3 h-3 rounded-full bg-green-500 flex items-center justify-center"><MessageSquare className="w-2 h-2 text-white" /></div>}
-                      {row.src === 'Call' && <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center"><Phone className="w-2 h-2 text-white" /></div>}
+                      {row.src === 'WhatsApp' && <div className="w-3 h-3 rounded-full bg-emerald-500 flex items-center justify-center"><MessageSquare className="w-2 h-2 text-white" /></div>}
+                      {row.src === 'Call' && <div className="w-3 h-3 rounded-full bg-[#3B6FEB] flex items-center justify-center"><Phone className="w-2 h-2 text-white" /></div>}
                       {row.src === 'Instagram' && <div className="w-3 h-3 rounded-full bg-pink-500 flex items-center justify-center"><Camera className="w-2 h-2 text-white" /></div>}
                       {row.src}
                     </td>
                     <td className="py-3 text-xs text-[#6B7280]">{row.date}</td>
                     <td className="py-3">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${row.sc}`}>{row.stat}</span>
+                      <StatusBadge status={row.status} />
                     </td>
                   </tr>
                 ))}
@@ -321,9 +330,9 @@ export default function AdminDashboardPage() {
 
       {/* ── BOTTOM KPI CARDS ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* KPI 5 */}
+        {/* KPI 5 — Orders */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--color-kpi-order-bg)', color: 'var(--color-kpi-order-icon)' }}>
             <ShoppingBag className="w-5 h-5" />
           </div>
           <div className="flex-1">
@@ -331,16 +340,16 @@ export default function AdminDashboardPage() {
             <h3 className="text-lg font-black text-[#111111] mt-0.5">156</h3>
           </div>
           <div className="text-right">
-            <span className="flex items-center justify-end text-[10px] font-bold text-green-600">
+            <span className="flex items-center justify-end text-[10px] font-bold text-emerald-700">
               <ArrowUp className="w-3 h-3 mr-0.5" /> 14.3%
             </span>
             <span className="text-[9px] text-[#9CA3AF] font-medium">this month</span>
           </div>
         </div>
 
-        {/* KPI 6 */}
+        {/* KPI 6 — Revenue */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--color-kpi-revenue-bg)', color: 'var(--color-kpi-revenue-icon)' }}>
             <IndianRupee className="w-5 h-5" />
           </div>
           <div className="flex-1">
@@ -348,16 +357,16 @@ export default function AdminDashboardPage() {
             <h3 className="text-lg font-black text-[#111111] mt-0.5">₹6,78,540</h3>
           </div>
           <div className="text-right">
-            <span className="flex items-center justify-end text-[10px] font-bold text-green-600">
+            <span className="flex items-center justify-end text-[10px] font-bold text-emerald-700">
               <ArrowUp className="w-3 h-3 mr-0.5" /> 16.5%
             </span>
             <span className="text-[9px] text-[#9CA3AF] font-medium">this month</span>
           </div>
         </div>
 
-        {/* KPI 7 */}
+        {/* KPI 7 — Customers */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--color-kpi-customer-bg)', color: 'var(--color-kpi-customer-icon)' }}>
             <Users className="w-5 h-5" />
           </div>
           <div className="flex-1">
@@ -365,16 +374,16 @@ export default function AdminDashboardPage() {
             <h3 className="text-lg font-black text-[#111111] mt-0.5">312</h3>
           </div>
           <div className="text-right">
-            <span className="flex items-center justify-end text-[10px] font-bold text-green-600">
+            <span className="flex items-center justify-end text-[10px] font-bold text-emerald-700">
               <ArrowUp className="w-3 h-3 mr-0.5" /> 10.2%
             </span>
             <span className="text-[9px] text-[#9CA3AF] font-medium">this month</span>
           </div>
         </div>
 
-        {/* KPI 8 */}
+        {/* KPI 8 — Conversion */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--color-kpi-inquiry-bg)', color: 'var(--color-kpi-inquiry-icon)' }}>
             <TrendingUp className="w-5 h-5" />
           </div>
           <div className="flex-1">
@@ -382,7 +391,7 @@ export default function AdminDashboardPage() {
             <h3 className="text-lg font-black text-[#111111] mt-0.5">18.7%</h3>
           </div>
           <div className="text-right">
-            <span className="flex items-center justify-end text-[10px] font-bold text-green-600">
+            <span className="flex items-center justify-end text-[10px] font-bold text-emerald-700">
               <ArrowUp className="w-3 h-3 mr-0.5" /> 2.6%
             </span>
             <span className="text-[9px] text-[#9CA3AF] font-medium">this month</span>

@@ -79,17 +79,6 @@ export default function InquiriesPage() {
     }
   };
 
-  const getStatusColor = (status: InquiryStatus) => {
-    switch (status) {
-      case 'NEW': return 'text-green-600 bg-green-50 border-green-100';
-      case 'CONTACTED': return 'text-amber-600 bg-amber-50 border-amber-100';
-      case 'FOLLOW_UP': return 'text-purple-600 bg-purple-50 border-purple-100';
-      case 'QUOTED': return 'text-blue-600 bg-blue-50 border-blue-100';
-      case 'CONVERTED': return 'text-emerald-600 bg-emerald-50 border-emerald-100';
-      case 'LOST': return 'text-red-600 bg-red-50 border-red-100';
-      default: return 'text-slate-600 bg-slate-50 border-slate-100';
-    }
-  };
 
   const getSourceIcon = (source: InquirySource) => {
     switch (source) {
@@ -281,15 +270,6 @@ export default function InquiriesPage() {
 function InquiryDrawer({ inquiry, onClose, onRefresh }: { inquiry: Inquiry, onClose: () => void, onRefresh: () => void }) {
   const [note, setNote] = useState('');
 
-  const getStatusColor = (status: InquiryStatus) => {
-    switch (status) {
-      case 'NEW': return 'text-green-600 bg-green-50 border-green-200';
-      case 'CONTACTED': return 'text-amber-600 bg-amber-50 border-amber-200';
-      case 'QUOTED': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'CONVERTED': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-      default: return 'text-slate-600 bg-slate-50 border-slate-200';
-    }
-  };
 
   const handleConvertToQuote = async () => {
     try {
@@ -341,7 +321,7 @@ function InquiryDrawer({ inquiry, onClose, onRefresh }: { inquiry: Inquiry, onCl
           <h2 className="text-lg font-heading font-black text-[#111111]">Inquiry Details</h2>
           <div className="flex items-center gap-3 mt-1.5">
             <span className="text-sm font-bold text-[#111111]">{inquiry.inquiryNumber}</span>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getStatusColor(inquiry.status)}`}>{inquiry.status}</span>
+            <StatusBadge status={inquiry.status} />
             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${inquiry.customerType === 'REGISTERED' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
               {inquiry.customerType}
             </span>
