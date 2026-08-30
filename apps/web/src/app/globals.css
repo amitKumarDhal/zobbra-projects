@@ -292,10 +292,9 @@
 
   /* Focus visible ring (keyboard navigation) */
   .focus-brand:focus-visible {
-    outline: none;
-    ring: 2px;
-    ring-color: var(--color-brand-primary);
-    ring-offset: 2px;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--color-bg-app), 0 0 0 4px var(--color-brand-primary);
   }
 
   /* Hide scrollbar (keep scroll functionality) — for filter chip rows */
