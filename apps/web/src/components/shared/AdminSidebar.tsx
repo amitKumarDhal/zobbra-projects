@@ -63,134 +63,135 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
 
   const sidebarContent = (
     <aside
-      className={`text-white flex flex-col justify-between p-3 h-full transition-all duration-300 ${
+      className={`bg-[#0A0F1C] text-white flex flex-col p-3 h-full overflow-hidden transition-all duration-300 select-none ${
         collapsed ? 'w-20' : 'w-64'
       }`}
       style={{ backgroundColor: 'var(--color-sidebar-bg, #0A0F1C)' }}
     >
-      <div>
-        {/* ── Sidebar Header ── */}
-        <div
-          className="flex items-center justify-between px-3 py-4 mb-2 border-b"
-          style={{ borderColor: 'var(--color-sidebar-border)' }}
-        >
-          {!collapsed ? (
-            <ZobbraLogo variant="white" href="/dashboard" width={135} height={45} priority={true} />
-          ) : (
-            <ZobbraLogo variant="mark-only" href="/dashboard" />
-          )}
+      {/* ── Sidebar Header (Fixed at Top) ── */}
+      <div
+        className="flex items-center justify-between px-3 py-3 mb-1 border-b flex-shrink-0"
+        style={{ borderColor: 'var(--color-sidebar-border)' }}
+      >
+        {!collapsed ? (
+          <ZobbraLogo variant="white" href="/dashboard" width={135} height={45} priority={true} />
+        ) : (
+          <ZobbraLogo variant="mark-only" href="/dashboard" />
+        )}
 
-          {/* Desktop collapse button */}
+        {/* Desktop collapse button */}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="p-1.5 rounded-lg transition-colors hidden lg:flex items-center justify-center cursor-pointer"
+          style={{ color: 'var(--color-sidebar-icon)' }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-sidebar-hover-icon, #ffffff)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-sidebar-icon)')}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </button>
+
+        {/* Mobile close button */}
+        {onClose && (
           <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 rounded-lg transition-colors hidden lg:flex items-center justify-center cursor-pointer"
+            onClick={onClose}
+            className="p-1.5 rounded-lg transition-colors lg:hidden flex items-center justify-center cursor-pointer"
             style={{ color: 'var(--color-sidebar-icon)' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-sidebar-hover-icon, #ffffff)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-sidebar-icon)')}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label="Close menu"
           >
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            <X className="w-4 h-4" />
           </button>
+        )}
+      </div>
 
-          {/* Mobile close button */}
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg transition-colors lg:hidden flex items-center justify-center cursor-pointer"
-              style={{ color: 'var(--color-sidebar-icon)' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-sidebar-hover-icon, #ffffff)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-sidebar-icon)')}
-              aria-label="Close menu"
+      {/* ── Navigation (Scrollable In Middle) ── */}
+      <nav
+        className="space-y-0.5 mt-1 flex-1 overflow-y-auto hide-scrollbar min-h-0 pr-0.5"
+        aria-label="Admin navigation"
+      >
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive =
+            pathname === item.href ||
+            (item.href !== '/dashboard' && pathname.startsWith(item.href));
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150 group min-h-[40px] ${
+                collapsed ? 'justify-center px-0' : ''
+              }`}
+              style={
+                isActive
+                  ? {
+                      backgroundColor: 'var(--color-sidebar-active-bg, #3B6FEB)',
+                      color: 'var(--color-sidebar-active-text, #ffffff)',
+                      boxShadow: '0 2px 8px var(--color-sidebar-active-shadow)',
+                    }
+                  : {}
+              }
+              data-active={isActive ? 'true' : 'false'}
+              data-sidebar-item="true"
+              title={collapsed ? item.name : undefined}
             >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {/* ── Navigation ── */}
-        <nav className="space-y-0.5 mt-2" aria-label="Admin navigation">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              pathname === item.href ||
-              (item.href !== '/dashboard' && pathname.startsWith(item.href));
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group min-h-[44px] ${
-                  collapsed ? 'justify-center px-0' : ''
-                }`}
-                style={
-                  isActive
-                    ? {
-                        backgroundColor: 'var(--color-sidebar-active-bg, #3B6FEB)',
-                        color: 'var(--color-sidebar-active-text, #ffffff)',
-                        boxShadow: '0 2px 8px var(--color-sidebar-active-shadow)',
-                      }
-                    : {}
-                }
-                data-active={isActive ? 'true' : 'false'}
-                data-sidebar-item="true"
-                title={collapsed ? item.name : undefined}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon
-                    className="w-[18px] h-[18px] shrink-0 transition-colors duration-150"
+              <div className="flex items-center gap-3">
+                <Icon
+                  className="w-[18px] h-[18px] shrink-0 transition-colors duration-150"
+                  style={
+                    isActive
+                      ? { color: 'var(--color-sidebar-active-text, #ffffff)' }
+                      : { color: 'var(--color-sidebar-icon)' }
+                  }
+                />
+                {!collapsed && (
+                  <span
                     style={
                       isActive
                         ? { color: 'var(--color-sidebar-active-text, #ffffff)' }
-                        : { color: 'var(--color-sidebar-icon)' }
+                        : { color: 'var(--color-sidebar-text-secondary, #CBD5E1)' }
                     }
-                  />
-                  {!collapsed && (
-                    <span
-                      style={
-                        isActive
-                          ? { color: 'var(--color-sidebar-active-text, #ffffff)' }
-                          : { color: 'var(--color-sidebar-text-secondary, #CBD5E1)' }
-                      }
-                    >
-                      {item.name}
-                    </span>
-                  )}
-                </div>
-
-                {!collapsed && item.hasBadge && (
-                  loading ? (
-                    <span
-                      className="w-5 h-4 rounded-md animate-pulse"
-                      style={{ backgroundColor: 'var(--color-sidebar-badge-bg)' }}
-                    />
-                  ) : typeof item.badge === 'number' && item.badge > 0 ? (
-                    <span
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-md tabular-nums"
-                      style={
-                        isActive
-                          ? {
-                              backgroundColor: 'var(--color-sidebar-badge-active-bg)',
-                              color: 'var(--color-sidebar-badge-active-text, #ffffff)',
-                            }
-                          : {
-                              backgroundColor: 'var(--color-sidebar-badge-bg)',
-                              color: 'var(--color-sidebar-badge-text, #94A3B8)',
-                            }
-                      }
-                    >
-                      {item.badge}
-                    </span>
-                  ) : null
+                  >
+                    {item.name}
+                  </span>
                 )}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+              </div>
 
-      {/* ── Profile Footer ── */}
+              {!collapsed && item.hasBadge && (
+                loading ? (
+                  <span
+                    className="w-5 h-4 rounded-md animate-pulse"
+                    style={{ backgroundColor: 'var(--color-sidebar-badge-bg)' }}
+                  />
+                ) : typeof item.badge === 'number' && item.badge > 0 ? (
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-md tabular-nums"
+                    style={
+                      isActive
+                        ? {
+                            backgroundColor: 'var(--color-sidebar-badge-active-bg)',
+                            color: 'var(--color-sidebar-badge-active-text, #ffffff)',
+                          }
+                        : {
+                            backgroundColor: 'var(--color-sidebar-badge-bg)',
+                            color: 'var(--color-sidebar-badge-text, #94A3B8)',
+                          }
+                    }
+                  >
+                    {item.badge}
+                  </span>
+                ) : null
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* ── Profile Footer (Fixed at Bottom) ── */}
       <div
-        className="pt-4 mt-4 border-t"
+        className="pt-3 mt-1 border-t flex-shrink-0"
         style={{ borderColor: 'var(--color-sidebar-border)' }}
       >
         {!collapsed ? (
@@ -224,7 +225,7 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
             </div>
             <Link
               href="/login"
-              className="p-1.5 rounded-lg transition-colors flex-shrink-0"
+              className="p-1.5 rounded-lg transition-colors flex-shrink-0 cursor-pointer"
               style={{ color: 'var(--color-sidebar-icon)' }}
               onMouseEnter={e => (e.currentTarget.style.color = '#FB7185')}
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-sidebar-icon)')}
@@ -236,7 +237,7 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
         ) : (
           <Link
             href="/login"
-            className="flex justify-center p-2 rounded-lg transition-colors"
+            className="flex justify-center p-2 rounded-lg transition-colors cursor-pointer"
             style={{ color: 'var(--color-sidebar-icon)' }}
             onMouseEnter={e => (e.currentTarget.style.color = '#FB7185')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-sidebar-icon)')}
@@ -252,13 +253,13 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
   return (
     <>
       {/* Desktop: Always visible sidebar */}
-      <div className="hidden lg:flex h-screen sticky top-0">
+      <div className="hidden lg:flex h-screen sticky top-0 bg-[#0A0F1C] flex-shrink-0">
         {sidebarContent}
       </div>
 
       {/* Mobile: Fixed overlay drawer */}
       <div
-        className={`lg:hidden fixed inset-y-0 left-0 z-40 flex h-full transition-transform duration-300 ease-in-out ${
+        className={`lg:hidden fixed inset-y-0 left-0 z-40 flex h-full bg-[#0A0F1C] transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-hidden={!isOpen}
