@@ -143,7 +143,7 @@ export default function RegisterPage() {
             <ArrowLeft className="w-4 h-4" /> Back to Login
           </Link>
           <div className="lg:hidden">
-            <ZobbraLogo variant="dark-text" href="/" />
+            <ZobbraLogo variant="dark-badge" href="/" />
           </div>
         </div>
 

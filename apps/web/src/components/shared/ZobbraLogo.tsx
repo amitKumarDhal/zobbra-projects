@@ -7,10 +7,11 @@ import Link from 'next/link';
 export interface ZobbraLogoProps {
   /**
    * 'white': Official white brand logo asset (/brand/zobbra-logo-white.png) for dark backgrounds.
-   * 'dark-text': Canonical typographic brand mark for light backgrounds (used when no official black PNG exists).
+   * 'dark-badge': Official white logo on a sleek solid-black brand pill container for light backgrounds / topbars.
+   * 'dark-text': Canonical typographic brand mark for light backgrounds.
    * 'mark-only': Compact mark for collapsed sidebars / mobile icons.
    */
-  variant?: 'white' | 'dark-text' | 'mark-only';
+  variant?: 'white' | 'dark-badge' | 'dark-text' | 'mark-only';
   /** Custom CSS classes */
   className?: string;
   /** Width in pixels (default: 135 for 'white') */
@@ -55,6 +56,22 @@ export function ZobbraLogo({
               WEAR YOUR BRAND
             </span>
           )}
+        </div>
+      );
+    }
+
+    if (variant === 'dark-badge') {
+      return (
+        <div className={`bg-[#050505] px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-[4px] flex items-center justify-center shadow-sm border border-black/10 hover:bg-[#111111] transition-colors ${className}`}>
+          <Image
+            src="/brand/zobbra-logo-white.png"
+            alt={alt}
+            width={width || 115}
+            height={height || 38}
+            priority={priority}
+            className="h-6 sm:h-7 w-auto object-contain"
+            style={{ aspectRatio: '3 / 1' }}
+          />
         </div>
       );
     }

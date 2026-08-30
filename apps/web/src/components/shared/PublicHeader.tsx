@@ -128,8 +128,8 @@ export function PublicHeader() {
         {/* 2. MAIN NAVIGATION */}
         <div className="border-b border-[#E5E5E5] bg-white">
           <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-[60px] sm:h-[66px] flex items-center justify-between">
-            {/* Left: Canonical Brand Logo */}
-            <ZobbraLogo variant="dark-text" href="/" />
+            {/* Left: Canonical Official Brand Logo */}
+            <ZobbraLogo variant="dark-badge" href="/" priority={true} />
 
             {/* Center: Navigation Links */}
             <nav className="hidden md:flex items-center gap-7 text-[13.5px] font-medium text-[#333333]">

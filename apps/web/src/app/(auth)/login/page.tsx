@@ -118,7 +118,7 @@ export default function LoginPage() {
             <ArrowLeft className="w-4 h-4" /> Back
           </Link>
           <div className="lg:hidden">
-            <ZobbraLogo variant="dark-text" href="/" />
+            <ZobbraLogo variant="dark-badge" href="/" />
           </div>
         </div>
 
