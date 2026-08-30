@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Lock, Mail, AlertCircle, Eye, EyeOff, ShieldCheck, User, Building, Phone, MapPin, Map } from 'lucide-react';
 import { API_URL } from '@/lib/api';
+import { ZobbraLogo } from '@/components/shared/ZobbraLogo';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -99,15 +100,8 @@ export default function RegisterPage() {
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
         </div>
 
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="w-10 h-10 bg-white text-[#050505] font-serif font-black text-2xl flex items-center justify-center shadow-[0_0_15px_rgba(59,111,235,0.3)]">
-            Z
-          </div>
-          <div>
-            <span className="text-xl font-serif font-black tracking-tight text-white block leading-none">
-              ZOBBRA
-            </span>
-          </div>
+        <div className="relative z-10">
+          <ZobbraLogo variant="white" href="/" width={160} height={53} priority={true} />
         </div>
 
         <motion.div
@@ -148,11 +142,8 @@ export default function RegisterPage() {
           <Link href="/login" className="inline-flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#050505] font-bold transition-colors min-h-[44px]">
             <ArrowLeft className="w-4 h-4" /> Back to Login
           </Link>
-          <div className="lg:hidden flex items-center gap-2">
-            <div className="w-6 h-6 bg-[#050505] text-white font-serif font-black text-sm flex items-center justify-center">
-              Z
-            </div>
-            <span className="text-sm font-serif font-black tracking-tight text-[#050505]">ZOBBRA</span>
+          <div className="lg:hidden">
+            <ZobbraLogo variant="dark-text" href="/" />
           </div>
         </div>
 

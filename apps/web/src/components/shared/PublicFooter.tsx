@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { MapPin, Mail, Phone, Clock } from 'lucide-react';
+import { ZobbraLogo } from './ZobbraLogo';
 
 export function PublicFooter() {
   return (
@@ -10,19 +11,7 @@ export function PublicFooter() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 pb-12 border-b border-[#1F2937]">
           {/* Column 1: Brand & Socials */}
           <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 bg-white text-[#050505] font-heading font-black text-lg flex items-center justify-center rounded-[3px]">
-                Z
-              </div>
-              <div className="leading-tight">
-                <span className="text-[16px] font-heading font-black tracking-[-0.02em] text-white block">
-                  ZOBBRA
-                </span>
-                <span className="text-[8.5px] uppercase font-bold tracking-[0.14em] text-[#6B7280] block">
-                  WEAR YOUR BRAND
-                </span>
-              </div>
-            </Link>
+            <ZobbraLogo variant="white" href="/" width={140} height={47} showTagline={true} />
 
             <p className="text-[12.5px] text-[#888888] leading-relaxed pr-2">
               Custom merchandise that represents your brand with pride.

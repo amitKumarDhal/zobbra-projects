@@ -11,6 +11,7 @@ import {
   Mail,
   Phone,
 } from 'lucide-react';
+import { ZobbraLogo } from './ZobbraLogo';
 
 export function PublicHeader() {
   const pathname = usePathname();
@@ -127,20 +128,8 @@ export function PublicHeader() {
         {/* 2. MAIN NAVIGATION */}
         <div className="border-b border-[#E5E5E5] bg-white">
           <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-[60px] sm:h-[66px] flex items-center justify-between">
-            {/* Left: Square logo + ZOBBRA */}
-            <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
-              <div className="w-8 h-8 bg-[#050505] text-white font-heading font-black text-lg flex items-center justify-center rounded-[3px] shadow-sm">
-                Z
-              </div>
-              <div className="leading-tight">
-                <span className="text-[15px] sm:text-[16px] font-heading font-black tracking-[-0.02em] text-[#050505] block">
-                  ZOBBRA
-                </span>
-                <span className="text-[8px] sm:text-[8.5px] uppercase font-bold tracking-[0.14em] text-[#666666] block">
-                  WEAR YOUR BRAND
-                </span>
-              </div>
-            </Link>
+            {/* Left: Canonical Brand Logo */}
+            <ZobbraLogo variant="dark-text" href="/" />
 
             {/* Center: Navigation Links */}
             <nav className="hidden md:flex items-center gap-7 text-[13.5px] font-medium text-[#333333]">

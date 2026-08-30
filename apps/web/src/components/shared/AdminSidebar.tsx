@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useAdminSidebarCounts } from '@/hooks/useAdminSidebarCounts';
 import { useCustomerUser } from '@/hooks/useCustomerUser';
+import { ZobbraLogo } from './ZobbraLogo';
 
 interface AdminSidebarProps {
   isOpen?: boolean;
@@ -67,19 +68,9 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
         {/* Sidebar Header */}
         <div className="flex items-center justify-between px-3 py-4 mb-6">
           {!collapsed ? (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white text-[#111111] font-heading font-black text-lg flex items-center justify-center rounded-lg">
-                Z
-              </div>
-              <div className="flex flex-col">
-                <span className="text-base font-heading font-black text-white leading-none">ZOBBRA</span>
-                <span className="text-[9px] font-medium text-slate-400 uppercase tracking-widest mt-1">WEAR YOUR BRAND</span>
-              </div>
-            </div>
+            <ZobbraLogo variant="white" href="/dashboard" width={135} height={45} priority={true} />
           ) : (
-            <div className="w-8 h-8 bg-white text-[#111111] font-heading font-black text-lg flex items-center justify-center rounded-lg mx-auto">
-              Z
-            </div>
+            <ZobbraLogo variant="mark-only" href="/dashboard" />
           )}
 
           {/* Desktop collapse button */}

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Lock, AlertCircle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { API_URL } from '@/lib/api';
+import { ZobbraLogo } from '@/components/shared/ZobbraLogo';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -81,15 +82,8 @@ function ResetPasswordForm() {
           <div className="absolute bottom-[10%] -left-[10%] w-[50%] h-[50%] rounded-full bg-[#3B6FEB]/5 blur-[100px]"></div>
         </div>
 
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="w-10 h-10 bg-white text-[#050505] font-heading font-black text-2xl flex items-center justify-center shadow-[0_0_15px_rgba(59,111,235,0.3)]">
-            Z
-          </div>
-          <div>
-            <span className="text-xl font-heading font-black tracking-tight text-white block leading-none">
-              ZOBBRA
-            </span>
-          </div>
+        <div className="relative z-10">
+          <ZobbraLogo variant="white" href="/" width={160} height={53} priority={true} />
         </div>
 
         <motion.div

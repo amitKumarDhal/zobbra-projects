@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCustomerUser } from '@/hooks/useCustomerUser';
+import { ZobbraLogo } from './ZobbraLogo';
 
 interface CustomerSidebarProps {
   isOpen?: boolean;
@@ -41,12 +42,12 @@ export function CustomerSidebar({ isOpen = false, onClose }: CustomerSidebarProp
   };
 
   const navItems = [
-    { name: 'Dashboard', href: '/customer', icon: LayoutDashboard },
-    { name: 'Products', href: '/customer/products', icon: Package },
-    { name: 'Create Quote', href: '/customer/create-quote', icon: PlusCircle },
+    { name: 'Overview', href: '/customer', icon: LayoutDashboard },
+    { name: 'Browse Products', href: '/customer/products', icon: Package },
+    { name: 'Request Quote', href: '/customer/create-quote', icon: PlusCircle },
     { name: 'My Quotes', href: '/customer/quotes', icon: FileText },
     { name: 'My Orders', href: '/customer/orders', icon: ShoppingBag },
-    { name: 'Shipment Tracking', href: '/customer/tracking', icon: Truck },
+    { name: 'Track Shipments', href: '/customer/tracking', icon: Truck },
     { name: 'Invoices', href: '/customer/invoices', icon: Receipt },
     { name: 'Notifications', href: '/customer/notifications', icon: Bell },
     { name: 'Support', href: '/customer/support', icon: HelpCircle },
@@ -63,19 +64,12 @@ export function CustomerSidebar({ isOpen = false, onClose }: CustomerSidebarProp
         {/* Sidebar Header */}
         <div className="flex items-center justify-between px-3 py-4 mb-3 border-b border-slate-800/80">
           {!collapsed ? (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white text-[#111111] font-heading font-black text-lg flex items-center justify-center rounded-lg shadow-sm">
-                Z
-              </div>
-              <div>
-                <span className="text-base font-heading font-black text-white block leading-tight">ZOBBRA</span>
-                <span className="text-[9px] font-bold text-[#3B6FEB] uppercase tracking-wider">CLIENT PORTAL</span>
-              </div>
+            <div className="flex flex-col gap-1">
+              <ZobbraLogo variant="white" href="/customer" width={125} height={42} priority={true} />
+              <span className="text-[9px] font-bold text-[#3B6FEB] uppercase tracking-wider pl-1">CLIENT PORTAL</span>
             </div>
           ) : (
-            <div className="w-8 h-8 bg-white text-[#111111] font-heading font-black text-lg flex items-center justify-center rounded-lg mx-auto shadow-sm">
-              Z
-            </div>
+            <ZobbraLogo variant="mark-only" href="/customer" />
           )}
 
           {/* Desktop collapse button */}

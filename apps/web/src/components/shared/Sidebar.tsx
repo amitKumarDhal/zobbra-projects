@@ -15,6 +15,7 @@ import {
   Globe,
   Settings,
 } from 'lucide-react';
+import { ZobbraLogo } from './ZobbraLogo';
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
@@ -36,13 +37,7 @@ export const Sidebar: React.FC = () => {
     <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between p-4 min-h-screen text-slate-300">
       <div>
         <div className="flex items-center gap-3 px-3 py-4 border-b border-slate-800 mb-6">
-          <div className="w-9 h-9 bg-blue-600 text-white font-black text-lg flex items-center justify-center rounded-xl shadow-md">
-            Z
-          </div>
-          <div>
-            <span className="text-lg font-black text-white block leading-tight">ZOBBRA</span>
-            <span className="text-[10px] font-bold text-slate-500 uppercase">B2B SaaS</span>
-          </div>
+          <ZobbraLogo variant="white" href="/dashboard" width={130} height={43} />
         </div>
 
         <nav className="space-y-1">
