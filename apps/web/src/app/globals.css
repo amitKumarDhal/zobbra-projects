@@ -60,19 +60,26 @@
   --color-neutral-soft:    #F8FAFC;
   --color-neutral-border:  #E2E8F0;
 
-  /* ── Admin Sidebar ───────────────────────────────────────────── */
-  /* Inactive icon/text — readable blue-slate, enough contrast on #0A0F1C */
-  --color-sidebar-icon:          #8B9EC5;
-  /* Hover background — brand-tinted, 10% opacity */
-  --color-sidebar-hover-bg:      rgba(59, 111, 235, 0.10);
-  /* Active item glow */
-  --color-sidebar-active-shadow: rgba(59, 111, 235, 0.32);
-  /* Badge background for inactive items */
-  --color-sidebar-badge-bg:      #1A2540;
-  /* Avatar tinted background */
-  --color-sidebar-avatar-bg:     #1A2B4A;
-  /* Section/logo area separator */
-  --color-sidebar-border:        rgba(255, 255, 255, 0.07);
+  /* ── Admin Sidebar System ─────────────────────────────────────── */
+  --color-sidebar-bg:                    #0A0F1C;
+  --color-sidebar-border:                rgba(255, 255, 255, 0.07);
+  --color-sidebar-text-primary:          #FFFFFF;
+  --color-sidebar-text-secondary:        #CBD5E1;
+  --color-sidebar-text-muted:            #8B9EC5;
+  --color-sidebar-icon:                  #8B9EC5;
+  --color-sidebar-hover-bg:              rgba(59, 111, 235, 0.10);
+  --color-sidebar-hover-text:            #FFFFFF;
+  --color-sidebar-hover-icon:            #FFFFFF;
+  --color-sidebar-active-bg:             #3B6FEB;
+  --color-sidebar-active-text:           #FFFFFF;
+  --color-sidebar-active-shadow:         rgba(59, 111, 235, 0.32);
+  --color-sidebar-badge-bg:              #1A2540;
+  --color-sidebar-badge-text:            #94A3B8;
+  --color-sidebar-badge-active-bg:       rgba(255, 255, 255, 0.20);
+  --color-sidebar-badge-active-text:     #FFFFFF;
+  --color-sidebar-profile-text:          #FFFFFF;
+  --color-sidebar-profile-secondary:     #8B9EC5;
+  --color-sidebar-avatar-bg:             #1A2B4A;
 
   /* ── Admin KPI Semantic Families ────────────────────────────── */
   /* Inquiry / Primary — brand blue */
@@ -353,13 +360,18 @@
 
   /* Sidebar nav item hover — brand-tinted, applied via data attribute
      to avoid overriding the active state (which uses inline style) */
+  a[data-sidebar-item='true'][data-active='false'] {
+    background-color: transparent;
+    color: var(--color-sidebar-text-secondary);
+  }
+
   a[data-sidebar-item='true'][data-active='false']:hover {
     background-color: var(--color-sidebar-hover-bg);
-    color: #ffffff;
+    color: var(--color-sidebar-hover-text);
   }
 
   a[data-sidebar-item='true'][data-active='false']:hover svg {
-    color: #ffffff !important;
+    color: var(--color-sidebar-hover-icon) !important;
   }
 }
 

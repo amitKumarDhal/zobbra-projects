@@ -39,10 +39,10 @@ export default function AdminDashboardPage() {
 
       {/* ── TOP KPI CARDS ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* KPI 1 */}
+        {/* KPI 1 — Inquiries */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[#EEF2FF] text-[#3B6FEB] flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--color-kpi-inquiry-bg)', color: 'var(--color-kpi-inquiry-icon)' }}>
               <Users className="w-6 h-6" />
             </div>
             <div>
@@ -51,17 +51,17 @@ export default function AdminDashboardPage() {
             </div>
           </div>
           <div className="mt-4 flex items-center gap-2">
-            <span className="flex items-center text-xs font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+            <span className="flex items-center text-xs font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
               <ArrowUp className="w-3 h-3 mr-0.5" /> 18.6%
             </span>
             <span className="text-[10px] text-[#9CA3AF] font-medium">vs last 7 days</span>
           </div>
         </div>
 
-        {/* KPI 2 */}
+        {/* KPI 2 — Quotes */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--color-kpi-quote-bg)', color: 'var(--color-kpi-quote-icon)' }}>
               <FileText className="w-6 h-6" />
             </div>
             <div>
@@ -70,17 +70,17 @@ export default function AdminDashboardPage() {
             </div>
           </div>
           <div className="mt-4 flex items-center gap-2">
-            <span className="flex items-center text-xs font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+            <span className="flex items-center text-xs font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
               <ArrowUp className="w-3 h-3 mr-0.5" /> 12.3%
             </span>
             <span className="text-[10px] text-[#9CA3AF] font-medium">vs last 7 days</span>
           </div>
         </div>
 
-        {/* KPI 3 */}
+        {/* KPI 3 — Orders */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--color-kpi-order-bg)', color: 'var(--color-kpi-order-icon)' }}>
               <Package className="w-6 h-6" />
             </div>
             <div>
@@ -89,7 +89,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
           <div className="mt-4 flex items-center gap-2">
-            <span className="flex items-center text-xs font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+            <span className="flex items-center text-xs font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
               <ArrowUp className="w-3 h-3 mr-0.5" /> 8.2%
             </span>
             <span className="text-[10px] text-[#9CA3AF] font-medium">vs last 7 days</span>

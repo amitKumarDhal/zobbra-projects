@@ -62,16 +62,6 @@ export default function PaymentsPage() {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount || 0);
   };
 
-  const getStatusColor = (status: string) => {
-     switch (status) {
-        case 'PAID':
-        case 'SUCCESS': return 'text-green-700 bg-green-50 border-green-200';
-        case 'PARTIAL': return 'text-orange-700 bg-orange-50 border-orange-200';
-        case 'OVERDUE': return 'text-red-700 bg-red-50 border-red-200';
-        case 'PENDING': return 'text-orange-700 bg-orange-50 border-orange-200';
-        default: return 'text-gray-600 bg-gray-50 border-gray-200';
-     }
-  };
 
   const getStatusText = (paymentStatus: string, orderStatus: string, createdDate: string) => {
      if (paymentStatus === 'SUCCESS' && orderStatus === 'PAID') return 'Paid';
@@ -225,9 +215,7 @@ export default function PaymentsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-4 text-center">
-                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border ${getStatusColor(uiStatus.toUpperCase())}`}>
-                          {uiStatus}
-                        </span>
+                        <StatusBadge status={uiStatus.toUpperCase()} />
                       </td>
                       <td className="px-4 py-4 text-center">
                         <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

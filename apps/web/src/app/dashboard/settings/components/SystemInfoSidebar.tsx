@@ -1,5 +1,6 @@
 import React from 'react';
 import { HardDrive, RotateCw, Activity } from 'lucide-react';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 export default function SystemInfoSidebar({ info, health, cloudinary }: any) {
   return (
@@ -20,11 +21,10 @@ export default function SystemInfoSidebar({ info, health, cloudinary }: any) {
           </div>
           <div className="flex justify-between items-center">
             <span className="text-xs text-[#6B7280]">Environment</span>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              info?.environment === 'Production' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-            }`}>
-              {info?.environment || 'Development'}
-            </span>
+            <StatusBadge
+              status={info?.environment === 'Production' ? 'ACTIVE' : 'DRAFT'}
+              label={info?.environment || 'Development'}
+            />
           </div>
           <div className="flex justify-between items-center">
             <span className="text-xs text-[#6B7280]">Last Updated</span>

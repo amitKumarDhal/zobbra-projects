@@ -115,17 +115,6 @@ export default function QuotesPage() {
     }
   };
 
-  const getStatusColor = (status: QuoteStatus) => {
-    switch (status) {
-      case 'DRAFT': return 'text-slate-600 bg-slate-50 border-slate-200';
-      case 'SENT': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'APPROVED': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-      case 'REJECTED': return 'text-red-600 bg-red-50 border-red-200';
-      case 'EXPIRED': return 'text-red-600 bg-red-50 border-red-200';
-      default: return 'text-amber-600 bg-amber-50 border-amber-200';
-    }
-  };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
   };
@@ -254,9 +243,7 @@ export default function QuotesPage() {
                       <p className="text-[10px]">{getValidityDisplay(q.validUntil, q.status)}</p>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border ${getStatusColor(q.status)}`}>
-                        {q.status === 'SENT' ? 'Pending' : q.status.charAt(0) + q.status.slice(1).toLowerCase()}
-                      </span>
+                      <StatusBadge status={q.status} />
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
@@ -319,17 +306,6 @@ function QuoteDrawer({ quote, onClose, onRefresh }: { quote: Quote, onClose: () 
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
-  };
-
-  const getStatusColor = (status: QuoteStatus) => {
-    switch (status) {
-      case 'DRAFT': return 'text-slate-600 bg-slate-50 border-slate-200';
-      case 'SENT': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'APPROVED': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-      case 'REJECTED': return 'text-red-600 bg-red-50 border-red-200';
-      case 'EXPIRED': return 'text-red-600 bg-red-50 border-red-200';
-      default: return 'text-amber-600 bg-amber-50 border-amber-200';
-    }
   };
 
   const numberToWords = (num: number) => {
@@ -407,9 +383,7 @@ function QuoteDrawer({ quote, onClose, onRefresh }: { quote: Quote, onClose: () 
           <h2 className="text-lg font-heading font-black text-[#111111]">Quote Details</h2>
           <div className="flex items-center gap-3 mt-1.5">
             <span className="text-sm font-bold text-[#111111]">{quote.quoteNumber}</span>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getStatusColor(quote.status)}`}>
-              {quote.status === 'SENT' ? 'Pending' : quote.status}
-            </span>
+            <StatusBadge status={quote.status} />
           </div>
           <p className="text-[10px] text-[#6B7280] mt-1">{new Date(quote.createdAt).toLocaleString()}</p>
         </div>
@@ -425,7 +399,7 @@ function QuoteDrawer({ quote, onClose, onRefresh }: { quote: Quote, onClose: () 
           <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2 mb-3"><UserCircle className="w-4 h-4"/> Customer Information</h3>
           <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-4 space-y-3 text-sm">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs">
+              <div className="w-8 h-8 rounded-full bg-[#EEF2FF] text-[#3B6FEB] flex items-center justify-center font-bold text-xs">
                 {quote.customer.name.substring(0, 2).toUpperCase()}
               </div>
               <div>

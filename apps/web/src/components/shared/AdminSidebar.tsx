@@ -58,19 +58,20 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
   ];
 
-  // Deterministic initials color for avatar — consistent for same user
+  // Deterministic initials for avatar
   const avatarInitial = userName.charAt(0).toUpperCase();
 
   const sidebarContent = (
     <aside
-      className={`bg-[#0A0F1C] text-white flex flex-col justify-between p-3 h-full transition-all duration-300 ${
+      className={`text-white flex flex-col justify-between p-3 h-full transition-all duration-300 ${
         collapsed ? 'w-20' : 'w-64'
       }`}
+      style={{ backgroundColor: 'var(--color-sidebar-bg, #0A0F1C)' }}
     >
       <div>
         {/* ── Sidebar Header ── */}
         <div
-          className={`flex items-center justify-between px-3 py-4 mb-2 border-b`}
+          className="flex items-center justify-between px-3 py-4 mb-2 border-b"
           style={{ borderColor: 'var(--color-sidebar-border)' }}
         >
           {!collapsed ? (
@@ -82,9 +83,9 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
           {/* Desktop collapse button */}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 rounded-lg transition-colors hidden lg:flex items-center justify-center"
+            className="p-1.5 rounded-lg transition-colors hidden lg:flex items-center justify-center cursor-pointer"
             style={{ color: 'var(--color-sidebar-icon)' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#ffffff')}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-sidebar-hover-icon, #ffffff)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-sidebar-icon)')}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
@@ -95,9 +96,9 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg transition-colors lg:hidden flex items-center justify-center"
+              className="p-1.5 rounded-lg transition-colors lg:hidden flex items-center justify-center cursor-pointer"
               style={{ color: 'var(--color-sidebar-icon)' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#ffffff')}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-sidebar-hover-icon, #ffffff)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-sidebar-icon)')}
               aria-label="Close menu"
             >
@@ -124,13 +125,12 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
                 style={
                   isActive
                     ? {
-                        backgroundColor: 'var(--color-brand-primary)',
-                        color: '#ffffff',
+                        backgroundColor: 'var(--color-sidebar-active-bg, #3B6FEB)',
+                        color: 'var(--color-sidebar-active-text, #ffffff)',
                         boxShadow: '0 2px 8px var(--color-sidebar-active-shadow)',
                       }
                     : {}
                 }
-                // Hover handled via CSS class below since inline styles can't do :hover
                 data-active={isActive ? 'true' : 'false'}
                 data-sidebar-item="true"
                 title={collapsed ? item.name : undefined}
@@ -140,23 +140,42 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
                     className="w-[18px] h-[18px] shrink-0 transition-colors duration-150"
                     style={
                       isActive
-                        ? { color: '#ffffff' }
+                        ? { color: 'var(--color-sidebar-active-text, #ffffff)' }
                         : { color: 'var(--color-sidebar-icon)' }
                     }
                   />
-                  {!collapsed && <span className={isActive ? 'text-white' : 'text-[#CBD5E1]'}>{item.name}</span>}
+                  {!collapsed && (
+                    <span
+                      style={
+                        isActive
+                          ? { color: 'var(--color-sidebar-active-text, #ffffff)' }
+                          : { color: 'var(--color-sidebar-text-secondary, #CBD5E1)' }
+                      }
+                    >
+                      {item.name}
+                    </span>
+                  )}
                 </div>
 
                 {!collapsed && item.hasBadge && (
                   loading ? (
-                    <span className="w-5 h-4 rounded-md animate-pulse" style={{ backgroundColor: 'var(--color-sidebar-badge-bg)' }} />
+                    <span
+                      className="w-5 h-4 rounded-md animate-pulse"
+                      style={{ backgroundColor: 'var(--color-sidebar-badge-bg)' }}
+                    />
                   ) : typeof item.badge === 'number' && item.badge > 0 ? (
                     <span
                       className="text-[10px] font-bold px-2 py-0.5 rounded-md tabular-nums"
                       style={
                         isActive
-                          ? { backgroundColor: 'rgba(255,255,255,0.20)', color: '#ffffff' }
-                          : { backgroundColor: 'var(--color-sidebar-badge-bg)', color: '#94A3B8' }
+                          ? {
+                              backgroundColor: 'var(--color-sidebar-badge-active-bg)',
+                              color: 'var(--color-sidebar-badge-active-text, #ffffff)',
+                            }
+                          : {
+                              backgroundColor: 'var(--color-sidebar-badge-bg)',
+                              color: 'var(--color-sidebar-badge-text, #94A3B8)',
+                            }
                       }
                     >
                       {item.badge}
@@ -179,17 +198,25 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
             <div className="flex items-center gap-3 min-w-0">
               {/* Avatar */}
               <div
-                className="w-8 h-8 text-white font-heading font-bold text-xs flex items-center justify-center rounded-full flex-shrink-0 select-none"
-                style={{ backgroundColor: 'var(--color-sidebar-avatar-bg)' }}
+                className="w-8 h-8 font-heading font-bold text-xs flex items-center justify-center rounded-full flex-shrink-0 select-none"
+                style={{
+                  backgroundColor: 'var(--color-sidebar-avatar-bg)',
+                  color: 'var(--color-sidebar-profile-text, #ffffff)',
+                }}
                 aria-hidden="true"
               >
                 {avatarInitial}
               </div>
               <div className="text-[11px] min-w-0">
-                <p className="font-bold text-white leading-tight truncate max-w-[120px]">{userName}</p>
+                <p
+                  className="font-bold leading-tight truncate max-w-[120px]"
+                  style={{ color: 'var(--color-sidebar-profile-text, #ffffff)' }}
+                >
+                  {userName}
+                </p>
                 <p
                   className="text-[10px] font-medium truncate max-w-[120px] mt-0.5"
-                  style={{ color: 'var(--color-sidebar-icon)' }}
+                  style={{ color: 'var(--color-sidebar-profile-secondary, #8B9EC5)' }}
                 >
                   {userEmail}
                 </p>

@@ -202,11 +202,7 @@ export default function AgentsPage() {
                         <span className="text-xs text-gray-400 font-medium">—</span>
                       </td>
                       <td className="px-4 py-4 text-center">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                           agent.isActive ? 'text-green-700 bg-green-50 border-green-200' : 'text-gray-600 bg-gray-50 border-gray-200'
-                        }`}>
-                          {agent.isActive ? 'Active' : 'Inactive'}
-                        </span>
+                        <StatusBadge status={agent.isActive ? 'ACTIVE' : 'INACTIVE'} />
                       </td>
                       <td className="px-4 py-4 text-center">
                         <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

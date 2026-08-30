@@ -1,5 +1,6 @@
 import React from 'react';
 import { CreditCard, Mail } from 'lucide-react';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 export default function PaymentEmailSettings({ settings }: { settings: any }) {
   return (
@@ -26,7 +27,7 @@ export default function PaymentEmailSettings({ settings }: { settings: any }) {
                 <h3 className="text-sm font-bold text-[#111111] flex items-center gap-2">
                   Razorpay
                   {settings.razorpayConfigured && (
-                     <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Active</span>
+                     <StatusBadge status="ACTIVE" />
                   )}
                 </h3>
                 <p className="text-xs text-[#6B7280] mt-1">Accept payments via UPI, Credit/Debit Cards, and Netbanking.</p>
@@ -67,9 +68,9 @@ export default function PaymentEmailSettings({ settings }: { settings: any }) {
                 <h3 className="text-sm font-bold text-[#111111] flex items-center gap-2">
                   Resend
                   {settings.resendConfigured ? (
-                     <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Active</span>
+                     <StatusBadge status="ACTIVE" />
                   ) : (
-                     <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Not Configured</span>
+                     <StatusBadge status="FAILED" label="Not Configured" />
                   )}
                 </h3>
                 <p className="text-xs text-[#6B7280] mt-1">Send transactional emails and invoices.</p>

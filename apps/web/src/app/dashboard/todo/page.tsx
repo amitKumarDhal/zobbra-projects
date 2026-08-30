@@ -119,17 +119,6 @@ export default function TodoPage() {
      }
   };
 
-  const getStatusColor = (status: string) => {
-     switch(status) {
-        case 'PENDING': return 'text-amber-600 bg-amber-50 border-amber-100';
-        case 'IN_PROGRESS': return 'text-blue-600 bg-blue-50 border-blue-100';
-        case 'COMPLETED': return 'text-emerald-600 bg-emerald-50 border-emerald-100';
-        case 'OVERDUE': return 'text-red-600 bg-red-50 border-red-100';
-        case 'CANCELLED': return 'text-gray-500 bg-gray-50 border-gray-200';
-        default: return 'text-gray-600 bg-gray-50 border-gray-200';
-     }
-  };
-
   return (
     <div className="space-y-6 pb-12 font-sans bg-[#F8F9FC] min-h-screen relative flex flex-col">
       {/* HEADER */}
@@ -280,9 +269,7 @@ export default function TodoPage() {
                         </p>
                       </td>
                       <td className="px-4 py-4">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${getStatusColor(t.status)}`}>
-                          {t.status.replace('_', ' ')}
-                        </span>
+                        <StatusBadge status={t.status} />
                       </td>
                       <td className="px-4 py-4 text-xs text-[#4B5563] capitalize font-medium">
                         {t.category.replace('_', ' ')}

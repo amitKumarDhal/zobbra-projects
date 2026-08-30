@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Filter, Star, Edit2, Trash2, CheckCircle, XCircle, MessageSquare, ThumbsUp, Clock, AlertCircle } from 'lucide-react';
 import TestimonialDrawer from './TestimonialDrawer';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 import { API_URL } from '@/lib/api';
 
@@ -262,9 +263,7 @@ export default function TestimonialsPage() {
                       <p className="text-xs text-[#4B5563] line-clamp-2" title={t.content}>"{t.content}"</p>
                     </td>
                     <td className="px-5 py-4">
-                      {t.status === 'PUBLISHED' && <span className="text-[10px] font-bold px-2 py-0.5 rounded text-green-700 bg-green-100">Published</span>}
-                      {t.status === 'PENDING' && <span className="text-[10px] font-bold px-2 py-0.5 rounded text-orange-700 bg-orange-100">Pending</span>}
-                      {t.status === 'INACTIVE' && <span className="text-[10px] font-bold px-2 py-0.5 rounded text-red-700 bg-red-100">Inactive</span>}
+                      <StatusBadge status={t.status} />
                     </td>
                     <td className="px-5 py-4 text-xs text-[#6B7280]">
                       {new Date(t.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}

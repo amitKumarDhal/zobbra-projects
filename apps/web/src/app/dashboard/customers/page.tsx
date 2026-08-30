@@ -215,9 +215,7 @@ export default function CustomersPage() {
                         )}
                       </td>
                       <td className="px-4 py-4 text-center">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${isActive ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-50 border-slate-200'}`}>
-                          {isActive ? 'Active' : 'Inactive'}
-                        </span>
+                        <StatusBadge status={isActive ? 'ACTIVE' : 'INACTIVE'} />
                       </td>
                       <td className="px-4 py-4 text-center">
                         <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -316,16 +314,14 @@ function CustomerDrawer({ customer, onClose, onRefresh }: { customer: Company, o
       <div className="px-5 pt-5 pb-0 border-b border-[#E5E7EB] bg-[#FDFDFD]">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-lg uppercase border border-purple-100 shadow-sm">
+            <div className="w-12 h-12 rounded-full bg-[#EEF2FF] text-[#3B6FEB] flex items-center justify-center font-bold text-lg uppercase border border-[#BFDBFE] shadow-sm">
               {mainUser.name.substring(0, 2)}
             </div>
             <div>
               <h2 className="text-lg font-heading font-black text-[#111111]">{mainUser.name}</h2>
               <div className="flex flex-wrap items-center gap-2 mt-1">
                 <span className="text-[10px] text-[#6B7280]">Customer ID: <span className="font-bold text-[#111111]">{customer.id.substring(0,8).toUpperCase()}</span></span>
-                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${isActive ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-50 border-slate-200'}`}>
-                  {isActive ? 'Active' : 'Inactive'}
-                </span>
+                <StatusBadge status={isActive ? 'ACTIVE' : 'INACTIVE'} />
                 {totalSpent > 50000 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border text-purple-700 bg-purple-50 border-purple-200">Top Customer</span>}
               </div>
             </div>
@@ -409,7 +405,7 @@ function CustomerDrawer({ customer, onClose, onRefresh }: { customer: Company, o
                       </div>
                       <div className="text-right">
                         <p className="text-xs font-black text-[#111111]">{formatCurrency(ord.totalAmount)}</p>
-                        <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5 inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">{ord.status}</span>
+                        <StatusBadge status={ord.status} className="mt-0.5" />
                       </div>
                     </div>
                   ))}
@@ -433,7 +429,7 @@ function CustomerDrawer({ customer, onClose, onRefresh }: { customer: Company, o
                     </div>
                     <div className="text-right">
                       <p className="text-xs font-black text-[#111111]">{formatCurrency(ord.totalAmount)}</p>
-                      <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5 inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{ord.status}</span>
+                      <StatusBadge status={ord.status} className="mt-0.5" />
                     </div>
                   </div>
                 ))
@@ -455,7 +451,7 @@ function CustomerDrawer({ customer, onClose, onRefresh }: { customer: Company, o
                     </div>
                     <div className="text-right">
                       <p className="text-xs font-black text-[#111111]">{formatCurrency(q.totalAmount)}</p>
-                      <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5 inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{q.status}</span>
+                      <StatusBadge status={q.status} className="mt-0.5" />
                     </div>
                   </div>
                 ))

@@ -223,9 +223,7 @@ export default function ProductsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-4 text-center">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${p.isActive ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-700 bg-amber-50 border-amber-200'}`}>
-                          {p.isActive ? 'Active' : 'Draft'}
-                        </span>
+                        <StatusBadge status={p.isActive ? 'ACTIVE' : 'DRAFT'} />
                       </td>
                       <td className="px-4 py-4 text-xs text-[#6B7280]">{new Date(p.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                       <td className="px-4 py-4 text-center">

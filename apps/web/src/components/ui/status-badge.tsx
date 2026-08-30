@@ -3,15 +3,26 @@ import { cn } from '@/lib/utils';
 
 /* ─── Canonical ZOBBRA Status Definitions ────────────────────────────────── */
 
+export type SemanticVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'primary';
+
 /**
  * Maps every known business status to a semantic display variant + label.
  *
- * Covers: Quote, Order, Payment, Inquiry, Coupon, Task
+ * Covers: Inquiry, Quote, Order, Payment, Task, Coupon, Testimonial
  *
  * Do NOT rename or change the status string keys — they map 1:1 to
  * backend enum values in the database.
  */
 const STATUS_MAP: Record<string, { variant: SemanticVariant; label: string }> = {
+  // ── Inquiry ────────────────────────────────────────────────────
+  NEW:                { variant: 'primary',  label: 'New'                },
+  CONTACTED:          { variant: 'warning',  label: 'Contacted'          },
+  FOLLOW_UP:          { variant: 'warning',  label: 'Follow-up'          },
+  QUOTED:             { variant: 'info',     label: 'Quoted'             },
+  CONVERTED:          { variant: 'success',  label: 'Converted'          },
+  LOST:               { variant: 'danger',   label: 'Lost'               },
+  CLOSED:             { variant: 'neutral',  label: 'Closed'             },
+
   // ── Quote ─────────────────────────────────────────────────────
   DRAFT:              { variant: 'neutral',  label: 'Draft'              },
   SENT:               { variant: 'info',     label: 'Sent'               },
@@ -30,36 +41,29 @@ const STATUS_MAP: Record<string, { variant: SemanticVariant; label: string }> = 
   DELIVERED:          { variant: 'success',  label: 'Delivered'          },
   COMPLETED:          { variant: 'success',  label: 'Completed'          },
   CANCELLED:          { variant: 'danger',   label: 'Cancelled'          },
-  CLOSED:             { variant: 'neutral',  label: 'Closed'             },
 
   // ── Payment ────────────────────────────────────────────────────
   UNPAID:             { variant: 'warning',  label: 'Unpaid'             },
   PARTIAL:            { variant: 'warning',  label: 'Partial'            },
   PAID:               { variant: 'success',  label: 'Paid'               },
+  SUCCESS:            { variant: 'success',  label: 'Paid'               },
   FAILED:             { variant: 'danger',   label: 'Failed'             },
   OVERDUE:            { variant: 'danger',   label: 'Overdue'            },
   REFUNDED:           { variant: 'neutral',  label: 'Refunded'           },
 
-  // ── Inquiry ────────────────────────────────────────────────────
-  NEW:                { variant: 'primary',  label: 'New'                },
-  CONTACTED:          { variant: 'warning',  label: 'Contacted'          },
-  FOLLOW_UP:          { variant: 'warning',  label: 'Follow-up'          },
-  QUOTED:             { variant: 'info',     label: 'Quoted'             },
-  CONVERTED:          { variant: 'success',  label: 'Converted'          },
-  LOST:               { variant: 'danger',   label: 'Lost'               },
+  // ── Task ───────────────────────────────────────────────────────
+  IN_PROGRESS:        { variant: 'info',     label: 'In Progress'        },
 
   // ── Coupon ─────────────────────────────────────────────────────
   ACTIVE:             { variant: 'success',  label: 'Active'             },
   INACTIVE:           { variant: 'neutral',  label: 'Inactive'           },
 
-  // ── Task ───────────────────────────────────────────────────────
-  IN_PROGRESS:        { variant: 'info',     label: 'In Progress'        },
+  // ── Testimonials ───────────────────────────────────────────────
+  PUBLISHED:          { variant: 'success',  label: 'Published'          },
 
-  // ── General ───────────────────────────────────────────────────
+  // ── General / Other ────────────────────────────────────────────
   ARCHIVED:           { variant: 'neutral',  label: 'Archived'           },
 };
-
-type SemanticVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'primary';
 
 const VARIANT_CLASSES: Record<SemanticVariant, string> = {
   success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -94,7 +98,11 @@ export interface StatusBadgeProps {
  * ```
  */
 export function StatusBadge({ status, label, variant, className }: StatusBadgeProps) {
-  const mapped = STATUS_MAP[status] ?? { variant: 'neutral' as SemanticVariant, label: status };
+  const normalizedKey = (status || '').toUpperCase().replace(/\s+/g, '_');
+  const mapped = STATUS_MAP[normalizedKey] ?? {
+    variant: 'neutral' as SemanticVariant,
+    label: status ? status.replace(/_/g, ' ') : 'Unknown',
+  };
   const resolvedVariant: SemanticVariant = variant ?? mapped.variant;
   const resolvedLabel = label ?? mapped.label ?? status;
 
@@ -115,17 +123,20 @@ export function StatusBadge({ status, label, variant, className }: StatusBadgePr
 
 /** Helper to get variant class string (e.g. for inline table cells) */
 export function getStatusVariantClasses(status: string): string {
-  const mapped = STATUS_MAP[status];
+  const normalizedKey = (status || '').toUpperCase().replace(/\s+/g, '_');
+  const mapped = STATUS_MAP[normalizedKey];
   if (!mapped) return VARIANT_CLASSES.neutral;
   return VARIANT_CLASSES[mapped.variant];
 }
 
 /** Helper to get just the variant name for a status */
 export function getStatusVariant(status: string): SemanticVariant {
-  return STATUS_MAP[status]?.variant ?? 'neutral';
+  const normalizedKey = (status || '').toUpperCase().replace(/\s+/g, '_');
+  return STATUS_MAP[normalizedKey]?.variant ?? 'neutral';
 }
 
 /** Helper to get a human-readable label for a status */
 export function getStatusLabel(status: string): string {
-  return STATUS_MAP[status]?.label ?? status;
+  const normalizedKey = (status || '').toUpperCase().replace(/\s+/g, '_');
+  return STATUS_MAP[normalizedKey]?.label ?? status;
 }

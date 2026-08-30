@@ -88,27 +88,6 @@ export default function OrdersPage() {
     }
   };
 
-  const getOrderStatusColor = (status: OrderStatus) => {
-    switch (status) {
-      case 'PENDING': return 'text-amber-600 bg-amber-50 border-amber-200';
-      case 'CONFIRMED': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'IN_PRODUCTION': return 'text-purple-600 bg-purple-50 border-purple-200';
-      case 'READY_FOR_DISPATCH': return 'text-indigo-600 bg-indigo-50 border-indigo-200';
-      case 'DISPATCHED': return 'text-teal-600 bg-teal-50 border-teal-200';
-      case 'DELIVERED': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-      case 'CANCELLED': return 'text-red-600 bg-red-50 border-red-200';
-      default: return 'text-slate-600 bg-slate-50 border-slate-200';
-    }
-  };
-  
-  const getPaymentStatusColor = (status: PaymentStatus) => {
-    switch (status) {
-      case 'PENDING': return 'text-amber-600 bg-amber-50';
-      case 'PARTIAL': return 'text-blue-600 bg-blue-50';
-      case 'PAID': return 'text-green-600 bg-green-50';
-      default: return 'text-slate-600 bg-slate-50';
-    }
-  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
@@ -290,18 +269,6 @@ function OrderDrawer({ order, onClose, onRefresh }: { order: Order, onClose: () 
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
   };
 
-  const getOrderStatusColor = (status: OrderStatus) => {
-    switch (status) {
-      case 'PENDING': return 'text-amber-600 bg-amber-50 border-amber-200';
-      case 'CONFIRMED': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'IN_PRODUCTION': return 'text-purple-600 bg-purple-50 border-purple-200';
-      case 'READY_FOR_DISPATCH': return 'text-indigo-600 bg-indigo-50 border-indigo-200';
-      case 'DISPATCHED': return 'text-teal-600 bg-teal-50 border-teal-200';
-      case 'DELIVERED': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-      case 'CANCELLED': return 'text-red-600 bg-red-50 border-red-200';
-      default: return 'text-slate-600 bg-slate-50 border-slate-200';
-    }
-  };
 
   const openWhatsApp = () => {
     const phone = order.customer?.phone;
@@ -378,9 +345,7 @@ function OrderDrawer({ order, onClose, onRefresh }: { order: Order, onClose: () 
           <h2 className="text-lg font-heading font-black text-[#111111]">Order Details</h2>
           <div className="flex items-center gap-3 mt-1.5">
             <span className="text-sm font-bold text-[#111111]">{order.orderNumber}</span>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getOrderStatusColor(order.status)}`}>
-              {order.status.replace(/_/g, ' ')}
-            </span>
+            <StatusBadge status={order.status} />
           </div>
           <p className="text-[10px] text-[#6B7280] mt-1">{new Date(order.createdAt).toLocaleString()}</p>
         </div>
