@@ -67,8 +67,9 @@ export default function RegisterPage() {
           city: formData.city,
           state: formData.state
         }),
+        signal: AbortSignal.timeout(15000), // 15 second timeout
       });
-      
+
       const data = await res.json();
 
       if (res.ok && data.success && data.token) {
@@ -79,11 +80,32 @@ export default function RegisterPage() {
 
         router.push('/customer');
       } else {
-        setError(data.message || 'Registration failed. Please check your inputs.');
+        // Provide status-based error messages
+        if (res.status === 400) {
+          setError(data.message || 'Please check your inputs and try again.');
+        } else if (res.status === 429) {
+          setError('Too many registration attempts. Please wait a moment and try again.');
+        } else if (res.status >= 500) {
+          setError('ZOBBRA is temporarily unavailable. Please try again in a moment.');
+        } else {
+          setError(data.message || 'Registration failed. Please check your inputs.');
+        }
       }
     } catch (err: any) {
       console.error('Registration API error:', err);
-      setError('Unable to connect to Zobra. Please try again.');
+
+      // Classify the error and provide appropriate user message
+      if (err.name === 'AbortError' || err.message.includes('timeout')) {
+        setError('Connection is taking too long. Please check your internet connection and try again.');
+      } else if (err instanceof TypeError) {
+        if (!navigator.onLine) {
+          setError('Unable to reach ZOBBRA. Please check your internet connection.');
+        } else {
+          setError('Connection error. Please try again.');
+        }
+      } else {
+        setError('Unable to complete registration. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

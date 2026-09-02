@@ -11,6 +11,6 @@ router.get('/:slug', getProductBySlug);
 router.post('/', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), createProduct);
 router.put('/:id', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), updateProduct);
 router.post('/:id/duplicate', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), duplicateProduct);
-router.delete('/:id', authenticateJWT, authorizeRoles('ADMIN'), deleteProduct);
+router.delete('/:id', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), deleteProduct);
 
 export default router;

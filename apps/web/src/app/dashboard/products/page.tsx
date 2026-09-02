@@ -71,14 +71,20 @@ export default function ProductsPage() {
   };
 
   const handleArchive = async (id: string) => {
-    if (!confirm('Are you sure you want to deactivate this product?')) return;
+    if (!confirm('Archive this product? It will be marked as inactive and hidden from customers.')) return;
     try {
-      await fetch(`${API_URL}/products/${id}`, {
+      const res = await fetch(`${API_URL}/products/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
       });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(`Failed to archive product: ${data.message || 'Unknown error'}`);
+        return;
+      }
       fetchData();
     } catch (err) {
+      alert('Network error. Please check your connection and try again.');
       console.error(err);
     }
   };

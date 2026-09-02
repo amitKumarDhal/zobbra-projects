@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { config } from './config/index.js';
+import { config, prisma } from './config/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 import authRoutes from './modules/auth/auth.routes.js';
@@ -23,12 +23,56 @@ import invoiceRoutes from './modules/invoices/invoices.routes.js';
 
 const app = express();
 
-app.use(cors());
+// CORS configuration - explicit origins only
+const allowedOrigins = [
+  'https://zobbra.com',
+  'https://www.zobbra.com',
+  'https://app.zobbra.com',
+  'http://localhost:3000', // development
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS not allowed'));
+    }
+  },
+  credentials: true,
+}));
+
 app.use(express.json());
 
-// Health check
+// Health check - basic liveness
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), service: 'ZOBBRA B2B SaaS API' });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'ZOBBRA B2B SaaS API'
+  });
+});
+
+// Readiness check - includes database connectivity
+app.get('/health/ready', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return res.json({
+      status: 'ok',
+      service: 'ZOBBRA B2B SaaS API',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    console.error('[HEALTH] Database connection failed:', error.message);
+    return res.status(503).json({
+      status: 'unavailable',
+      service: 'ZOBBRA B2B SaaS API',
+      database: 'disconnected',
+      timestamp: new Date().toISOString(),
+      error: 'Database connection failed'
+    });
+  }
 });
 
 // API Routes (v1)
@@ -60,5 +104,20 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`🚀 ZOBBRA B2B Server listening on http://0.0.0.0:${config.port}`);
   });
 }
+
+// Global error handlers - prevent silent crashes
+process.on('uncaughtException', (error: Error) => {
+  console.error('[FATAL] Uncaught Exception:', error);
+  console.error(error.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+  if (reason instanceof Error) {
+    console.error(reason.stack);
+  }
+  // Log but don't crash - some rejections may be recoverable
+});
 
 export default app;

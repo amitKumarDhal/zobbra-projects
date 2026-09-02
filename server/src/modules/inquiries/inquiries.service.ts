@@ -1,6 +1,5 @@
-import { PrismaClient, Inquiry, InquiryActivity, InquiryStatus, InquirySource, InquiryActivityType, Prisma } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Inquiry, InquiryActivity, InquiryStatus, InquirySource, InquiryActivityType, Prisma } from '@prisma/client';
+import { prisma } from '../../config/index.js';
 
 export class InquiryService {
   

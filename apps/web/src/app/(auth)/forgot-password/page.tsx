@@ -16,7 +16,7 @@ export default function ForgotPasswordPage() {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
+
     if (!email) {
       setError('Please enter your email address.');
       return;
@@ -29,18 +29,38 @@ export default function ForgotPasswordPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
+        signal: AbortSignal.timeout(15000), // 15 second timeout
       });
-      
+
       const data = await res.json();
 
       if (res.ok && data.success) {
         setSuccess(true);
       } else {
-        setError(data.message || 'Failed to request password reset.');
+        // Provide status-based error messages
+        if (res.status === 429) {
+          setError('Too many attempts. Please wait a moment and try again.');
+        } else if (res.status >= 500) {
+          setError('ZOBBRA is temporarily unavailable. Please try again in a moment.');
+        } else {
+          setError(data.message || 'Failed to request password reset.');
+        }
       }
     } catch (err: any) {
       console.error('Reset API error:', err);
-      setError('Unable to connect to Zobra. Please try again.');
+
+      // Classify the error and provide appropriate user message
+      if (err.name === 'AbortError' || err.message.includes('timeout')) {
+        setError('Connection is taking too long. Please check your internet connection and try again.');
+      } else if (err instanceof TypeError) {
+        if (!navigator.onLine) {
+          setError('Unable to reach ZOBBRA. Please check your internet connection.');
+        } else {
+          setError('Connection error. Please try again.');
+        }
+      } else {
+        setError('Unable to process request. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

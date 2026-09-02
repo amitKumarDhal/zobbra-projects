@@ -32,6 +32,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        signal: AbortSignal.timeout(15000), // 15 second timeout
       });
       const data = await res.json();
 
@@ -47,11 +48,32 @@ export default function LoginPage() {
           router.push('/dashboard');
         }
       } else {
-        setError(data.message || 'Invalid email or password.');
+        // Use the API error message if available, otherwise provide status-based message
+        if (res.status === 401) {
+          setError('Invalid email or password.');
+        } else if (res.status === 429) {
+          setError('Too many login attempts. Please wait a moment and try again.');
+        } else if (res.status >= 500) {
+          setError('ZOBBRA is temporarily unavailable. Please try again in a moment.');
+        } else {
+          setError(data.message || 'Unable to complete sign in. Please try again.');
+        }
       }
     } catch (err: any) {
       console.error('Login API error:', err);
-      setError('Unable to connect to Zobra. Please try again.');
+
+      // Classify the error and provide appropriate user message
+      if (err.name === 'AbortError' || err.message.includes('timeout')) {
+        setError('Connection is taking too long. Please check your internet connection and try again.');
+      } else if (err instanceof TypeError) {
+        if (!navigator.onLine) {
+          setError('Unable to reach ZOBBRA. Please check your internet connection.');
+        } else {
+          setError('Connection error. Please try again.');
+        }
+      } else {
+        setError('Unable to complete sign in. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
