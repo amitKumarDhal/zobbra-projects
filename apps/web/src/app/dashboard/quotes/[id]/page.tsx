@@ -8,24 +8,20 @@ import { buildWhatsAppUrl, getQuoteWhatsAppMessage } from '@/lib/whatsapp';
 import { triggerSidebarCountsRefresh } from '@/hooks/useAdminSidebarCounts';
 import {
   MessageSquare,
-  Send,
   CheckCircle2,
   XCircle,
   ShoppingBag,
   Edit3,
   User,
-  Building,
   Phone,
   Mail,
   FileText,
   Clock,
   ArrowLeft,
-  DollarSign,
   Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 interface QuoteActivity {
   id: string;
@@ -248,17 +244,17 @@ export default function AdminQuoteDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-4 bg-[#F7F5F2] min-h-screen">
-        <div className="h-8 w-48 bg-gray-200 animate-pulse rounded-lg" />
-        <div className="h-64 w-full bg-gray-200 animate-pulse rounded-xl" />
+      <div className="p-8 space-y-4 bg-[#F8F9FC] min-h-screen">
+        <div className="h-8 w-48 bg-[#E5E7EB] animate-pulse rounded-lg" />
+        <div className="h-64 w-full bg-[#E5E7EB] animate-pulse rounded-2xl" />
       </div>
     );
   }
 
   if (!quote) {
     return (
-      <div className="p-8 text-center bg-[#F7F5F2] min-h-screen">
-        <h2 className="text-2xl font-bold text-[#1C1C1C]">Quote Not Found</h2>
+      <div className="p-8 text-center bg-[#F8F9FC] min-h-screen">
+        <h2 className="text-2xl font-bold text-[#111111]">Quote Not Found</h2>
         <Link href="/dashboard/quotes">
           <Button variant="outline" className="mt-4">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Quotes
@@ -268,39 +264,32 @@ export default function AdminQuoteDetailPage() {
     );
   }
 
-  const firstItem = quote.items && quote.items[0];
 
   return (
-    <div className="space-y-8 bg-[#F7F5F2] min-h-screen pb-12">
+    <div className="space-y-8 bg-[#F8F9FC] min-h-screen pb-12 font-sans relative">
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <Link href="/dashboard/quotes" className="text-xs text-[#5F6368] hover:text-[#C75B39] flex items-center gap-1 font-bold mb-2">
+          <Link href="/dashboard/quotes" className="text-xs text-[#6B7280] hover:text-[#111111] flex items-center gap-1 font-bold mb-2 transition-colors w-fit">
             <ArrowLeft className="w-3.5 h-3.5" /> BACK TO QUOTES
           </Link>
           <div className="flex items-center gap-3">
-            <h1 className="text-4xl font-serif font-black text-[#1C1C1C]">{quote.quoteNumber}</h1>
-            <Badge
-              variant={
-                quote.status === 'APPROVED' ? 'success' : quote.status === 'REJECTED' ? 'secondary' : 'gold'
-              }
-            >
-              {quote.status}
-            </Badge>
+            <h1 className="text-3xl font-heading font-black text-[#111111]">{quote.quoteNumber}</h1>
+            <StatusBadge status={quote.status} />
           </div>
-          <p className="text-xs text-[#5F6368] mt-1">{quote.company?.name || quote.customer?.name} • Created on {new Date(quote.createdAt).toLocaleDateString('en-IN')}</p>
+          <p className="text-xs text-[#6B7280] font-medium mt-1">{quote.company?.name || quote.customer?.name} • Created on {new Date(quote.createdAt).toLocaleDateString('en-IN')}</p>
         </div>
 
         {/* Action Buttons Bar */}
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            variant="terracotta"
+            variant="success"
             size="sm"
             data-cy="whatsapp-link"
             onClick={() => handleWhatsAppClick('NEW_QUOTE')}
-            className="gap-2 font-bold bg-[#25D366] hover:bg-[#1EBE57] text-white border-none"
+            className="gap-2 font-bold"
           >
-            <MessageSquare className="w-4 h-4 fill-white" /> WHATSAPP CUSTOMER
+            <MessageSquare className="w-4 h-4" /> WHATSAPP CUSTOMER
           </Button>
 
           <Button
@@ -308,28 +297,28 @@ export default function AdminQuoteDetailPage() {
             size="sm"
             data-cy="admin-update-qty-btn"
             onClick={() => setIsEditing(!isEditing)}
-            className="gap-1.5 font-bold border-[#E7E3DD] bg-white text-[#1C1C1C]"
+            className="gap-2 font-bold bg-white border-[#E5E7EB] text-[#111111] hover:bg-[#F9FAFB]"
           >
-            <Edit3 className="w-4 h-4 text-[#C75B39]" /> EDIT QUOTE
+            <Edit3 className="w-4 h-4 text-[#6B7280]" /> EDIT QUOTE
           </Button>
 
           {quote.status !== 'APPROVED' && quote.status !== 'REJECTED' && (
             <>
               <Button
-                variant="outline"
+                variant="success"
                 size="sm"
                 onClick={() => handleUpdateStatus('APPROVED')}
                 disabled={updating}
-                className="gap-1.5 font-bold bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                className="gap-1.5 font-bold"
               >
                 <CheckCircle2 className="w-4 h-4" /> APPROVE
               </Button>
               <Button
-                variant="outline"
+                variant="danger"
                 size="sm"
                 onClick={() => handleUpdateStatus('REJECTED')}
                 disabled={updating}
-                className="gap-1.5 font-bold bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100"
+                className="gap-1.5 font-bold"
               >
                 <XCircle className="w-4 h-4" /> REJECT
               </Button>
@@ -338,11 +327,11 @@ export default function AdminQuoteDetailPage() {
 
           {quote.status === 'APPROVED' && (
             <Button
-              variant="terracotta"
+              variant="black"
               size="sm"
               onClick={handleConvertToOrder}
               disabled={updating}
-              className="gap-2 font-bold bg-[#1A5653] text-[#D4A953] hover:bg-[#123D3B]"
+              className="gap-2 font-bold"
             >
               <ShoppingBag className="w-4 h-4" /> CONVERT TO ORDER
             </Button>
@@ -350,95 +339,95 @@ export default function AdminQuoteDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Left Column: Customer Info & Quote Items */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="flex-1 space-y-6 min-w-0">
           {/* Customer Profile Card */}
-          <Card className="bg-white border-[#E7E3DD] p-6 space-y-4 shadow-sm">
-            <h3 className="text-sm uppercase tracking-wider font-bold text-[#5F6368] flex items-center gap-2">
-              <User className="w-4 h-4 text-[#C75B39]" /> Customer & Company Profile
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-sm p-6 space-y-4">
+            <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2">
+              <User className="w-4 h-4 text-[#3B6FEB]" /> Customer & Company Profile
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
               <div>
-                <span className="text-[#5F6368] block text-[11px]">Customer Name</span>
-                <span className="text-[#1C1C1C] font-bold text-sm" data-cy="quote-detail-customer-name">{quote.customer?.name || '—'}</span>
+                <span className="text-[#6B7280] block text-[11px]">Customer Name</span>
+                <span className="text-[#111111] font-bold text-sm" data-cy="quote-detail-customer-name">{quote.customer?.name || '—'}</span>
               </div>
               <div>
-                <span className="text-[#5F6368] block text-[11px]">Company Name</span>
-                <span className="text-[#1C1C1C] font-bold text-sm" data-cy="quote-detail-company-name">{quote.company?.name || 'Acme Tech Pvt Ltd'}</span>
+                <span className="text-[#6B7280] block text-[11px]">Company Name</span>
+                <span className="text-[#374151] font-bold text-sm" data-cy="quote-detail-company-name">{quote.company?.name || 'Acme Tech Pvt Ltd'}</span>
               </div>
               <div>
-                <span className="text-[#5F6368] block text-[11px]">Phone Number</span>
-                <span className="text-[#1A5653] font-mono font-bold flex items-center gap-1" data-cy="quote-detail-phone">
-                  <Phone className="w-3.5 h-3.5" /> {quote.customer?.phone || '+91 98765 43210'}
+                <span className="text-[#6B7280] block text-[11px]">Phone Number</span>
+                <span className="text-[#374151] font-mono font-bold flex items-center gap-1.5" data-cy="quote-detail-phone">
+                  <Phone className="w-3.5 h-3.5 text-green-600" /> {quote.customer?.phone || '+91 98765 43210'}
                 </span>
               </div>
               <div>
-                <span className="text-[#5F6368] block text-[11px]">Email Address</span>
-                <span className="text-[#1C1C1C] font-mono flex items-center gap-1" data-cy="quote-detail-email">
-                  <Mail className="w-3.5 h-3.5 text-[#5F6368]" /> {quote.customer?.email || 'rahul@acme.com'}
+                <span className="text-[#6B7280] block text-[11px]">Email Address</span>
+                <span className="text-[#3B6FEB] font-mono flex items-center gap-1.5 truncate max-w-full" data-cy="quote-detail-email">
+                  <Mail className="w-3.5 h-3.5" /> {quote.customer?.email || 'rahul@acme.com'}
                 </span>
               </div>
               <div>
-                <span className="text-[#5F6368] block text-[11px]">GSTIN</span>
-                <span className="text-[#1C1C1C] font-mono">{quote.company?.gstin || '21AAACA1234A1Z5'}</span>
+                <span className="text-[#6B7280] block text-[11px]">GSTIN</span>
+                <span className="text-[#374151] font-mono">{quote.company?.gstin || '21AAACA1234A1Z5'}</span>
               </div>
               <div>
-                <span className="text-[#5F6368] block text-[11px]">Location</span>
-                <span className="text-[#1C1C1C]">{quote.company?.city || quote.company?.address || 'Bhubaneswar, Odisha'}</span>
+                <span className="text-[#6B7280] block text-[11px]">Location</span>
+                <span className="text-[#374151]">{quote.company?.city || quote.company?.address || 'Bhubaneswar, Odisha'}</span>
               </div>
             </div>
-          </Card>
+          </div>
 
           {/* Specifications & Customization Requirements Card */}
           {quote.notes && (
-            <Card className="bg-white border-[#E7E3DD] p-6 space-y-4 shadow-sm" data-cy="quote-specifications-card">
-              <h3 className="text-sm uppercase tracking-wider font-bold text-[#5F6368] flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#C75B39]" /> Customization & Order Specifications
+            <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-sm p-6 space-y-4" data-cy="quote-specifications-card">
+              <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#3B6FEB]" /> Customization & Order Specifications
               </h3>
-              <div className="bg-[#F7F5F2] p-4 rounded-xl space-y-2 text-xs font-medium">
+              <div className="bg-[#F9FAFB] border border-[#E5E7EB] p-4 rounded-xl space-y-2 text-xs font-medium">
                 {quote.notes.includes('|') ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {quote.notes.split('|').map((part, idx) => {
                       const [label, ...val] = part.split(':');
                       return (
-                        <div key={idx} className="bg-white p-2.5 rounded-lg border border-[#E7E3DD]">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#5F6368] block">{label?.trim()}</span>
-                          <span className="text-[#1C1C1C] font-semibold">{val.join(':').trim()}</span>
+                        <div key={idx} className="bg-white p-3 rounded-lg border border-[#E5E7EB] shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B7280] block mb-1">{label?.trim()}</span>
+                          <span className="text-[#111111] font-semibold">{val.join(':').trim()}</span>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <p className="text-[#1C1C1C] leading-relaxed whitespace-pre-wrap">{quote.notes}</p>
+                  <p className="text-[#374151] leading-relaxed whitespace-pre-wrap font-semibold">{quote.notes}</p>
                 )}
               </div>
-            </Card>
+            </div>
           )}
 
           {/* Edit Form Drawer if active */}
           {isEditing && (
-            <Card className="bg-amber-50 border-amber-200 p-6 space-y-4 shadow-sm">
-              <h3 className="text-sm font-bold text-amber-900 flex items-center gap-2">
-                <Edit3 className="w-4 h-4 text-amber-700" /> Edit Quote Specifications (Server Recalculates Price)
+            <div className="bg-[#EEF2FF] border border-[#BFDBFE] rounded-2xl p-6 space-y-4 shadow-sm">
+              <h3 className="text-sm font-bold text-[#1D4ED8] flex items-center gap-2">
+                <Edit3 className="w-4 h-4" /> Edit Quote Specifications (Server Recalculates Price)
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs font-semibold">
-                <div>
-                  <label className="text-[#5F6368] block mb-1">Quantity</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-bold text-[#374151]">
+                <div className="space-y-1.5">
+                  <label className="text-[#6B7280]">Quantity</label>
                   <input
                     type="number"
                     data-cy="admin-qty-input"
                     value={editQty || ''}
                     onChange={(e) => setEditQty(e.target.value === '' ? 0 : Number(e.target.value))}
-                    className="w-full p-2 border border-[#E7E3DD] rounded-lg bg-white"
+                    className="w-full p-2.5 border border-[#BFDBFE] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3B6FEB]/50"
                   />
                 </div>
-                <div>
-                  <label className="text-[#5F6368] block mb-1">Print Type</label>
+                <div className="space-y-1.5">
+                  <label className="text-[#6B7280]">Print Type</label>
                   <select
                     value={editPrintType}
                     onChange={(e) => setEditPrintType(e.target.value)}
-                    className="w-full p-2 border border-[#E7E3DD] rounded-lg bg-white"
+                    className="w-full p-2.5 border border-[#BFDBFE] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3B6FEB]/50"
                   >
                     <option value="Front Only">Front Only</option>
                     <option value="Back Only">Back Only</option>
@@ -446,142 +435,146 @@ export default function AdminQuoteDetailPage() {
                     <option value="Embroidery Logo">Embroidery Logo</option>
                   </select>
                 </div>
-                <div>
-                  <label className="text-[#5F6368] block mb-1">Color</label>
+                <div className="space-y-1.5">
+                  <label className="text-[#6B7280]">Color</label>
                   <input
                     type="text"
                     value={editColor}
                     onChange={(e) => setEditColor(e.target.value)}
-                    className="w-full p-2 border border-[#E7E3DD] rounded-lg bg-white"
+                    className="w-full p-2.5 border border-[#BFDBFE] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3B6FEB]/50"
                   />
                 </div>
-                <div>
-                  <label className="text-[#5F6368] block mb-1">Size</label>
+                <div className="space-y-1.5">
+                  <label className="text-[#6B7280]">Size</label>
                   <input
                     type="text"
                     value={editSize}
                     onChange={(e) => setEditSize(e.target.value)}
-                    className="w-full p-2 border border-[#E7E3DD] rounded-lg bg-white"
+                    className="w-full p-2.5 border border-[#BFDBFE] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3B6FEB]/50"
                   />
                 </div>
               </div>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
-                <Button variant="terracotta" size="sm" data-cy="admin-save-quote-btn" onClick={handleSaveEdits} disabled={updating}>
-                  SAVE & RECALCULATE PRICE
+              <div className="flex gap-2 justify-end pt-2">
+                <Button variant="outline" size="sm" onClick={() => setIsEditing(false)} className="bg-white border-[#BFDBFE] text-[#374151]">Cancel</Button>
+                <Button variant="primary" size="sm" data-cy="admin-save-quote-btn" onClick={handleSaveEdits} disabled={updating}>
+                  SAVE & RECALCULATE
                 </Button>
               </div>
-            </Card>
+            </div>
           )}
 
           {/* Quote Item Details Breakdown */}
-          <Card className="bg-white border-[#E7E3DD] p-0 overflow-hidden shadow-sm">
-            <div className="p-4 border-b border-[#E7E3DD] bg-[#F7F5F2]">
-              <h3 className="text-xs uppercase tracking-wider font-bold text-[#5F6368] flex items-center gap-2">
-                <Package className="w-4 h-4 text-[#C75B39]" /> Line Item Specifications
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-sm flex flex-col">
+            <div className="p-4 border-b border-[#E5E7EB] bg-[#FDFDFD]">
+              <h3 className="text-xs uppercase tracking-wider font-bold text-[#111111] flex items-center gap-2">
+                <Package className="w-4 h-4 text-[#3B6FEB]" /> Line Item Specifications
               </h3>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="table-scroll">
-                <table className="w-full min-w-[600px] text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-[#E7E3DD] text-[#5F6368] font-bold">
-                      <th className="pb-2">Product Description</th>
-                      <th className="pb-2">Print Customization</th>
-                      <th className="pb-2">Color / Size</th>
-                      <th className="pb-2">Qty</th>
-                      <th className="pb-2">Unit Rate</th>
-                      <th className="pb-2 text-right">Total Price</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E7E3DD] font-semibold text-[#1C1C1C]">
-                    {quote.items?.map((item) => (
-                      <tr key={item.id}>
-                        <td className="py-3 font-bold text-[#1A5653]">{item.product?.name || 'Customized Polo T-Shirt (200 GSM)'}</td>
-                        <td className="py-3 text-[#5F6368]">{item.printType}</td>
-                        <td className="py-3">{item.color} / {item.size}</td>
-                        <td className="py-3">{item.quantity} Pcs</td>
-                        <td className="py-3">₹{item.unitPrice}</td>
-                        <td className="py-3 text-right font-black">₹{item.totalPrice.toLocaleString('en-IN')}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
 
-              {/* Financial Totals */}
-              <div className="border-t border-[#E7E3DD] pt-4 flex justify-end">
-                <div className="w-full sm:w-64 space-y-2 text-xs font-semibold">
-                  <div className="flex justify-between text-[#5F6368]">
-                    <span>Subtotal</span>
-                    <span className="text-[#1C1C1C]">₹{quote.subtotal.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between text-[#5F6368]">
-                    <span>GST (5% HSN 6109)</span>
-                    <span className="text-[#1C1C1C]">₹{quote.gstTotal.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between text-[#1C1C1C] font-black text-sm pt-2 border-t border-[#E7E3DD]">
-                    <span>Grand Total</span>
-                    <span className="text-[#C75B39]">₹{quote.totalAmount.toLocaleString('en-IN')}</span>
-                  </div>
+            <div className="table-scroll">
+              <table className="w-full min-w-[650px] text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280] font-bold uppercase tracking-wider text-[10px]">
+                    <th className="px-4 py-3">Product Description</th>
+                    <th className="px-4 py-3">Print Customization</th>
+                    <th className="px-4 py-3">Color / Size</th>
+                    <th className="px-4 py-3">Qty</th>
+                    <th className="px-4 py-3">Unit Rate</th>
+                    <th className="px-4 py-3 text-right">Total Price</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E5E7EB] font-semibold text-[#111111]">
+                  {quote.items?.map((item) => (
+                    <tr key={item.id} className="hover:bg-[#F9FAFB] transition-colors">
+                      <td className="px-4 py-4 font-bold text-[#111111]">{item.product?.name || 'Customized Polo T-Shirt (200 GSM)'}</td>
+                      <td className="px-4 py-4 text-[#6B7280]">{item.printType}</td>
+                      <td className="px-4 py-4 text-[#374151]">{item.color} / {item.size}</td>
+                      <td className="px-4 py-4">{item.quantity} Pcs</td>
+                      <td className="px-4 py-4 font-mono text-sm">₹{item.unitPrice}</td>
+                      <td className="px-4 py-4 text-right font-black font-mono text-sm">₹{item.totalPrice.toLocaleString('en-IN')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Financial Totals */}
+            <div className="p-5 bg-[#FDFDFD] border-t border-[#E5E7EB] flex justify-end">
+              <div className="w-full sm:w-72 space-y-3 text-xs font-semibold">
+                <div className="flex justify-between text-[#6B7280] items-center">
+                  <span>Subtotal</span>
+                  <span className="text-[#111111] font-mono text-sm">₹{quote.subtotal.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-[#6B7280] items-center">
+                  <span>GST (5% HSN 6109)</span>
+                  <span className="text-[#111111] font-mono text-sm">₹{quote.gstTotal.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-[#111111] font-black text-sm pt-3 border-t border-[#E5E7EB] items-center">
+                  <span>Grand Total</span>
+                  <span className="text-[#3B6FEB] text-lg font-mono tracking-tight">₹{quote.totalAmount.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
-          </Card>
+          </div>
         </div>
 
         {/* Right Column: Activity Timeline & Note Input */}
-        <div className="space-y-8">
-          <Card className="bg-white border-[#E7E3DD] p-6 space-y-6 shadow-sm">
-            <h3 className="text-sm uppercase tracking-wider font-bold text-[#5F6368] flex items-center gap-2 border-b border-[#E7E3DD] pb-3">
-              <Clock className="w-4 h-4 text-[#C75B39]" /> Sales Activity & Timeline
+        <div className="w-full lg:w-[320px] xl:w-[380px] shrink-0 space-y-6">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-sm p-5 flex flex-col h-full lg:max-h-[calc(100vh-140px)]">
+            <h3 className="text-xs uppercase tracking-wider font-bold text-[#111111] flex items-center gap-2 border-b border-[#E5E7EB] pb-3 mb-4 shrink-0">
+              <Clock className="w-4 h-4 text-[#3B6FEB]" /> Sales Activity & Timeline
             </h3>
 
             {/* Timeline Events */}
-            <div className="space-y-4">
+            <div className="space-y-5 overflow-y-auto flex-1 pr-1 custom-scrollbar">
               {quote.activities && quote.activities.length > 0 ? (
                 quote.activities.map((act) => (
-                  <div key={act.id} className="flex gap-3 text-xs border-l-2 border-[#1A5653] pl-3 py-1">
+                  <div key={act.id} className="relative pl-5">
+                    <div className="absolute w-2.5 h-2.5 bg-[#3B6FEB] rounded-full left-[1px] top-1 border-2 border-white shadow-sm ring-1 ring-[#3B6FEB]/20"></div>
+                    <div className="absolute w-px h-full bg-[#E5E7EB] left-1 top-3.5 -z-10"></div>
+
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-[#1A5653] uppercase text-[10px] tracking-wider bg-[#F7F5F2] px-2 py-0.5 rounded">
+                        <span className="font-bold text-[#3B6FEB] uppercase text-[9px] tracking-wider bg-[#EEF2FF] px-1.5 py-0.5 rounded border border-[#BFDBFE]">
                           {act.type}
                         </span>
-                        <span className="text-[10px] text-[#5F6368]">
+                        <span className="text-[10px] text-[#6B7280]">
                           {new Date(act.createdAt).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}
                         </span>
                       </div>
-                      <p className="text-[#1C1C1C] font-medium">{act.message}</p>
-                      {act.user && <p className="text-[10px] text-[#5F6368]">by {act.user.name}</p>}
+                      <p className="text-[#111111] font-medium text-xs leading-relaxed">{act.message}</p>
+                      {act.user && <p className="text-[10px] text-[#9CA3AF] font-medium">by {act.user.name}</p>}
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-[#5F6368] italic">No sales activity logged yet.</p>
+                <div className="bg-[#F9FAFB] rounded-xl p-4 text-center border border-[#E5E7EB] border-dashed">
+                  <p className="text-xs text-[#6B7280] font-medium">No sales activity logged yet.</p>
+                </div>
               )}
             </div>
 
             {/* Add Internal Sales Note Form */}
-            <form onSubmit={handleAddNote} className="space-y-3 pt-4 border-t border-[#E7E3DD]">
-              <label className="text-xs font-bold text-[#1C1C1C] block">Add Internal Sales Note</label>
+            <form onSubmit={handleAddNote} className="space-y-3 pt-5 border-t border-[#E5E7EB] mt-4 shrink-0">
+              <label className="text-xs font-bold text-[#111111] block">Add Internal Sales Note</label>
               <textarea
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
-                placeholder="e.g. Customer requested 150 units with custom embroidery on back..."
-                className="w-full p-3 text-xs border border-[#E7E3DD] rounded-xl focus:ring-2 focus:ring-[#C75B39] focus:outline-none bg-[#F7F5F2]"
+                placeholder="e.g. Customer requested custom printing..."
+                className="w-full p-3 text-xs font-medium border border-[#E5E7EB] rounded-xl focus:ring-2 focus:ring-[#3B6FEB] focus:border-[#3B6FEB] focus:outline-none bg-[#F9FAFB] placeholder:text-[#9CA3AF] transition-shadow resize-none"
                 rows={3}
               />
               <Button
                 type="submit"
-                variant="terracotta"
-                size="sm"
+                variant="black"
+                size="md"
                 disabled={addingNote || !noteText.trim()}
-                className="w-full font-bold"
+                className="w-full"
               >
                 {addingNote ? 'ADDING NOTE...' : 'ADD NOTE'}
               </Button>
             </form>
-          </Card>
+          </div>
         </div>
       </div>
     </div>
