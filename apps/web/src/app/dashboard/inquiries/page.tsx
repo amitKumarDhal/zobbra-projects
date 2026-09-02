@@ -132,8 +132,8 @@ export default function InquiriesPage() {
         {/* LIST TABLE (Takes full width if drawer is closed, or partial if open) */}
         <div className={`bg-white border border-[#E5E7EB] rounded-2xl shadow-sm transition-all duration-300 flex-1 ${isDrawerOpen ? 'w-full lg:w-2/3' : 'w-full'}`}>
           {/* Toolbar */}
-          <div className="p-4 border-b border-[#E5E7EB] flex flex-wrap gap-3 justify-between items-center bg-[#FDFDFD] rounded-t-2xl">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <div className="p-4 border-b border-[#E5E7EB] flex flex-col sm:flex-row sm:flex-wrap gap-3 justify-between items-stretch sm:items-center bg-[#FDFDFD] rounded-t-2xl">
+            <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
               <input 
                 type="text" 
@@ -159,7 +159,7 @@ export default function InquiriesPage() {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="table-scroll">
             <table className="w-full min-w-[850px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#E5E7EB]">

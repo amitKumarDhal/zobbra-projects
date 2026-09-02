@@ -206,7 +206,7 @@ export default function TestimonialsPage() {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="table-scroll">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB]">

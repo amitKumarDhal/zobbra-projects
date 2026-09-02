@@ -128,8 +128,8 @@ export default function CouponsPage() {
         {/* LIST TABLE - Left Side */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-sm transition-all duration-300 flex-1 overflow-hidden flex flex-col">
           {/* Toolbar */}
-          <div className="p-4 border-b border-[#E5E7EB] flex flex-wrap gap-3 justify-between items-center bg-[#FDFDFD]">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <div className="p-4 border-b border-[#E5E7EB] flex flex-col sm:flex-row sm:flex-wrap gap-3 justify-between items-stretch sm:items-center bg-[#FDFDFD]">
+            <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
               <input 
                 type="text" 
@@ -158,7 +158,7 @@ export default function CouponsPage() {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto flex-1">
+          <div className="table-scroll flex-1">
             <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
                 <tr className="border-b border-[#E5E7EB] bg-[#FDFDFD]">

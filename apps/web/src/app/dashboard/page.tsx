@@ -233,7 +233,7 @@ export default function AdminDashboardPage() {
         {/* Latest Inquiries Table */}
         <div className="lg:col-span-6 bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm flex flex-col">
           <h3 className="font-bold text-[#111111] mb-4">Latest Inquiries</h3>
-          <div className="overflow-x-auto">
+          <div className="table-scroll">
             <table className="w-full min-w-[540px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#F3F4F6]">

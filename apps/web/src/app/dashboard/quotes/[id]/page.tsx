@@ -482,7 +482,7 @@ export default function AdminQuoteDetailPage() {
               </h3>
             </div>
             <div className="p-6 space-y-4">
-              <div className="overflow-x-auto">
+              <div className="table-scroll">
                 <table className="w-full min-w-[600px] text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-[#E7E3DD] text-[#5F6368] font-bold">

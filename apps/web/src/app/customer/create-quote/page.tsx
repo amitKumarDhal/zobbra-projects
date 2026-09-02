@@ -272,7 +272,7 @@ export default function CreateQuoteWizardPage() {
 
       {/* 3. 8-STEP CONFIGURATOR STEP NAVIGATION */}
       {!submitted && (
-        <div className="bg-white p-5 rounded-2xl border border-[#E5E7EB] shadow-sm overflow-x-auto">
+        <div className="bg-white p-5 rounded-2xl border border-[#E5E7EB] shadow-sm table-scroll">
           <div className="flex items-center justify-between min-w-[620px] gap-2">
             {stepsList.map((s) => (
               <div

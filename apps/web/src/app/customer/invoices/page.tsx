@@ -128,7 +128,7 @@ export default function CustomerInvoicesPage() {
             </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="table-scroll">
             <table className="w-full min-w-[720px] text-left border-collapse text-xs" data-cy="invoices-table">
               <thead>
                 <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-[#6B7280] uppercase tracking-wider font-bold">
