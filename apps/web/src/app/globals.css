@@ -306,13 +306,61 @@
    ═══════════════════════════════════════════════════════════════ */
 
 @layer utilities {
-  /* FAQ accordion */
+  /* ── Responsive Container Utilities ────────────────────────────── */
+
+  /* Responsive container prevents horizontal overflow */
+  .responsive-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Table scroll container — keeps table scroll local, not page-level */
+  .table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Responsive grid that collapses on mobile */
+  .responsive-grid-cols-2 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .responsive-grid-cols-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .responsive-grid-cols-3 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .responsive-grid-cols-3 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .responsive-grid-cols-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  /* ── FAQ accordion ────────────────────────────────────────────── */
   .faq-content {
     overflow: hidden;
     transition: max-height 0.3s ease, opacity 0.3s ease;
   }
 
-  /* Subtle scrollbar */
+  /* ── Subtle scrollbar ────────────────────────────────────────── */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -328,14 +376,14 @@
     background: var(--color-border-strong);
   }
 
-  /* Focus visible ring (keyboard navigation) */
+  /* ── Focus visible ring (keyboard navigation) ─────────────────── */
   .focus-brand:focus-visible {
     outline: 2px solid transparent;
     outline-offset: 2px;
     box-shadow: 0 0 0 2px var(--color-bg-app), 0 0 0 4px var(--color-brand-primary);
   }
 
-  /* Hide scrollbar (keep scroll functionality) — for filter chip rows */
+  /* ── Hide scrollbar (keep scroll functionality) ─────────────────── */
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -344,12 +392,13 @@
     display: none;
   }
 
-  /* Ensure buttons feel snappy on touch devices */
+  /* ── Touch-friendly interactive elements ────────────────────────── */
   button, a, [role="button"] {
     touch-action: manipulation;
+    min-height: 44px;
   }
 
-  /* Mobile drawer overlay backdrop */
+  /* ── Mobile drawer overlay backdrop ────────────────────────────── */
   .drawer-backdrop {
     position: fixed;
     inset: 0;
@@ -358,8 +407,7 @@
     backdrop-filter: blur(2px);
   }
 
-  /* Sidebar nav item hover — brand-tinted, applied via data attribute
-     to avoid overriding the active state (which uses inline style) */
+  /* ── Sidebar nav item hover ────────────────────────────────────── */
   a[data-sidebar-item='true'][data-active='false'] {
     background-color: transparent;
     color: var(--color-sidebar-text-secondary);
@@ -372,6 +420,40 @@
 
   a[data-sidebar-item='true'][data-active='false']:hover svg {
     color: var(--color-sidebar-hover-icon) !important;
+  }
+
+  /* ── Responsive Typography ─────────────────────────────────────── */
+
+  /* Display headings scale down on mobile */
+  .text-display-xl {
+    font-size: clamp(2rem, 5vw, 3.75rem);
+  }
+
+  .text-display {
+    font-size: clamp(1.875rem, 4.5vw, 3rem);
+  }
+
+  .text-h1 {
+    font-size: clamp(1.5rem, 3vw, 1.875rem);
+  }
+
+  /* ── Mobile-first KPI Grid ─────────────────────────────────────── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 640px) {
+    .kpi-grid {
+      gap: 1rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .kpi-grid {
+      grid-template-columns: repeat(5, 1fr);
+    }
   }
 }
 
