@@ -48,10 +48,7 @@ export function PublicHeader() {
         { name: 'All Products', href: '/products' },
       ],
     },
-    { name: 'How It Works', href: '/#how-it-works' },
-    { name: 'Our Clients', href: '/#clients' },
     { name: 'About Us', href: '/about' },
-    { name: 'Contact', href: '/contact' },
   ];
 
   return (
