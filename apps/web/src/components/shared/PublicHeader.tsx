@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import {
   Menu,
   X,
-  ChevronDown,
   MapPin,
   Mail,
   Phone,
@@ -16,7 +15,6 @@ import { ZobbraLogo } from './ZobbraLogo';
 export function PublicHeader() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [productsOpen, setProductsOpen] = useState(false);
 
   // Close menu on route change
   useEffect(() => {
@@ -35,19 +33,7 @@ export function PublicHeader() {
 
   const navLinks = [
     { name: 'Home', href: '/' },
-    {
-      name: 'Products',
-      href: '/products',
-      hasDropdown: true,
-      children: [
-        { name: 'T-Shirts', href: '/products?category=t-shirts' },
-        { name: 'Caps & Headwear', href: '/products?category=caps' },
-        { name: 'Bags & Backpacks', href: '/products?category=bags' },
-        { name: 'Mugs & Bottles', href: '/products?category=drinkware' },
-        { name: 'Welcome Kits', href: '/products?category=kits' },
-        { name: 'All Products', href: '/products' },
-      ],
-    },
+    { name: 'Products', href: '/products' },
     { name: 'About Us', href: '/about' },
   ];
 
@@ -130,54 +116,26 @@ export function PublicHeader() {
 
             {/* Center: Navigation Links */}
             <nav className="hidden md:flex items-center gap-7 text-[13.5px] font-medium text-[#333333]">
-              {navLinks.map((link) =>
-                link.hasDropdown ? (
-                  <div key={link.href} className="relative">
-                    <button
-                      onClick={() => setProductsOpen(!productsOpen)}
-                      onBlur={() => setTimeout(() => setProductsOpen(false), 200)}
-                      aria-expanded={productsOpen}
-                      className={`flex items-center gap-1 transition-colors hover:text-[#050505] py-2 ${
-                        pathname.startsWith('/products') ? 'text-[#050505] font-bold' : ''
-                      }`}
-                    >
-                      {link.name}
-                      <ChevronDown
-                        className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 ${
-                          productsOpen ? 'rotate-180' : ''
-                        }`}
-                      />
-                    </button>
-                    {productsOpen && (
-                      <div className="absolute top-full left-0 mt-1 w-52 bg-white border border-[#E5E5E5] rounded-md shadow-lg z-50 py-1">
-                        {link.children?.map((child) => (
-                          <Link
-                            key={child.href}
-                            href={child.href}
-                            onClick={() => setProductsOpen(false)}
-                            className="block px-4 py-2 text-[13px] text-[#444444] hover:bg-[#F7F7F5] hover:text-[#050505] transition-colors"
-                          >
-                            {child.name}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
+              {navLinks.map((link) => {
+                const isActive =
+                  link.href === '/'
+                    ? pathname === '/'
+                    : pathname.startsWith(link.href);
+                return (
                   <Link
                     key={link.href}
                     href={link.href}
                     className={`transition-colors hover:text-[#050505] py-2 relative ${
-                      pathname === link.href ? 'text-[#050505] font-bold' : ''
+                      isActive ? 'text-[#050505] font-bold' : ''
                     }`}
                   >
                     {link.name}
-                    {pathname === link.href && (
+                    {isActive && (
                       <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#050505] rounded-full" />
                     )}
                   </Link>
-                )
-              )}
+                );
+              })}
             </nav>
 
             {/* Right: Login & CTA Button */}
@@ -227,41 +185,26 @@ export function PublicHeader() {
                 <Mail className="w-3.5 h-3.5 text-gray-500" /> hello@zobbra.com
               </span>
             </div>
-            {navLinks.map((link) => (
-              <div key={link.href}>
-                {link.hasDropdown ? (
-                  <div className="space-y-1">
-                    <div className="px-2 py-1.5 text-xs font-bold text-[#999999] uppercase tracking-wider mt-1">
-                      {link.name}
-                    </div>
-                    <div className="pl-2 space-y-1 border-l-2 border-[#E5E5E5] ml-2 mb-2">
-                      {link.children?.map((child) => (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block py-2 px-3 text-sm font-medium text-[#444444] hover:text-[#050505] hover:bg-[#F7F7F5] rounded transition-colors min-h-[40px] flex items-center"
-                        >
-                          {child.name}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <Link
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block py-2.5 px-3 text-sm font-medium rounded transition-colors min-h-[44px] flex items-center ${
-                      pathname === link.href
-                        ? 'text-[#050505] bg-[#F7F7F5] font-bold'
-                        : 'text-[#333333] hover:text-[#050505] hover:bg-[#F7F7F5]'
-                    }`}
-                  >
-                    {link.name}
-                  </Link>
-                )}
-              </div>
-            ))}
+            {navLinks.map((link) => {
+              const isActive =
+                link.href === '/'
+                  ? pathname === '/'
+                  : pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`block py-2.5 px-3 text-sm font-medium rounded transition-colors min-h-[44px] flex items-center ${
+                    isActive
+                      ? 'text-[#050505] bg-[#F7F7F5] font-bold'
+                      : 'text-[#333333] hover:text-[#050505] hover:bg-[#F7F7F5]'
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
             <div className="pt-3 border-t border-[#E5E5E5] space-y-2.5 mt-3">
               <Link
                 href="/login"
