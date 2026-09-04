@@ -41,16 +41,16 @@ export function PublicHeader() {
     <>
       <header className="sticky top-0 z-50 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
         {/* 1. TOP UTILITY BAR (Thin black bar at very top) */}
-        <div className="bg-[#050505] text-[#D1D5DB] text-[11px] py-1.5 px-4 hidden md:block border-b border-black">
-          <div className="max-w-[1240px] mx-auto flex items-center justify-between font-normal tracking-wide">
+        <div className="bg-[#050505] text-[#D1D5DB] text-[11px] py-1.5 hidden md:block border-b border-black">
+          <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between font-normal tracking-wide">
             {/* Left: Location */}
-            <div className="flex items-center gap-1.5 text-gray-300">
+            <div className="flex-1 flex items-center justify-start gap-1.5 text-gray-300">
               <MapPin className="w-3 h-3 text-gray-400" />
               <span>Bhubaneswar, Odisha</span>
             </div>
 
             {/* Center: Email */}
-            <div className="flex items-center gap-1.5 text-gray-300">
+            <div className="flex items-center justify-center gap-1.5 text-gray-300">
               <Mail className="w-3 h-3 text-gray-400" />
               <a href="mailto:hello@zobbra.com" className="hover:text-white transition-colors">
                 hello@zobbra.com
@@ -58,7 +58,7 @@ export function PublicHeader() {
             </div>
 
             {/* Right: Phone & Socials */}
-            <div className="flex items-center gap-6">
+            <div className="flex-1 flex items-center justify-end gap-6">
               <div className="flex items-center gap-1.5 text-gray-300">
                 <Phone className="w-3 h-3 text-gray-400" />
                 <a href="tel:+919124449666" className="hover:text-white transition-colors">
@@ -112,10 +112,12 @@ export function PublicHeader() {
         <div className="border-b border-[#E5E5E5] bg-white">
           <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-[60px] sm:h-[66px] flex items-center justify-between">
             {/* Left: Canonical Official Brand Logo */}
-            <ZobbraLogo variant="dark-badge" href="/" priority={true} />
+            <div className="flex-1 flex items-center justify-start">
+              <ZobbraLogo variant="dark-badge" href="/" priority={true} />
+            </div>
 
             {/* Center: Navigation Links */}
-            <nav className="hidden md:flex items-center gap-7 text-[13.5px] font-medium text-[#333333]">
+            <nav className="hidden md:flex items-center justify-center gap-8 text-[13.5px] font-medium text-[#333333]">
               {navLinks.map((link) => {
                 const isActive =
                   link.href === '/'
@@ -139,10 +141,10 @@ export function PublicHeader() {
             </nav>
 
             {/* Right: Login & CTA Button */}
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden md:flex flex-1 items-center justify-end gap-5">
               <Link
                 href="/login"
-                className="text-[13px] font-semibold text-[#444444] hover:text-[#050505] transition-colors py-1.5 px-2.5 rounded hover:bg-[#F7F7F5]"
+                className="text-[13.5px] font-semibold text-[#444444] hover:text-[#050505] transition-colors py-1.5 px-2.5 rounded hover:bg-[#F7F7F5]"
               >
                 Login
               </Link>
@@ -155,13 +157,15 @@ export function PublicHeader() {
             </div>
 
             {/* Mobile Menu Toggle */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded text-[#050505] hover:bg-[#F3F4F6] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+            <div className="flex flex-1 md:hidden items-center justify-end">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 rounded text-[#050505] hover:bg-[#F3F4F6] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
         </div>
 
