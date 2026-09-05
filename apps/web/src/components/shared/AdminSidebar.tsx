@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard,
   MessageSquare,
   FileText,
   ShoppingBag,
@@ -42,7 +41,6 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
   const userEmail = user?.email || 'admin@zobbra.com';
 
   const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Inquiry', href: '/dashboard/inquiries', icon: MessageSquare, badge: counts.inquiries, hasBadge: true },
     { name: 'Quote', href: '/dashboard/quotes', icon: FileText, badge: counts.quotes, hasBadge: true },
     { name: 'Order', href: '/dashboard/orders', icon: ShoppingBag, badge: counts.orders, hasBadge: true },
@@ -57,6 +55,20 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
     { name: 'Media', href: '/dashboard/media', icon: ImageIcon },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
   ];
+
+  // PHASE 2 - ADMIN V1 Allowlist
+  const adminV1Allowlist = [
+    '/dashboard/orders',
+    '/dashboard/products',
+    '/dashboard/customers',
+    '/dashboard/inquiries',
+    '/dashboard/payments',
+    '/dashboard/settings'
+  ];
+
+  const displayedNavItems = user?.role === 'ADMIN'
+    ? navItems.filter(item => adminV1Allowlist.includes(item.href))
+    : navItems;
 
   // Deterministic initials for avatar
   const avatarInitial = userName.charAt(0).toUpperCase();
@@ -111,7 +123,7 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
         className="space-y-0.5 mt-1 flex-1 overflow-y-auto hide-scrollbar min-h-0 pr-0.5"
         aria-label="Admin navigation"
       >
-        {navItems.map((item) => {
+        {displayedNavItems.map((item) => {
           const Icon = item.icon;
           const isActive =
             pathname === item.href ||
