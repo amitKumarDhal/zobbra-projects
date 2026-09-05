@@ -7,6 +7,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 import { API_URL } from '@/lib/api';
+import { uploadToCloudinary, deleteFromCloudinary } from '@/lib/upload';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -276,6 +277,7 @@ export default function ProductsPage() {
 function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mode: 'ADD'|'EDIT', productId: string|null, categories: any[], onClose: () => void, onRefresh: () => void }) {
   const [activeTab, setActiveTab] = useState<'Basic Info' | 'Variants' | 'Pricing' | 'Design Studio'>('Basic Info');
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   
   // Form State
   const [basic, setBasic] = useState({ name: '', sku: '', categoryId: '', description: '', basePrice: 0, isActive: true, images: [] as string[] });
@@ -336,6 +338,47 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size exceeds 5MB limit.');
+      return;
+    }
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Only JPG, PNG and WEBP formats are supported.');
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      const secureUrl = await uploadToCloudinary(file);
+      setBasic(prev => ({ ...prev, images: [...prev.images, secureUrl] }));
+    } catch (err: any) {
+      alert(`Failed to upload image: ${err.message}`);
+    } finally {
+      setUploadingImage(false);
+      // Reset input
+      e.target.value = '';
+    }
+  };
+
+  const handleImageDelete = async (index: number) => {
+    const imageUrl = basic.images[index];
+    if (confirm('Are you sure you want to delete this image?')) {
+      try {
+        // Attempt to delete from Cloudinary
+        await deleteFromCloudinary(imageUrl);
+      } catch (err) {
+        console.error('Failed to delete image from Cloudinary', err);
+      }
+      // Remove from UI regardless to prevent broken state
+      setBasic(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
+    }
+  };
+
   return (
     <div className="w-full lg:w-1/3 min-w-0 lg:min-w-[380px] max-w-[420px] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
       {/* Header */}
@@ -390,26 +433,24 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
             
             <div>
                <label className="block text-xs font-bold text-[#374151] mb-2">Product Images *</label>
-               <div className="border-2 border-dashed border-[#E5E7EB] rounded-lg p-6 text-center bg-[#F9FAFB]">
-                 <UploadCloud className="w-8 h-8 text-[#9CA3AF] mx-auto mb-2" />
-                 <p className="text-xs font-bold text-[#374151]">Upload Images</p>
-                 <p className="text-[10px] text-[#6B7280]">PNG, JPG up to 5MB (Max 5 images)</p>
-                 {/* Simulated UI upload for MVP */}
-                 <div className="mt-4 pt-4 border-t border-[#E5E7EB]">
-                   <input type="text" placeholder="Or paste image URL here..." className="w-full px-2 py-1 text-xs border border-[#E5E7EB] rounded outline-none" onKeyDown={(e) => {
-                     if (e.key === 'Enter') {
-                        setBasic({...basic, images: [...basic.images, e.currentTarget.value]});
-                        e.currentTarget.value = '';
-                     }
-                   }} />
-                 </div>
+               <div className="border-2 border-dashed border-[#E5E7EB] rounded-lg p-6 text-center bg-[#F9FAFB] relative hover:bg-gray-100 transition-colors cursor-pointer">
+                 <input 
+                   type="file" 
+                   accept="image/png, image/jpeg, image/webp" 
+                   onChange={handleImageUpload} 
+                   disabled={uploadingImage || basic.images.length >= 5}
+                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed" 
+                 />
+                 <UploadCloud className={`w-8 h-8 mx-auto mb-2 ${uploadingImage ? 'text-blue-500 animate-bounce' : 'text-[#9CA3AF]'}`} />
+                 <p className="text-xs font-bold text-[#374151]">{uploadingImage ? 'Uploading...' : 'Click or Drag Images to Upload'}</p>
+                 <p className="text-[10px] text-[#6B7280]">PNG, JPG, WEBP up to 5MB (Max 5 images)</p>
                </div>
                {basic.images.length > 0 && (
                  <div className="flex flex-wrap gap-2 mt-3">
                    {basic.images.map((img, i) => (
                      <div key={i} className="w-12 h-12 bg-gray-100 rounded border border-[#E5E7EB] relative group">
                        <img src={img} className="w-full h-full object-cover rounded" />
-                       <button onClick={()=>setBasic({...basic, images: basic.images.filter((_, idx)=>idx!==i)})} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hidden group-hover:block"><X className="w-3 h-3"/></button>
+                       <button type="button" onClick={() => handleImageDelete(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hidden group-hover:block"><X className="w-3 h-3"/></button>
                      </div>
                    ))}
                  </div>
