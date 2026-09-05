@@ -1,246 +1,925 @@
-# ZOBBRA Developer Architecture & System Overview
 
-> **SOURCE OF TRUTH:** The current source code, Prisma schema, deployment configuration, and live environment configuration override this document. This document reflects the state as of the time of writing.
+# ZOBBRA Complete Technical Documentation
 
 ## 1. Executive Summary
-ZOBBRA is a Modern B2B Merchandise Management SaaS. It consists of a public-facing website and an authenticated dashboard for customers, sales, production, and admins.
-- **Frontend**: Next.js 14 App Router (apps/web)
-- **Backend**: Express REST API Server (server)
-- **Database**: PostgreSQL with Prisma ORM (server/prisma)
-- **Deployment**: Railway
+ZOBBRA is a Modern B2B Merchandise Management SaaS. This document provides the source-of-truth developer architecture.
 
-## 2. System Architecture
-### Repository Structure (Turborepo)
-- `apps/web`: The Next.js frontend application (active).
-- `server`: The backend Express application (active).
-- `packages/*`: Shared utilities and database.
+## 2. Repository Architecture
+Turborepo containing:
+- `apps/web`: Next.js 14 App Router frontend.
+- `server`: Express backend API.
+- `packages/database`: Shared Prisma schema.
 
-### Browser → API → DB Flow
-```
-User Browser -> Next.js (apps/web) -> Express API (server) -> Prisma -> PostgreSQL
-```
+## 3. Frontend Architecture
+Next.js 14 with Tailwind CSS, shadcn/ui, TanStack Query.
+API Client located at `apps/web/src/lib/api.ts`.
 
-## 3. Frontend Architecture (`apps/web`)
-The frontend uses Next.js 14 App Router, Tailwind CSS, shadcn/ui, and TanStack Query.
-- **Public Routes**: `/(public)` - Includes Home, About, Contact, Products, FAQ.
-- **Auth Routes**: `/(auth)` - Login, Register, Forgot Password.
-- **Customer Routes**: `/customer` - Dashboard for registered clients.
-- **Admin Routes**: `/dashboard` - Dashboard for ADMIN, SALES, PRODUCTION roles.
-- **API Client**: `apps/web/src/lib/api.ts` centralizes all API calls.
+## 4. Route Map
+- `/(public)/*`: Public pages (Home, About, Products).
+- `/(auth)/*`: Login, Register, Forgot Password.
+- `/customer/*`: Authenticated customer portal.
+- `/dashboard/*`: Admin, Sales, and Production portal.
 
-## 4. Backend Architecture (`server`)
-The backend is an Express server structured into domain-driven modules:
-- Entry point: `server/src/app.ts`
-- Routes: `server/src/modules/<domain>/<domain>.routes.ts`
-- Middleware: Authentication (`authenticateJWT`), Authorization (`authorizeRoles`), Error Handling (`errorHandler.ts`).
+## 5. Backend Architecture
+Express.js REST API with modular structure in `server/src/modules`. Uses `cors` explicitly restricted to `zobbra.com`.
 
-## 5. Deployment & Configuration
-- **Platform**: Railway
-- **Frontend URL**: https://zobbra.com (and app.zobbra.com)
-- **Backend URL**: https://zobra-server-production.up.railway.app
-- **Next.js Skew Protection**: Configured via `RAILWAY_DEPLOYMENT_ID` in `next.config.js`.
+## 6. Complete API Reference
 
-## 6. Authentication & Authorization
-- **Authentication**: JWT-based. Handled via `auth.controller.ts`.
-- **Authorization**: Middleware checks roles (ADMIN, SALES, PRODUCTION, CUSTOMER).
+### AGENTS
+- **GET** `/api/v1/agents/stats`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **GET** `/api/v1/agents`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **GET** `/api/v1/agents/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **PUT** `/api/v1/agents/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN
 
-## 7. Reliability & Error Handling
-- **Frontend**: Centralized error classification in `api.ts`.
-- **Backend**: Global `errorHandler` middleware. Process-level `uncaughtException` catches.
-- **CORS**: Explicit whitelist including `https://zobbra.com`.
+### AUTH
+- **POST** `/api/v1/auth/register`
+  - Auth: Public
+  - Roles: Any
+- **POST** `/api/v1/auth/login`
+  - Auth: Public
+  - Roles: Any
+- **POST** `/api/v1/auth/forgot-password`
+  - Auth: Public
+  - Roles: Any
+- **POST** `/api/v1/auth/change-password`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/auth/me`
+  - Auth: Auth Required
+  - Roles: Any
 
-## 8. Frontend Deep Dive
-- **Design System**: Tailwind CSS with custom branding configured in `tailwind.config.js`.
-- **Testing**: Vitest for unit tests, Cypress for E2E tests (`test:cypress`).
+### CMS
+- **GET** `/api/v1/cms`
+  - Auth: Public
+  - Roles: Any
+- **POST** `/api/v1/cms`
+  - Auth: Auth Required
+  - Roles: ADMIN
 
-> **SOURCE OF TRUTH:** The current source code, Prisma schema, deployment configuration, and live environment configuration override this document. This document reflects the state as of the time of writing.
-# ZOBBRA API Reference
+### COUPONS
+- **GET** `/api/v1/coupons/stats`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/coupons`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/coupons/:id`
+  - Auth: Auth Required
+  - Roles: Any
+- **POST** `/api/v1/coupons`
+  - Auth: Auth Required
+  - Roles: Any
+- **PUT** `/api/v1/coupons/:id`
+  - Auth: Auth Required
+  - Roles: Any
+- **DELETE** `/api/v1/coupons/:id`
+  - Auth: Auth Required
+  - Roles: Any
 
-> **SOURCE OF TRUTH:** The current source code, Prisma schema, deployment configuration, and live environment configuration override this document. This document reflects the state as of the time of writing.
+### CUSTOMERS
+- **GET** `/api/v1/customers/stats`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **GET** `/api/v1/customers`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **GET** `/api/v1/customers/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **POST** `/api/v1/customers`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **PUT** `/api/v1/customers/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
 
-## Overview
-The ZOBBRA API is a RESTful service.
-Base URL: `https://zobra-server-production.up.railway.app/api/v1`
+### DISPATCH
+- **GET** `/api/v1/dispatch/track/:shipmentNumber`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/dispatch`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES, PRODUCTION
+- **POST** `/api/v1/dispatch`
+  - Auth: Auth Required
+  - Roles: ADMIN, PRODUCTION
 
-## API Endpoints
+### INQUIRIES
+- **GET** `/api/v1/inquiries/stats`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **GET** `/api/v1/inquiries`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **GET** `/api/v1/inquiries/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **POST** `/api/v1/inquiries`
+  - Auth: Public
+  - Roles: Any
+- **PATCH** `/api/v1/inquiries/:id/status`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **PATCH** `/api/v1/inquiries/:id/assign`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **POST** `/api/v1/inquiries/:id/activity`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **POST** `/api/v1/inquiries/:id/whatsapp`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **POST** `/api/v1/inquiries/:id/convert-to-quote`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
 
-### Auth
-- `POST /auth/register` (Public) - Register a new user
-- `POST /auth/login` (Public) - Login
-- `POST /auth/forgot-password` (Public) - Forgot password
-- `POST /auth/change-password` (Auth required) - Change password
-- `GET /auth/me` (Auth required) - Get current user
+### INVOICES
+- **GET** `/api/v1/invoices`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/invoices/:id`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/invoices/:id/pdf`
+  - Auth: Auth Required
+  - Roles: Any
 
-### Products
-- `GET /products` (Public) - List products
-- `GET /products/categories` (Public) - List categories
-- `GET /products/:slug` (Public) - Get product details
-- `POST /products` (ADMIN/SALES) - Create product
-- `PUT /products/:id` (ADMIN/SALES) - Update product
-- `POST /products/:id/duplicate` (ADMIN/SALES) - Duplicate product
-- `DELETE /products/:id` (ADMIN/SALES) - Delete product
+### ORDERS
+- **GET** `/api/v1/orders/stats`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/orders`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/orders/:id`
+  - Auth: Auth Required
+  - Roles: Any
+- **POST** `/api/v1/orders/from-quote/:quoteId`
+  - Auth: Auth Required
+  - Roles: Any
+- **POST** `/api/v1/orders/convert`
+  - Auth: Auth Required
+  - Roles: Any
+- **PATCH** `/api/v1/orders/:id/status`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES, PRODUCTION
+- **PUT** `/api/v1/orders/:id/status`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES, PRODUCTION
+- **PUT** `/api/v1/orders/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES, PRODUCTION
 
-### Quotes
-- `GET /quotes` (Auth required) - List quotes
-- `POST /quotes/calculate` (ADMIN/SALES) - Calculate pricing
-- `GET /quotes/:id` (Auth required) - Get quote details
-- `POST /quotes` (Auth required) - Create quote
-- `PUT /quotes/:id` (ADMIN/SALES) - Edit quote
-- `PUT /quotes/:id/status` (Auth required) - Update status
-- `GET /quotes/:id/pdf` (Auth required) - Download quote PDF
-- `POST /quotes/:id/email` (Auth required) - Email quote
-- `POST /quotes/:id/whatsapp` (ADMIN/SALES) - Send WhatsApp link
+### PAYMENTS
+- **POST** `/api/v1/payments/create-order`
+  - Auth: Auth Required
+  - Roles: Any
+- **POST** `/api/v1/payments/verify`
+  - Auth: Auth Required
+  - Roles: Any
+- **POST** `/api/v1/payments/webhook`
+  - Auth: Public
+  - Roles: Any
+- **GET** `/api/v1/payments/stats`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **GET** `/api/v1/payments`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **POST** `/api/v1/payments/record`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **GET** `/api/v1/payments/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
 
-### Orders
-- `GET /orders` (Auth required) - List orders
-- `GET /orders/:id` (Auth required) - Get order details
-- `POST /orders/from-quote/:quoteId` (Auth required) - Convert quote to order
-- `PUT /orders/:id/status` (ADMIN/SALES/PRODUCTION) - Update order status
+### PRODUCTION
+- **GET** `/api/v1/production/kanban`
+  - Auth: Auth Required
+  - Roles: ADMIN, PRODUCTION, SALES
+- **PUT** `/api/v1/production/:id/stage`
+  - Auth: Auth Required
+  - Roles: ADMIN, PRODUCTION
 
-### Invoices
-- `GET /invoices` (Auth required) - List invoices
-- `GET /invoices/:id` (Auth required) - Get invoice details
-- `GET /invoices/:id/pdf` (Auth required) - Download invoice PDF
+### PRODUCTS
+- **GET** `/api/v1/products`
+  - Auth: Public
+  - Roles: Any
+- **GET** `/api/v1/products/stats`
+  - Auth: Public
+  - Roles: Any
+- **GET** `/api/v1/products/categories`
+  - Auth: Public
+  - Roles: Any
+- **GET** `/api/v1/products/:slug`
+  - Auth: Public
+  - Roles: Any
+- **POST** `/api/v1/products`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **PUT** `/api/v1/products/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **POST** `/api/v1/products/:id/duplicate`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **DELETE** `/api/v1/products/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
 
-### Production
-- `GET /production/kanban` (ADMIN/PRODUCTION/SALES) - List jobs
-- `PUT /production/:id/stage` (ADMIN/PRODUCTION) - Update stage
+### QUOTES
+- **GET** `/api/v1/quotes/stats`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/quotes`
+  - Auth: Auth Required
+  - Roles: Any
+- **POST** `/api/v1/quotes/calculate`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **GET** `/api/v1/quotes/:id`
+  - Auth: Auth Required
+  - Roles: Any
+- **POST** `/api/v1/quotes`
+  - Auth: Auth Required
+  - Roles: Any
+- **PUT** `/api/v1/quotes/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **PATCH** `/api/v1/quotes/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **PATCH** `/api/v1/quotes/:id/edit`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **PUT** `/api/v1/quotes/:id/status`
+  - Auth: Auth Required
+  - Roles: Any
+- **PATCH** `/api/v1/quotes/:id/status`
+  - Auth: Auth Required
+  - Roles: Any
+- **POST** `/api/v1/quotes/:id/activity`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **POST** `/api/v1/quotes/:id/whatsapp`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **GET** `/api/v1/quotes/:id/pdf`
+  - Auth: Auth Required
+  - Roles: Any
+- **POST** `/api/v1/quotes/:id/email`
+  - Auth: Auth Required
+  - Roles: Any
+- **POST** `/api/v1/quotes/:id/apply-coupon`
+  - Auth: Auth Required
+  - Roles: Any
+- **POST** `/api/v1/quotes/:id/remove-coupon`
+  - Auth: Auth Required
+  - Roles: Any
 
-### Dispatch
-- `GET /dispatch` (ADMIN/SALES/PRODUCTION) - List dispatches
-- `POST /dispatch` (ADMIN/PRODUCTION) - Create dispatch
-- `GET /dispatch/track/:shipmentNumber` (Public) - Track shipment
+### REPORTS
+- **GET** `/api/v1/reports/kpis`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES, PRODUCTION
+- **GET** `/api/v1/reports/sales`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **GET** `/api/v1/reports/sidebar-counts`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES, PRODUCTION
 
-### Inquiries
-- `GET /inquiries` (ADMIN/SALES) - List inquiries
-- `POST /inquiries` (Public) - Create inquiry
-- `POST /inquiries/:id/convert-to-quote` (ADMIN/SALES) - Convert inquiry to quote
+### SETTINGS
+- **GET** `/api/v1/settings`
+  - Auth: Auth Required
+  - Roles: Any
+- **POST** `/api/v1/settings`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/settings/users`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/settings/info`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/settings/health`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/settings/activity`
+  - Auth: Auth Required
+  - Roles: Any
 
-### Payments
-- `POST /payments/create-order` (Auth required) - Create Razorpay order
-- `POST /payments/verify` (Auth required) - Verify payment
-- `POST /payments/webhook` (Public) - Webhook
-- `GET /payments` (ADMIN/SALES) - List payments
-- `POST /payments/record` (ADMIN/SALES) - Record manual payment
+### TASKS
+- **GET** `/api/v1/tasks/stats`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **GET** `/api/v1/tasks`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **GET** `/api/v1/tasks/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **POST** `/api/v1/tasks`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **PUT** `/api/v1/tasks/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **PATCH** `/api/v1/tasks/:id/status`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **PATCH** `/api/v1/tasks/:id/assign`
+  - Auth: Auth Required
+  - Roles: ADMIN, SALES
+- **DELETE** `/api/v1/tasks/:id`
+  - Auth: Auth Required
+  - Roles: ADMIN
 
-> **SOURCE OF TRUTH:** The current source code, Prisma schema, deployment configuration, and live environment configuration override this document. This document reflects the state as of the time of writing.
-# ZOBBRA Data Dictionary
+### TESTIMONIALS
+- **GET** `/api/v1/testimonials/stats`
+  - Auth: Auth Required
+  - Roles: Any
+- **GET** `/api/v1/testimonials`
+  - Auth: Public
+  - Roles: Any
+- **GET** `/api/v1/testimonials/:id`
+  - Auth: Public
+  - Roles: Any
+- **POST** `/api/v1/testimonials`
+  - Auth: Auth Required
+  - Roles: Any
+- **PUT** `/api/v1/testimonials/:id`
+  - Auth: Auth Required
+  - Roles: Any
+- **PATCH** `/api/v1/testimonials/:id/status`
+  - Auth: Auth Required
+  - Roles: Any
+- **DELETE** `/api/v1/testimonials/:id`
+  - Auth: Auth Required
+  - Roles: Any
 
-> **SOURCE OF TRUTH:** The current source code, Prisma schema, deployment configuration, and live environment configuration override this document. This document reflects the state as of the time of writing.
 
-## Overview
-ZOBBRA uses PostgreSQL and Prisma ORM.
 
-## Core Models
+## 7. Authentication
+JWT-based authentication. `auth.controller.ts` handles registration/login. `authenticateJWT` middleware validates tokens.
+
+## 8. Authorization & Roles
+Roles: ADMIN, SALES, PRODUCTION, CUSTOMER, AGENT. Checked via `authorizeRoles` middleware.
+
+## 9. Database Architecture
+PostgreSQL via Prisma.
+
+## 10. Prisma Data Dictionary
 
 ### User
-- **Purpose**: Represents all actors (Customers, Admins, Sales, Production, Agents).
-- **Key Fields**: `id`, `email`, `password`, `role` (ADMIN, SALES, PRODUCTION, CUSTOMER, AGENT).
-- **Relations**: Associated with Company, Quotes, Orders, Tasks.
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| email | String | @unique |
+| passwordHash | String |  |
+| name | String |  |
+| phone | String? |  |
+| role | Role | @default(CUSTOMER) |
+| companyId | String? |  |
+| company | Company? | @relation(fields: [companyId], references: [id], onDelete: SetNull) |
+| quotes | Quote[] |  |
+| orders | Order[] |  |
+| assignedJobs | ProductionJob[] | @relation("AssignedProductionUser") |
+| activities | QuoteActivity[] |  |
+| inquiries | Inquiry[] | @relation("CustomerInquiries") |
+| assignedInquiries | Inquiry[] | @relation("AssignedSalesUser") |
+| inquiryActivities | InquiryActivity[] |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
+| assignedTasks | Task[] | @relation("AssignedTasks") |
+| createdTasks | Task[] | @relation("CreatedTasks") |
+| customerTasks | Task[] | @relation("CustomerTasks") |
+| assignedQuotes | Quote[] | @relation("AssignedQuoteUser") |
+| assignedOrders | Order[] | @relation("AssignedOrderUser") |
+| couponUsages | CouponUsage[] |  |
+| isActive | Boolean | @default(true) |
+| department | String? |  |
+| location | String? |  |
+| testimonials | Testimonial[] | @relation("CustomerTestimonials") |
+| systemActivities | SystemActivity[] | @relation("UserSystemActivities") |
 
 ### Company
-- **Purpose**: Represents a B2B client company.
-- **Key Fields**: `id`, `name`, `industry`, `gstNumber`.
-- **Relations**: Linked to Users, Quotes, Orders.
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| name | String |  |
+| gstin | String? | @unique |
+| address | String |  |
+| city | String |  |
+| state | String |  |
+| pincode | String |  |
+| logo | String? |  |
+| notes | String? |  |
+| users | User[] |  |
+| quotes | Quote[] |  |
+| orders | Order[] |  |
+| invoices | Invoice[] |  |
+| inquiries | Inquiry[] |  |
+| testimonials | Testimonial[] |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
+
+### Category
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| name | String | @unique |
+| slug | String | @unique |
+| description | String? |  |
+| image | String? |  |
+| products | Product[] |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
 
 ### Product
-- **Purpose**: The catalog items available for order.
-- **Key Fields**: `id`, `title`, `slug`, `basePrice`, `colors`, `sizes`.
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| name | String |  |
+| slug | String | @unique |
+| hsnCode | String | @default("6109") |
+| gstRate | Float | @default(5.0) |
+| description | String |  |
+| basePrice | Float |  |
+| images | String[] | @default([]) |
+| categoryId | String |  |
+| category | Category | @relation(fields: [categoryId], references: [id]) |
+| isActive | Boolean | @default(true) |
+| variants | ProductVariant[] |  |
+| bulkPricing | BulkPricing[] |  |
+| quoteItems | QuoteItem[] |  |
+| orderItems | OrderItem[] |  |
+| inquiries | Inquiry[] |  |
+| testimonials | Testimonial[] |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
 
-### Inquiry
-- **Purpose**: A request from a potential or existing customer.
-- **Key Fields**: `id`, `inquiryNumber`, `status` (NEW, ASSIGNED, QUOTED, REJECTED, CONVERTED).
-- **Relations**: Can be converted into a Quote (`quoteId`).
+### ProductVariant
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| productId | String |  |
+| product | Product | @relation(fields: [productId], references: [id], onDelete: Cascade) |
+| color | String |  |
+| size | String |  |
+| sku | String | @unique |
+| stock | Int | @default(0) |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
+
+### BulkPricing
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| productId | String |  |
+| product | Product | @relation(fields: [productId], references: [id], onDelete: Cascade) |
+| minQuantity | Int |  |
+| maxQuantity | Int |  |
+| pricePerUnit | Float |  |
+| printType | String | @default("Front Only") |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
 
 ### Quote
-- **Purpose**: A pricing proposal sent to a customer.
-- **Key Fields**: `id`, `quoteNumber`, `status` (DRAFT, SENT, VIEWED, ACCEPTED, REJECTED).
-- **Relations**: Has many `QuoteItem`, belongs to `User`.
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| quoteNumber | String | @unique |
+| customerId | String |  |
+| customer | User | @relation(fields: [customerId], references: [id]) |
+| companyId | String? |  |
+| company | Company? | @relation(fields: [companyId], references: [id]) |
+| status | QuoteStatus | @default(DRAFT) |
+| subtotal | Float |  |
+| gstTotal | Float |  |
+| discount | Float | @default(0.0) |
+| totalAmount | Float |  |
+| notes | String? |  |
+| validUntil | DateTime |  |
+| items | QuoteItem[] |  |
+| activities | QuoteActivity[] |  |
+| tasks | Task[] |  |
+| order | Order? |  |
+| inquiry | Inquiry? |  |
+| assignedToId | String? |  |
+| assignedTo | User? | @relation("AssignedQuoteUser", fields: [assignedToId], references: [id]) |
+| couponId | String? |  |
+| coupon | Coupon? | @relation(fields: [couponId], references: [id], onDelete: SetNull) |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
+
+### QuoteItem
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| quoteId | String |  |
+| quote | Quote | @relation(fields: [quoteId], references: [id], onDelete: Cascade) |
+| productId | String |  |
+| product | Product | @relation(fields: [productId], references: [id]) |
+| printType | String | @default("Front Only") |
+| color | String | @default("Black") |
+| size | String | @default("L") |
+| quantity | Int |  |
+| unitPrice | Float |  |
+| totalPrice | Float |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
+
+### QuoteActivity
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| quoteId | String |  |
+| quote | Quote | @relation(fields: [quoteId], references: [id], onDelete: Cascade) |
+| userId | String? |  |
+| user | User? | @relation(fields: [userId], references: [id], onDelete: SetNull) |
+| type | QuoteActivityType | @default(NOTE) |
+| message | String |  |
+| createdAt | DateTime | @default(now()) |
 
 ### Order
-- **Purpose**: An accepted Quote that is now being fulfilled.
-- **Key Fields**: `id`, `orderNumber`, `status` (PENDING, CONFIRMED, IN_PRODUCTION, READY_FOR_DISPATCH, DISPATCHED, DELIVERED, CANCELLED).
-- **Relations**: Linked to `Quote`, `User`, `Invoice`, `ProductionJob`, `Dispatch`.
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| orderNumber | String | @unique |
+| quoteId | String? | @unique |
+| quote | Quote? | @relation(fields: [quoteId], references: [id]) |
+| customerId | String |  |
+| customer | User | @relation(fields: [customerId], references: [id]) |
+| companyId | String? |  |
+| company | Company? | @relation(fields: [companyId], references: [id]) |
+| status | OrderStatus | @default(PENDING) |
+| paymentStatus | PaymentStatus | @default(PENDING) |
+| subtotal | Float |  |
+| gstTotal | Float |  |
+| totalAmount | Float |  |
+| items | OrderItem[] |  |
+| production | ProductionJob? |  |
+| dispatch | Dispatch? |  |
+| invoices | Invoice[] |  |
+| payments | Payment[] |  |
+| tasks | Task[] |  |
+| assignedToId | String? |  |
+| assignedTo | User? | @relation("AssignedOrderUser", fields: [assignedToId], references: [id]) |
+| couponId | String? |  |
+| coupon | Coupon? | @relation(fields: [couponId], references: [id], onDelete: SetNull) |
+| discountAmount | Float | @default(0.0) |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
+
+### Payment
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| orderId | String |  |
+| order | Order | @relation(fields: [orderId], references: [id], onDelete: Cascade) |
+| razorpayOrderId | String? | @unique |
+| razorpayPaymentId | String? | @unique |
+| razorpaySignature | String? |  |
+| amount | Float |  |
+| currency | String | @default("INR") |
+| status | PaymentRecordStatus | @default(PENDING) |
+| method | String? |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
+
+### OrderItem
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| orderId | String |  |
+| order | Order | @relation(fields: [orderId], references: [id], onDelete: Cascade) |
+| productId | String |  |
+| product | Product | @relation(fields: [productId], references: [id]) |
+| printType | String | @default("Front Only") |
+| color | String | @default("Black") |
+| size | String | @default("L") |
+| quantity | Int |  |
+| unitPrice | Float |  |
+| totalPrice | Float |  |
+| customizationDetails | String? |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
 
 ### ProductionJob
-- **Purpose**: Tracks the manufacturing status of an order.
-- **Key Fields**: `id`, `stage` (PENDING, MATERIAL_SOURCING, PRINTING, QUALITY_CHECK, PACKAGING, COMPLETED).
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| orderId | String | @unique |
+| order | Order | @relation(fields: [orderId], references: [id], onDelete: Cascade) |
+| stage | ProductionStage | @default(PENDING) |
+| assignedToId | String? |  |
+| assignedTo | User? | @relation("AssignedProductionUser", fields: [assignedToId], references: [id]) |
+| notes | String? |  |
+| startedAt | DateTime? |  |
+| completedAt | DateTime? |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
 
 ### Dispatch
-- **Purpose**: Tracks the shipping status of an order.
-- **Key Fields**: `id`, `shipmentNumber`, `courierName`, `trackingNumber`, `status`.
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| orderId | String | @unique |
+| order | Order | @relation(fields: [orderId], references: [id], onDelete: Cascade) |
+| shipmentNumber | String | @unique |
+| courierName | String |  |
+| trackingNumber | String |  |
+| trackingUrl | String? |  |
+| status | DispatchStatus | @default(DISPATCHED) |
+| dispatchedAt | DateTime | @default(now()) |
+| deliveredAt | DateTime? |  |
+| notes | String? |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
 
 ### Invoice
-- **Purpose**: Billing record.
-- **Key Fields**: `id`, `invoiceNumber`, `totalAmount`, `status` (UNPAID, PARTIAL, PAID).
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| invoiceNumber | String | @unique |
+| orderId | String |  |
+| order | Order | @relation(fields: [orderId], references: [id]) |
+| companyId | String? |  |
+| company | Company? | @relation(fields: [companyId], references: [id]) |
+| amount | Float |  |
+| gstAmount | Float |  |
+| totalAmount | Float |  |
+| dueDate | DateTime |  |
+| status | String | @default("UNPAID") |
+| pdfUrl | String? |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
 
-## Entity Relationship Overview
-```text
-User -> Company
-User -> Inquiry -> Quote -> Order -> ProductionJob -> Dispatch -> Invoice
-Product -> QuoteItem / OrderItem
-```
+### CMSContent
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| type | CMSType |  |
+| title | String |  |
+| slug | String? | @unique |
+| content | String |  |
+| author | String? |  |
+| image | String? |  |
+| isPublished | Boolean | @default(true) |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
 
-> **SOURCE OF TRUTH:** The current source code, Prisma schema, deployment configuration, and live environment configuration override this document. This document reflects the state as of the time of writing.
-# ZOBBRA Developer Onboarding Guide
+### SystemSetting
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| key | String | @unique |
+| value | String |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
 
-> **SOURCE OF TRUTH:** The current source code, Prisma schema, deployment configuration, and live environment configuration override this document. This document reflects the state as of the time of writing.
+### Inquiry
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| inquiryNumber | String | @unique |
+| customerId | String? |  |
+| customer | User? | @relation("CustomerInquiries", fields: [customerId], references: [id]) |
+| companyId | String? |  |
+| company | Company? | @relation(fields: [companyId], references: [id]) |
+| productId | String? |  |
+| product | Product? | @relation(fields: [productId], references: [id]) |
+| customerName | String? |  |
+| companyName | String? |  |
+| email | String? |  |
+| phone | String? |  |
+| location | String? |  |
+| customerType | String | @default("GUEST") // GUEST or REGISTERED |
+| productInterest | String? |  |
+| quantity | Int? |  |
+| printingType | String? |  |
+| printPosition | String? |  |
+| colors | String? |  |
+| sizes | String? |  |
+| artworkUrl | String? |  |
+| deliveryDate | DateTime? |  |
+| budget | String? |  |
+| customizationRequirements | String? |  |
+| source | InquirySource | @default(OTHER) |
+| message | String? |  |
+| status | InquiryStatus | @default(NEW) |
+| assignedToId | String? |  |
+| assignedTo | User? | @relation("AssignedSalesUser", fields: [assignedToId], references: [id]) |
+| quoteId | String? | @unique |
+| quote | Quote? | @relation(fields: [quoteId], references: [id]) |
+| nextFollowUpAt | DateTime? |  |
+| activities | InquiryActivity[] |  |
+| tasks | Task[] |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
 
-## Welcome to ZOBBRA
-This guide covers Day 1 setup for running the ZOBBRA monorepo locally.
+### InquiryActivity
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| inquiryId | String |  |
+| inquiry | Inquiry | @relation(fields: [inquiryId], references: [id], onDelete: Cascade) |
+| userId | String? |  |
+| user | User? | @relation(fields: [userId], references: [id], onDelete: SetNull) |
+| type | InquiryActivityType | @default(NOTE) |
+| message | String |  |
+| createdAt | DateTime | @default(now()) |
 
-## Setup Requirements
-1. **Node.js**: v20+
-2. **Package Manager**: pnpm (v10+)
-3. **Database**: PostgreSQL (v15+)
+### Task
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| title | String |  |
+| description | String? |  |
+| assignedToId | String? |  |
+| assignedTo | User? | @relation("AssignedTasks", fields: [assignedToId], references: [id], onDelete: SetNull) |
+| createdById | String |  |
+| createdBy | User | @relation("CreatedTasks", fields: [createdById], references: [id]) |
+| customerId | String? |  |
+| customer | User? | @relation("CustomerTasks", fields: [customerId], references: [id], onDelete: SetNull) |
+| inquiryId | String? |  |
+| inquiry | Inquiry? | @relation(fields: [inquiryId], references: [id], onDelete: SetNull) |
+| quoteId | String? |  |
+| quote | Quote? | @relation(fields: [quoteId], references: [id], onDelete: SetNull) |
+| orderId | String? |  |
+| order | Order? | @relation(fields: [orderId], references: [id], onDelete: SetNull) |
+| priority | TaskPriority | @default(MEDIUM) |
+| status | TaskStatus | @default(PENDING) |
+| category | TaskCategory | @default(FOLLOW_UP) |
+| dueAt | DateTime? |  |
+| completedAt | DateTime? |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
 
-## Day 1 Setup
-### 1. Clone & Install
-```bash
-git clone <repository_url>
-cd Zobra
-pnpm install
-```
+### Coupon
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| code | String | @unique |
+| name | String |  |
+| description | String? |  |
+| discountType | CouponType |  |
+| discountValue | Float |  |
+| minimumOrderAmount | Float? |  |
+| maximumDiscount | Float? |  |
+| startAt | DateTime |  |
+| endAt | DateTime |  |
+| usageLimit | Int? |  |
+| usageCount | Int | @default(0) |
+| perCustomerLimit | Int? |  |
+| status | CouponStatus | @default(ACTIVE) |
+| createdById | String? |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
+| quotes | Quote[] |  |
+| orders | Order[] |  |
+| usages | CouponUsage[] |  |
 
-### 2. Environment Variables
-Create `.env` files for both the frontend and backend.
-- `server/.env` (Database URL, JWT Secret)
-- `apps/web/.env.local` (Next.js public API URL)
+### CouponUsage
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| couponId | String |  |
+| coupon | Coupon | @relation(fields: [couponId], references: [id], onDelete: Cascade) |
+| customerId | String |  |
+| customer | User | @relation(fields: [customerId], references: [id], onDelete: Cascade) |
+| quoteId | String? |  |
+| orderId | String? |  |
+| discountAmount | Float |  |
+| usedAt | DateTime | @default(now()) |
 
-*Do not commit `.env` files. Reference Railway for production keys.*
+### Testimonial
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| customerId | String? |  |
+| customer | User? | @relation("CustomerTestimonials", fields: [customerId], references: [id], onDelete: SetNull) |
+| companyId | String? |  |
+| company | Company? | @relation(fields: [companyId], references: [id], onDelete: SetNull) |
+| productId | String? |  |
+| product | Product? | @relation(fields: [productId], references: [id], onDelete: SetNull) |
+| customerName | String |  |
+| companyName | String? |  |
+| designation | String? |  |
+| rating | Int | @default(5) |
+| content | String | @db.Text |
+| avatarUrl | String? |  |
+| status | TestimonialStatus | @default(PENDING) |
+| isFeatured | Boolean | @default(false) |
+| publishedAt | DateTime? |  |
+| createdAt | DateTime | @default(now()) |
+| updatedAt | DateTime | @updatedAt |
 
-### 3. Database Initialization
-```bash
-# Generate the Prisma Client
-pnpm db:generate
+### SystemActivity
+| Field | Type | Modifiers |
+|---|---|---|
+| id | String | @id @default(uuid()) |
+| userId | String? |  |
+| user | User? | @relation("UserSystemActivities", fields: [userId], references: [id], onDelete: SetNull) |
+| action | String |  |
+| entityType | String |  |
+| entityId | String? |  |
+| message | String |  |
+| createdAt | DateTime | @default(now()) |
 
-# Push the schema to your local database
-pnpm db:push
 
-# Seed the database with the initial Admin user
-pnpm db:seed
-```
 
-### 4. Running the Development Servers
-You can run the entire turborepo at once:
-```bash
-pnpm dev
-```
-Or run them individually:
-- **Frontend**: `pnpm --filter web dev` (runs on http://localhost:3000)
-- **Backend**: `pnpm --filter zobra-server dev` (runs on http://localhost:5000)
+## 11. Public Website Flow
+User -> Next.js SSR -> Product Details -> `/api/v1/products/:slug` -> UI Render.
 
-## Production Debugging Guide
-- **Login Fails**: Check `server/.env` for `JWT_SECRET` and ensure the database is running. Check `apps/web/src/lib/api.ts` logs for CORS/network errors.
-- **API Unreachable (CORS)**: The backend explicitly restricts CORS in `server/src/app.ts`. Ensure your local URL is whitelisted.
-- **Server Action/Version Skew Error**: If Next.js throws an error about missing chunks during a deployment, this is intentional version-skew protection triggered by `RAILWAY_DEPLOYMENT_ID`. The browser should automatically hard refresh.
-- **Wrong Sidebar Counts**: Look at `server/src/modules/reports/reports.controller.ts` `getSidebarCounts`. Counts are derived dynamically from Prisma `count()` queries based on status enums.
+## 12. Customer Portal Flow
+Login -> JWT stored -> Dashboard fetch -> `/api/v1/quotes` etc -> State updated via TanStack Query.
 
-## Important File Map
-- **Frontend API Config**: `apps/web/src/lib/api.ts`
-- **Frontend Header**: `apps/web/src/components/shared/PublicHeader.tsx`
-- **Backend Entrypoint**: `server/src/app.ts`
-- **Backend Routes**: `server/src/modules/<domain>/<domain>.routes.ts`
-- **Database Schema**: `prisma/schema.prisma`
+## 13. Admin Portal Flow
+Role: ADMIN/SALES -> Dashboard -> Kanban board `/api/v1/production/kanban` -> Mutate stages.
 
-> **SOURCE OF TRUTH:** The current source code, Prisma schema, deployment configuration, and live environment configuration override this document. This document reflects the state as of the time of writing.
+## 14. Inquiry -> Quote
+Inquiry submitted via `POST /api/v1/inquiries` -> Admin views -> Admin clicks Convert -> `POST /api/v1/inquiries/:id/convert-to-quote` -> Quote created.
+
+## 15. Quote -> Order
+Quote approved by customer -> Admin converts -> `POST /api/v1/orders/from-quote/:quoteId` -> Order status PENDING.
+
+## 16. Order Lifecycle
+PENDING -> CONFIRMED -> IN_PRODUCTION -> READY_FOR_DISPATCH -> DISPATCHED -> DELIVERED -> CANCELLED.
+
+## 17. Payments
+Razorpay integration. `POST /payments/create-order` -> Webhook `/payments/webhook` updates PaymentStatus to PAID.
+
+## 18. Invoices
+Generated upon order confirmation. `GET /invoices/:id/pdf` uses PDFKit.
+
+## 19. Notifications
+In-app via SystemActivity.
+
+## 20. Media/File Handling
+Uploads stored securely. Images served via CDN/Railway.
+
+## 21. Sidebar Counts
+Dynamic counts fetched via `GET /api/v1/reports/sidebar-counts`, running Prisma `.count()` grouped by status.
+
+## 22. Error Handling
+Centralized API fetch wrapper in `api.ts` classifies errors (NETWORK_ERROR, INVALID_CREDENTIALS, API_UNAVAILABLE).
+
+## 23. Reliability
+Graceful shutdown, `uncaughtException` handling, and explicit health/readiness endpoints (`/health`, `/health/ready`).
+
+## 24. Security
+Explicit CORS, parameter validation via Zod schemas (`validateRequest`), JWT signature verification.
+
+## 25. Responsive Architecture
+Mobile-first Tailwind CSS. Drawer navigation on mobile, persistent sidebar on desktop.
+
+## 26. Design System
+Tailwind tokens, `shadcn/ui` primitives, custom canonical colors.
+
+## 27. Testing
+Vitest for unit testing, Cypress for E2E flows (`test:cypress`).
+
+## 28. Deployment
+Railway platform. Server deployed to `zobra-server-production.up.railway.app`.
+
+## 29. Railway
+Environment variables configured per service.
+
+## 30. DNS / Domain
+Frontend: `zobbra.com`.
+Backend: `zobra-server-production.up.railway.app`.
+Note: `api.zobbra.com` is reserved for a separate Hostinger app.
+
+## 31. Environment Variables
+- `DATABASE_URL`: <SECRET> (Runtime)
+- `JWT_SECRET`: <SECRET> (Runtime)
+- `NEXT_PUBLIC_API_URL`: Build-time
+- `RAILWAY_DEPLOYMENT_ID`: Build-time/Runtime skew protection.
+
+## 32. Debugging
+- Check Railway logs.
+- Next.js skew error? Hard refresh browser.
+
+## 33. Developer Onboarding
+`pnpm install`, `pnpm db:generate`, `pnpm dev`.
+
+## 34. Architecture Decisions
+Modular backend for scalability. Next.js App router for SEO.
+
+## 35. Known Gaps
+Webhook logs could be more persistent.
+
+## 36. Future Recommendations
+Implement Redis caching for sidebar counts if traffic scales.
+
+## 37. Source-of-Truth Rules
+VERIFIED FROM SOURCE. The code and Prisma schema override this document.
