@@ -1,9 +1,17 @@
 'use client';
 
 import React from 'react';
-import { BarChart3, TrendingUp, Users, ShoppingBag, ArrowUp, Calendar, ChevronDown, DownloadCloud } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, ShoppingBag, Calendar, ChevronDown, DownloadCloud } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api';
 
 export default function ReportsPage() {
+  const { data: salesRes, isLoading: loading } = useQuery({
+    queryKey: ['admin-sales-report'],
+    queryFn: () => apiFetch('/reports/sales').then(res => res.json()),
+  });
+  const sales = salesRes?.report;
+
   return (
     <div className="space-y-6 pb-12 font-sans bg-[#F8F9FC] min-h-screen">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -28,40 +36,36 @@ export default function ReportsPage() {
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0"><TrendingUp className="w-5 h-5" /></div>
             <div>
               <p className="text-xs font-semibold text-[#6B7280]">Total Revenue</p>
-              <h3 className="text-xl font-black text-[#111111]">₹12,45,600</h3>
+              <h3 className="text-xl font-black text-[#111111]">₹{loading ? '...' : (sales?.totalRevenue || 0).toLocaleString()}</h3>
             </div>
           </div>
-          <p className="text-[10px] text-green-600 font-bold mt-4 flex items-center"><ArrowUp className="w-3 h-3 mr-0.5" /> 15.2% vs last month</p>
         </div>
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center flex-shrink-0"><ShoppingBag className="w-5 h-5" /></div>
             <div>
-              <p className="text-xs font-semibold text-[#6B7280]">Orders Completed</p>
-              <h3 className="text-xl font-black text-[#111111]">1,248</h3>
+              <p className="text-xs font-semibold text-[#6B7280]">Total Orders</p>
+              <h3 className="text-xl font-black text-[#111111]">{loading ? '...' : (sales?.totalOrders || 0)}</h3>
             </div>
           </div>
-          <p className="text-[10px] text-green-600 font-bold mt-4 flex items-center"><ArrowUp className="w-3 h-3 mr-0.5" /> 8.4% vs last month</p>
         </div>
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0"><BarChart3 className="w-5 h-5" /></div>
             <div>
-              <p className="text-xs font-semibold text-[#6B7280]">Quote Conversion</p>
-              <h3 className="text-xl font-black text-[#111111]">34.2%</h3>
+              <p className="text-xs font-semibold text-[#6B7280]">Total Quotes</p>
+              <h3 className="text-xl font-black text-[#111111]">{loading ? '...' : (sales?.totalQuotes || 0)}</h3>
             </div>
           </div>
-          <p className="text-[10px] text-green-600 font-bold mt-4 flex items-center"><ArrowUp className="w-3 h-3 mr-0.5" /> 2.1% vs last month</p>
         </div>
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0"><Users className="w-5 h-5" /></div>
             <div>
-              <p className="text-xs font-semibold text-[#6B7280]">New Customers</p>
-              <h3 className="text-xl font-black text-[#111111]">89</h3>
+              <p className="text-xs font-semibold text-[#6B7280]">Total Customers</p>
+              <h3 className="text-xl font-black text-[#111111]">{loading ? '...' : (sales?.totalCustomers || 0)}</h3>
             </div>
           </div>
-          <p className="text-[10px] text-green-600 font-bold mt-4 flex items-center"><ArrowUp className="w-3 h-3 mr-0.5" /> 12.5% vs last month</p>
         </div>
       </div>
 

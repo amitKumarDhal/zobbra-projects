@@ -86,3 +86,13 @@ export const getSidebarCounts = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getActivity = async (req: AuthRequest, res: Response) => {
+  try {
+    const activities = await prisma.systemActivity.findMany({ take: 5, orderBy: { createdAt: 'desc' }, include: { user: true } });
+    return res.json({ success: true, activities });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+

@@ -480,7 +480,7 @@ export default function OrdersPage() {
                         <td className="px-4 py-4" data-cy="admin-payment-status">
                           <StatusBadge status={o.paymentStatus} />
                           <span className="sr-only" data-cy="admin-payment-id">
-                            {o.payments?.[0]?.razorpayPaymentId || o.payments?.[0]?.id || (o.paymentStatus === 'PAID' ? 'pay_mock_verified' : 'N/A')}
+                            {o.payments?.[0]?.razorpayPaymentId || o.payments?.[0]?.id || 'N/A'}
                           </span>
                         </td>
 

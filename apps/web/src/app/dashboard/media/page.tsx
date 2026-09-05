@@ -6,14 +6,7 @@ import { UploadCloud, Search, Filter, Image as ImageIcon, FileText as FileIcon, 
 export default function MediaPage() {
   const [search, setSearch] = useState('');
 
-  const mediaFiles = [
-    { id: 1, name: 'black-tshirt-front.jpg', type: 'image/jpeg', size: '1.2 MB', category: 'Product Images', date: '20 May 2024', url: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=400&q=80' },
-    { id: 2, name: 'zobbra-logo-dark.png', type: 'image/png', size: '450 KB', category: 'Logos', date: '18 May 2024', url: 'https://images.unsplash.com/photo-1620288627223-53302f4e8c74?auto=format&fit=crop&w=400&q=80' },
-    { id: 3, name: 'summer-campaign-banner.jpg', type: 'image/jpeg', size: '3.4 MB', category: 'Marketing', date: '15 May 2024', url: 'https://images.unsplash.com/photo-1555529771-835f59fc5efe?auto=format&fit=crop&w=400&q=80' },
-    { id: 4, name: 'bulk-order-terms.pdf', type: 'application/pdf', size: '2.1 MB', category: 'Documents', date: '10 May 2024', url: '' },
-    { id: 5, name: 'white-mug-mockup.jpg', type: 'image/jpeg', size: '980 KB', category: 'Product Images', date: '05 May 2024', url: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&w=400&q=80' },
-    { id: 6, name: 'cap-black-side.jpg', type: 'image/jpeg', size: '1.1 MB', category: 'Product Images', date: '02 May 2024', url: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=400&q=80' },
-  ];
+  const [mediaFiles, setMediaFiles] = useState<any[]>([]); // To be wired to a real API
 
   return (
     <div className="space-y-6 pb-12 font-sans bg-[#F8F9FC] min-h-screen">

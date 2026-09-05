@@ -316,15 +316,18 @@ export default function TodoPage() {
                  <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
               </div>
               <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold">
-                 {/* Fake calendar grid for UI matching */}
-                 {Array.from({length: 31}).map((_, i) => (
-                    <div key={i} className={`p-1.5 rounded-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 
-                       ${i+1 === 20 ? 'bg-[#3B6FEB] text-white hover:bg-[#2563EB]' : 'text-[#374151]'}`}>
-                       {i+1}
-                       {/* Task dots */}
-                       {(i===19 || i===23 || i===24) && <span className={`w-1 h-1 rounded-full mt-0.5 ${i+1===20 ? 'bg-white' : 'bg-orange-400'}`}></span>}
-                    </div>
-                 ))}
+                 {/* Dynamic calendar grid mapping actual tasks */}
+                 {Array.from({length: 31}).map((_, i) => {
+                    const dayTasks = tasks.filter(t => t.dueAt && new Date(t.dueAt).getDate() === i + 1);
+                    const isToday = new Date().getDate() === i + 1;
+                    return (
+                      <div key={i} className={`p-1.5 rounded-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 
+                         ${isToday ? 'bg-[#3B6FEB] text-white hover:bg-[#2563EB]' : 'text-[#374151]'}`}>
+                         {i+1}
+                         {dayTasks.length > 0 && <span className={`w-1 h-1 rounded-full mt-0.5 ${isToday ? 'bg-white' : 'bg-orange-400'}`}></span>}
+                      </div>
+                    );
+                 })}
               </div>
            </div>
 
