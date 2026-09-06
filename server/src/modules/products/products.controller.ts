@@ -5,8 +5,13 @@ export const getProducts = async (req: Request, res: Response) => {
   const { category, search, status, page = '1', pageSize = '10' } = req.query;
 
   const where: any = {};
-  if (status && status !== 'All Status') {
-    where.isActive = status === 'Active';
+  if (status === 'All Status') {
+    // Do not filter by isActive
+  } else if (status === 'Draft') {
+    where.isActive = false;
+  } else {
+    // Default to 'Active'
+    where.isActive = true;
   }
   if (category && category !== 'All Categories') {
     where.category = { slug: String(category) };
@@ -216,4 +221,30 @@ export const duplicateProduct = async (req: Request, res: Response) => {
   });
 
   return res.json({ success: true, product });
+};
+
+export const bulkDeleteProducts = async (req: Request, res: Response) => {
+  const { ids } = req.body;
+  
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ success: false, message: 'No product IDs provided' });
+  }
+
+  try {
+    const result = await prisma.product.updateMany({
+      where: {
+        id: { in: ids }
+      },
+      data: { isActive: false },
+    });
+
+    return res.json({ 
+      success: true, 
+      message: `${result.count} products deactivated`,
+      count: result.count
+    });
+  } catch (error: any) {
+    console.error('Bulk delete error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to deactivate products' });
+  }
 };

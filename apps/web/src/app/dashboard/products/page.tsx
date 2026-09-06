@@ -17,15 +17,16 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('All Categories');
-  const [filterStatus, setFilterStatus] = useState('All Status');
+  const [filterStatus, setFilterStatus] = useState('Active');
   
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1, pageSize: 10 });
 
-  // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<'ADD' | 'EDIT'>('ADD');
   const [editProductId, setEditProductId] = useState<string | null>(null);
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetchCategories();
@@ -33,6 +34,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     fetchData();
+    setSelectedIds([]);
   }, [search, filterCategory, filterStatus, page]);
 
   const fetchCategories = async () => {
@@ -114,6 +116,48 @@ export default function ProductsPage() {
     setIsDrawerOpen(true);
   };
 
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(products.map(p => p.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(x => x !== id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Are you sure you want to archive ${selectedIds.length} selected products? They will be marked inactive and hidden.`)) return;
+    
+    try {
+      const res = await fetch(`${API_URL}/products/bulk`, {
+        method: 'DELETE',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + localStorage.getItem('token') 
+        },
+        body: JSON.stringify({ ids: selectedIds })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(`Failed to bulk archive: ${data.message || 'Unknown error'}`);
+        return;
+      }
+      setSelectedIds([]);
+      fetchData();
+    } catch (err) {
+      alert('Network error. Please check your connection and try again.');
+      console.error(err);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12 font-sans bg-[#F8F9FC] min-h-screen relative flex flex-col">
       {/* HEADER */}
@@ -176,12 +220,33 @@ export default function ProductsPage() {
             </div>
           </div>
 
+          {selectedIds.length > 0 && (
+            <div className="bg-[#EEF2FF] border-b border-[#E5E7EB] px-4 py-3 flex items-center justify-between">
+              <span className="text-sm font-bold text-[#3B6FEB]">
+                {selectedIds.length} product{selectedIds.length > 1 ? 's' : ''} selected
+              </span>
+              <button 
+                onClick={handleBulkDelete}
+                className="flex items-center gap-2 px-4 py-1.5 bg-red-500 text-white rounded text-xs font-bold shadow-sm hover:bg-red-600 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete Selected
+              </button>
+            </div>
+          )}
+
           {/* Table */}
           <div className="table-scroll">
             <table className="w-full min-w-[850px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#E5E7EB]">
-                  <th className="px-4 py-3 w-10 text-center"><input type="checkbox" className="rounded border-gray-300" /></th>
+                  <th className="px-4 py-3 w-10 text-center">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-300" 
+                      checked={products.length > 0 && selectedIds.length === products.length}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
                   <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Product</th>
                   <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Category</th>
                   <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Price (₹)</th>
@@ -203,7 +268,14 @@ export default function ProductsPage() {
 
                   return (
                     <tr key={p.id} className="hover:bg-[#F9FAFB] transition-colors">
-                      <td className="px-4 py-4 text-center"><input type="checkbox" className="rounded border-gray-300" /></td>
+                      <td className="px-4 py-4 text-center">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-gray-300" 
+                          checked={selectedIds.includes(p.id)}
+                          onChange={(e) => handleSelectOne(p.id, e.target.checked)}
+                        />
+                      </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200">
