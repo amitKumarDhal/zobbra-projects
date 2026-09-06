@@ -42,14 +42,14 @@ export function Testimonial() {
   const current = testimonials[activeIdx];
 
   return (
-    <section className="bg-white py-16 sm:py-20 border-b border-[#E5E5E5]">
+    <section className="bg-white py-16 sm:py-24 border-b border-[#DDDCD5]">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-40px' }}
           transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-[#F7F7F5] border border-[#E5E5E5] rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.04)]"
+          className="bg-[#F2F1EC] border border-[#DDDCD5] rounded-[2rem] overflow-hidden shadow-[0_18px_38px_rgba(17,17,17,0.07)]"
         >
           <div className="grid grid-cols-1 lg:grid-cols-12 items-center">
             {/* Left Side: Quote Content (7 / 12 cols) */}

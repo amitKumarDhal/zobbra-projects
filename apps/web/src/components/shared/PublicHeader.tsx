@@ -9,6 +9,7 @@ import {
   MapPin,
   Mail,
   Phone,
+  ArrowRight,
 } from 'lucide-react';
 import { ZobbraLogo } from './ZobbraLogo';
 
@@ -39,9 +40,9 @@ export function PublicHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(17,17,17,0.06)]">
         {/* 1. TOP UTILITY BAR (Thin black bar at very top) */}
-        <div className="bg-[#050505] text-[#D1D5DB] text-[11px] py-1.5 hidden md:block border-b border-black">
+        <div className="bg-[#111111] text-[#D1D5DB] text-[11px] py-2 hidden md:block border-b border-black">
           <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between font-normal tracking-wide">
             {/* Left: Location */}
             <div className="flex-1 flex items-center justify-start gap-1.5 text-gray-300">
@@ -110,7 +111,7 @@ export function PublicHeader() {
 
         {/* 2. MAIN NAVIGATION */}
         <div className="border-b border-[#E5E5E5] bg-white">
-          <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-[60px] sm:h-[66px] flex items-center justify-between">
+          <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-[64px] sm:h-[72px] flex items-center justify-between">
             {/* Left: Canonical Official Brand Logo */}
             <div className="flex-1 flex items-center justify-start">
               <ZobbraLogo variant="dark-badge" href="/" priority={true} />
@@ -150,9 +151,9 @@ export function PublicHeader() {
               </Link>
               <Link
                 href="/get-quote"
-                className="px-4 py-2 bg-[#050505] hover:bg-[#1f1f1f] text-white text-[12px] font-bold tracking-wider uppercase rounded-[3px] transition-all shadow-sm active:scale-[0.98] min-h-0 flex items-center justify-center"
+                className="px-4 py-2.5 bg-[#111111] hover:bg-[#3B6FEB] text-white text-[12px] font-bold tracking-wider uppercase rounded-full transition-all shadow-sm active:scale-[0.98] min-h-0 flex items-center justify-center group"
               >
-                GET A FREE QUOTE
+                GET A FREE QUOTE <ArrowRight className="w-3.5 h-3.5 ml-1.5 transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
 
@@ -199,7 +200,7 @@ export function PublicHeader() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`block py-2.5 px-3 text-sm font-medium rounded transition-colors min-h-[44px] flex items-center ${
+                  className={`py-2.5 px-3 text-sm font-medium rounded transition-colors min-h-[44px] flex items-center ${
                     isActive
                       ? 'text-[#050505] bg-[#F7F7F5] font-bold'
                       : 'text-[#333333] hover:text-[#050505] hover:bg-[#F7F7F5]'
@@ -213,16 +214,16 @@ export function PublicHeader() {
               <Link
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-center py-2.5 px-3 text-sm font-semibold text-[#333333] hover:text-black hover:bg-[#F7F7F5] rounded border border-[#E5E5E5] transition-colors min-h-[44px] flex items-center justify-center"
+                className="text-center py-2.5 px-3 text-sm font-semibold text-[#333333] hover:text-black hover:bg-[#F7F7F5] rounded border border-[#E5E5E5] transition-colors min-h-[44px] flex items-center justify-center"
               >
                 Login
               </Link>
               <Link
                 href="/get-quote"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-center px-4 py-3 bg-[#050505] text-white text-xs font-bold uppercase tracking-wider rounded-[3px] min-h-[44px] flex items-center justify-center active:scale-[0.98]"
+                className="text-center px-4 py-3 bg-[#050505] text-white text-xs font-bold uppercase tracking-wider rounded-[3px] min-h-[44px] flex items-center justify-center active:scale-[0.98] group"
               >
-                GET A FREE QUOTE
+                GET A FREE QUOTE <ArrowRight className="w-3.5 h-3.5 ml-1.5 transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
           </div>

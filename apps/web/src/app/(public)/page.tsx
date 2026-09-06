@@ -10,7 +10,7 @@ import { CTASection } from '@/components/landing/CTASection';
 
 export default function HomePage() {
   return (
-    <div className="w-full bg-white text-[#111111] overflow-hidden">
+    <div className="w-full bg-[#F7F6F2] text-[#111111] overflow-hidden">
       {/* 3. Hero Section */}
       <Hero />
 

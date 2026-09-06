@@ -5,10 +5,10 @@ import { ZobbraLogo } from './ZobbraLogo';
 
 export function PublicFooter() {
   return (
-    <footer className="bg-[#050505] text-[#9CA3AF] pt-14 pb-8 border-t border-black">
+    <footer className="bg-[#111111] text-[#9CA3AF] pt-16 pb-8 border-t border-black">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main 5-Column Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 pb-12 border-b border-[#1F2937]">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 pb-14 border-b border-[#2B2B2B]">
           {/* Column 1: Brand & Socials */}
           <div className="space-y-4">
             <ZobbraLogo variant="white" href="/" width={140} height={47} showTagline={true} />

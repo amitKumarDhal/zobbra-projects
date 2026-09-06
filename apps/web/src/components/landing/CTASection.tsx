@@ -9,7 +9,7 @@ export function CTASection() {
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <section className="bg-white py-14 sm:py-18">
+    <section className="bg-[#F7F6F2] py-14 sm:py-24">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Full-width Black CTA Box with Scroll Reveal */}
         <motion.div
@@ -17,14 +17,14 @@ export function CTASection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-40px' }}
           transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-[#050505] text-white rounded-2xl p-8 sm:p-12 lg:p-14 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8 border border-[#1F2937] relative overflow-hidden"
+          className="bg-[#3B6FEB] text-white rounded-[2rem] p-8 sm:p-12 lg:p-14 shadow-[0_24px_55px_-18px_rgba(59,111,235,0.45)] flex flex-col md:flex-row items-center justify-between gap-8 border border-[#5B84F1] relative overflow-hidden"
         >
           {/* Subtle top ambient sheen */}
           <div className="absolute top-0 left-1/4 w-1/2 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
 
           {/* Left: Icon & Text */}
           <div className="flex items-center gap-5 text-center md:text-left">
-            <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-white text-[#050505] flex items-center justify-center shrink-0 shadow-md">
+            <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-white text-[#3B6FEB] flex items-center justify-center shrink-0 shadow-md">
               <Send className="w-6 h-6 -rotate-12 translate-x-0.5" />
             </div>
 
@@ -32,7 +32,7 @@ export function CTASection() {
               <h2 className="text-2xl sm:text-3xl lg:text-[32px] font-heading font-black text-white tracking-tight leading-tight">
                 Ready to bring your brand to life?
               </h2>
-              <p className="text-sm sm:text-[15px] text-[#9CA3AF] font-normal">
+              <p className="text-sm sm:text-[15px] text-[#D9E2FF] font-normal">
                 Let&apos;s create something amazing together.
               </p>
             </div>
@@ -42,7 +42,7 @@ export function CTASection() {
           <div className="shrink-0 w-full sm:w-auto text-center">
             <Link
               href="/get-quote"
-              className="inline-flex items-center justify-center gap-2.5 px-7 py-4 bg-white hover:bg-[#F0F0F0] text-[#050505] text-[13px] font-extrabold uppercase tracking-wider rounded-[3px] transition-all shadow-md hover:shadow-xl active:scale-[0.98] group w-full sm:w-auto"
+              className="inline-flex items-center justify-center gap-2.5 px-7 py-4 bg-white hover:bg-[#EEF2FF] text-[#111111] text-[13px] font-extrabold uppercase tracking-wider rounded-full transition-all shadow-md hover:shadow-xl active:scale-[0.98] group w-full sm:w-auto"
             >
               <span>GET A FREE QUOTE</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />

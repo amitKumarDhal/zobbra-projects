@@ -36,7 +36,7 @@ export function WhyChooseUs() {
   ];
 
   return (
-    <section className="bg-white py-16 sm:py-20 border-y border-[#E5E5E5]">
+    <section className="bg-white py-16 sm:py-24 border-y border-[#DDDCD5]">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         {/* Section Header with Scroll Reveal */}
         <motion.div
@@ -47,9 +47,9 @@ export function WhyChooseUs() {
           className="text-center space-y-2 max-w-2xl mx-auto"
         >
           <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#666666] font-heading block">
-            WHY CHOOSE ZOBBRA?
+            WHY ZOBBRA
           </span>
-          <h2 className="text-3xl sm:text-4xl font-heading font-black text-[#050505] tracking-[-0.03em] leading-tight">
+          <h2 className="text-3xl sm:text-4xl font-heading font-black text-[#111111] tracking-[-0.03em] leading-tight">
             We Don&apos;t Just Print, We Represent Your Brand.
           </h2>
         </motion.div>
@@ -77,7 +77,7 @@ export function WhyChooseUs() {
                     : 'lg:px-5'
                 } space-y-3 text-center group hover:-translate-y-1 transition-transform duration-300`}
               >
-                <div className="w-11 h-11 rounded-full bg-[#F7F7F5] border border-[#E5E5E5] group-hover:bg-black group-hover:text-white flex items-center justify-center text-[#050505] mx-auto transition-all duration-300 shadow-sm">
+                <div className="w-11 h-11 rounded-full bg-[#EEF2FF] border border-[#D9E2FF] group-hover:bg-[#3B6FEB] group-hover:text-white flex items-center justify-center text-[#3B6FEB] mx-auto transition-all duration-300">
                   <Icon className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
                 </div>
                 <h3 className="text-[14px] font-heading font-black text-[#050505]">

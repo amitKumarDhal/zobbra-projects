@@ -26,7 +26,7 @@ export function PrintServices() {
   ];
 
   return (
-    <section className="bg-white py-12 sm:py-16">
+    <section className="bg-[#F7F6F2] py-12 sm:py-20">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Large Black Container with Scroll Reveal */}
         <motion.div
@@ -34,14 +34,14 @@ export function PrintServices() {
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
           viewport={{ once: true, margin: '-40px' }}
           transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-[#050505] text-white rounded-2xl p-8 sm:p-12 lg:p-14 shadow-2xl border border-[#1F2937] relative overflow-hidden"
+          className="bg-[#111111] text-white rounded-[2rem] p-8 sm:p-12 lg:p-14 shadow-[0_24px_55px_-18px_rgba(17,17,17,0.42)] border border-[#2B2B2B] relative overflow-hidden"
         >
           {/* Subtle background ambient gradient */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-white/[0.02] rounded-full blur-3xl pointer-events-none" />
 
           {/* Header */}
           <div className="text-center space-y-2 mb-10 sm:mb-12">
-            <span className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#9CA3AF] font-heading block">
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#8EA8FF] font-heading block">
               OUR PRINT SERVICES
             </span>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-black text-white tracking-tight">
@@ -64,7 +64,7 @@ export function PrintServices() {
                       : 'md:pl-8'
                   } space-y-3 text-center md:text-left group`}
                 >
-                  <div className="w-10 h-10 rounded-lg bg-[#151515] border border-[#2A2A2A] group-hover:border-gray-500 group-hover:bg-[#202020] flex items-center justify-center text-gray-200 mx-auto md:mx-0 transition-all duration-300">
+                  <div className="w-10 h-10 rounded-lg bg-[#1C2B5A] border border-[#344B99] group-hover:border-[#8EA8FF] group-hover:bg-[#263A7A] flex items-center justify-center text-[#D9E2FF] mx-auto md:mx-0 transition-all duration-300">
                     <Icon className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
                   </div>
                   <h3 className="text-lg font-heading font-bold text-white tracking-tight">
