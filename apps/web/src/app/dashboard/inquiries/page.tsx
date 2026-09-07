@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Filter, MessageSquare, Phone, Globe, Camera, Eye, MoreVertical, Plus, UserCircle, FileText, ArrowRight, X, Clock, AlertCircle, Users, FileCheck, CheckCircle } from 'lucide-react';
+import { Search, Filter, MessageSquare, Phone, Globe, Camera, Eye, MoreVertical, Plus, UserCircle, FileText, ArrowRight, X, Clock, AlertCircle, Users, FileCheck, CheckCircle, Calendar, Building2, MapPin, Package, User, Mail } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
@@ -160,75 +160,76 @@ export default function InquiriesPage() {
 
           {/* Table */}
           <div className="table-scroll">
-            <table className="w-full min-w-[850px] text-left border-collapse">
+            <table className="w-full min-w-[900px] text-left border-collapse">
               <thead>
-                <tr className="border-b border-[#E5E7EB]">
-                  <th className="px-4 py-3 w-10 text-center"><input type="checkbox" className="rounded border-gray-300" /></th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Inquiry ID</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Customer</th>
+                <tr className="border-b border-[#E5E7EB] bg-[#FAFAFA]">
+                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider w-32">Inquiry ID</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider w-40">Customer</th>
                   <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Product Interested</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Source</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Date</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Assigned To</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider text-center">Actions</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider w-28">Source</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider w-32">Date</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider w-28">Status</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider w-32">Assigned To</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider w-24 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F3F4F6]">
                 {loading ? (
-                  <tr><td colSpan={9} className="p-8 text-center text-gray-500">Loading inquiries...</td></tr>
+                  <tr><td colSpan={8} className="p-8 text-center text-gray-500">Loading inquiries...</td></tr>
                 ) : inquiries.length === 0 ? (
-                  <tr><td colSpan={9} className="p-8 text-center text-gray-500">No inquiries found.</td></tr>
-                ) : inquiries.filter(inq => filterType === 'ALL' || inq.customerType === filterType).map((inq) => (
-                  <tr key={inq.id} className="hover:bg-[#F9FAFB] transition-colors cursor-pointer group" onClick={() => handleOpenInquiry(inq.id)}>
-                    <td className="px-4 py-4 text-center"><input type="checkbox" className="rounded border-gray-300" onClick={e=>e.stopPropagation()} /></td>
-                    <td className="px-4 py-4 text-xs font-bold text-[#111111]">{inq.inquiryNumber}</td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs font-bold text-[#111111]">{inq.customerName || inq.customer?.name}</p>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${inq.customerType === 'REGISTERED' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
-                          {inq.customerType}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-[#6B7280] mt-0.5">{inq.companyName || inq.customer?.company || inq.company?.name || 'Individual'}</p>
-                    </td>
-                    <td className="px-4 py-4">
-                      <p className="text-xs font-medium text-[#374151] line-clamp-1">{inq.quantity ? `${inq.quantity} ` : ''}{inq.productInterest || 'N/A'}</p>
-                    </td>
-                    <td className="px-4 py-4 text-xs font-medium text-[#4B5563]">
-                      {getSourceIcon(inq.source)}
-                    </td>
-                    <td className="px-4 py-4">
-                      <p className="text-xs text-[#111111]">{new Date(inq.createdAt).toLocaleDateString()}</p>
-                      <p className="text-[10px] text-[#6B7280]">{new Date(inq.createdAt).toLocaleTimeString()}</p>
-                    </td>
-                    <td className="px-4 py-4">
-                      <StatusBadge status={inq.status} />
-                    </td>
-                    <td className="px-4 py-4">
-                      {inq.assignedTo ? (
+                  <tr><td colSpan={8} className="p-8 text-center text-gray-500">No inquiries found.</td></tr>
+                ) : inquiries.filter(inq => filterType === 'ALL' || inq.customerType === filterType).map((inq) => {
+                  const isActive = isDrawerOpen && selectedInquiry?.id === inq.id;
+                  return (
+                    <tr key={inq.id} className={`${isActive ? 'bg-[#EEF2FF]' : 'hover:bg-[#F9FAFB]'} transition-all duration-150 ease-out cursor-pointer group`} onClick={() => handleOpenInquiry(inq.id)}>
+                      <td className="px-4 py-4 text-xs font-bold text-[#111111]">{inq.inquiryNumber}</td>
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[10px] font-bold text-[#374151]">
-                            {inq.assignedTo.name.charAt(0)}
-                          </div>
-                          <span className="text-xs font-medium text-[#374151]">{inq.assignedTo.name}</span>
+                          <p className="text-xs font-bold text-[#111111]">{inq.customerName || inq.customer?.name}</p>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${inq.customerType === 'REGISTERED' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {inq.customerType}
+                          </span>
                         </div>
-                      ) : (
-                        <span className="text-xs text-[#9CA3AF] italic">Unassigned</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-1.5 bg-white border border-[#E5E7EB] text-[#6B7280] hover:text-[#3B6FEB] rounded shadow-sm" title="View Details">
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                        <button className="p-1.5 bg-white border border-[#E5E7EB] text-[#6B7280] hover:text-[#111111] rounded shadow-sm" title="More Options">
-                          <MoreVertical className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        <p className="text-[10px] text-[#6B7280] mt-0.5">{inq.companyName || inq.customer?.company || inq.company?.name || 'Individual'}</p>
+                      </td>
+                      <td className="px-4 py-4">
+                        <p className="text-xs font-medium text-[#374151] line-clamp-1">{inq.quantity ? `${inq.quantity} ` : ''}{inq.productInterest || 'N/A'}</p>
+                      </td>
+                      <td className="px-4 py-4 text-xs font-medium text-[#4B5563]">
+                        {getSourceIcon(inq.source)}
+                      </td>
+                      <td className="px-4 py-4">
+                        <p className="text-xs text-[#111111]">{new Date(inq.createdAt).toLocaleDateString()}</p>
+                        <p className="text-[10px] text-[#6B7280]">{new Date(inq.createdAt).toLocaleTimeString()}</p>
+                      </td>
+                      <td className="px-4 py-4">
+                        <StatusBadge status={inq.status} />
+                      </td>
+                      <td className="px-4 py-4">
+                        {inq.assignedTo ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[10px] font-bold text-[#374151]">
+                              {inq.assignedTo.name.charAt(0)}
+                            </div>
+                            <span className="text-xs font-medium text-[#374151]">{inq.assignedTo.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-[#9CA3AF] italic">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button className="p-1.5 bg-white border border-[#E5E7EB] text-[#6B7280] hover:text-[#3B6FEB] rounded shadow-sm" title="View Details">
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button className="p-1.5 bg-white border border-[#E5E7EB] text-[#6B7280] hover:text-[#111111] rounded shadow-sm" title="More Options">
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -244,9 +245,9 @@ export default function InquiriesPage() {
 
         {/* RIGHT DRAWER */}
         {isDrawerOpen && selectedInquiry && (
-          <InquiryDrawer 
-            inquiry={selectedInquiry} 
-            onClose={() => setIsDrawerOpen(false)} 
+          <InquiryDrawer
+            inquiry={selectedInquiry}
+            onClose={() => setIsDrawerOpen(false)}
             onRefresh={() => { handleOpenInquiry(selectedInquiry.id); fetchData(); }}
           />
         )}
@@ -254,9 +255,9 @@ export default function InquiriesPage() {
 
       {/* NEW INQUIRY MODAL */}
       {isNewInquiryModalOpen && (
-        <NewInquiryModal 
-          onClose={() => setIsNewInquiryModalOpen(false)} 
-          onSuccess={() => { setIsNewInquiryModalOpen(false); fetchData(); }} 
+        <NewInquiryModal
+          onClose={() => setIsNewInquiryModalOpen(false)}
+          onSuccess={() => { setIsNewInquiryModalOpen(false); fetchData(); }}
         />
       )}
     </div>
@@ -265,7 +266,7 @@ export default function InquiriesPage() {
 
 
 // ---------------------------------------------------------
-// RIGHT SIDE DRAWER COMPONENT
+// RIGHT SIDE DRAWER COMPONENT - PREMIUM REDESIGN
 // ---------------------------------------------------------
 function InquiryDrawer({ inquiry, onClose, onRefresh }: { inquiry: Inquiry, onClose: () => void, onRefresh: () => void }) {
   const [note, setNote] = useState('');
@@ -314,126 +315,272 @@ function InquiryDrawer({ inquiry, onClose, onRefresh }: { inquiry: Inquiry, onCl
   };
 
   return (
-    <div data-cy="inquiry-drawer" className="w-full lg:w-1/3 min-w-0 lg:min-w-[360px] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
-      {/* Drawer Header */}
-      <div className="p-5 border-b border-[#E5E7EB] flex items-start justify-between bg-[#FDFDFD]">
-        <div>
-          <h2 className="text-lg font-heading font-black text-[#111111]">Inquiry Details</h2>
-          <div className="flex items-center gap-3 mt-1.5">
-            <span className="text-sm font-bold text-[#111111]">{inquiry.inquiryNumber}</span>
-            <StatusBadge status={inquiry.status} />
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${inquiry.customerType === 'REGISTERED' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
-              {inquiry.customerType}
-            </span>
-          </div>
-          <p className="text-[10px] text-[#6B7280] mt-1">{new Date(inquiry.createdAt).toLocaleString()}</p>
-        </div>
-        <button onClick={onClose} className="p-1.5 text-[#9CA3AF] hover:text-[#111111] hover:bg-[#F3F4F6] rounded-lg transition-colors">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-5 space-y-6">
-        
-        {/* Customer Information */}
-        <div>
-          <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2 mb-3"><UserCircle className="w-4 h-4 text-[#3B6FEB]"/> Customer Information</h3>
-          <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-4 space-y-2.5 text-sm">
-            <div className="flex justify-between items-center"><span className="w-28 text-[#6B7280] text-xs">Customer Type</span><span className={`text-[10px] font-bold px-2 py-0.5 rounded ${inquiry.customerType === 'REGISTERED' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>{inquiry.customerType}</span></div>
-            <div className="flex justify-between items-center"><span className="w-28 text-[#6B7280] text-xs">Name</span><span className="font-semibold text-[#111111]">{inquiry.customerName || inquiry.customer?.name || 'N/A'}</span></div>
-            <div className="flex justify-between items-center"><span className="w-28 text-[#6B7280] text-xs">Company</span><span className="font-semibold text-[#374151]">{inquiry.companyName || inquiry.company?.name || inquiry.customer?.company || 'N/A'}</span></div>
-            <div className="flex justify-between items-center"><span className="w-28 text-[#6B7280] text-xs">Phone</span>
-              <span className="font-semibold text-[#374151] flex items-center gap-1.5">
-                {inquiry.phone || inquiry.customer?.phone || 'N/A'}
-                {(inquiry.phone || inquiry.customer?.phone) && <button onClick={openWhatsApp} title="WhatsApp Customer" className="text-green-500 hover:bg-green-50 p-1 rounded transition-colors"><MessageSquare className="w-3.5 h-3.5" /></button>}
+    <div data-cy="inquiry-drawer" className="w-full lg:w-[400px] xl:w-[440px] bg-white border border-[#E5E7EB] rounded-2xl shadow-2xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
+      {/* Premium Header */}
+      <div className="p-5 border-b border-[#F3F4F6] bg-gradient-to-b from-white to-[#FAFAFA]">
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0 pr-4">
+            {/* Label */}
+            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider mb-1">Inquiry ID</p>
+            {/* Inquiry Number - Prominent */}
+            <h2 className="text-2xl font-heading font-black text-[#111111] leading-tight tracking-tight">
+              {inquiry.inquiryNumber}
+            </h2>
+            {/* Status Badges */}
+            <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+              <StatusBadge status={inquiry.status} />
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${inquiry.customerType === 'REGISTERED' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                {inquiry.customerType}
               </span>
             </div>
-            <div className="flex justify-between items-center"><span className="w-28 text-[#6B7280] text-xs">Email</span><span className="font-semibold text-[#3B6FEB] truncate max-w-[180px]">{inquiry.email || inquiry.customer?.email || 'N/A'}</span></div>
-            {inquiry.location && (
-              <div className="flex justify-between items-center"><span className="w-28 text-[#6B7280] text-xs">Location / City</span><span className="font-semibold text-[#374151]">{inquiry.location}</span></div>
-            )}
+            {/* Date */}
+            <div className="flex items-center gap-1.5 mt-2.5 text-[11px] text-[#6B7280]">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>{new Date(inquiry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              <span className="text-[#D1D5DB]">·</span>
+              <span>{new Date(inquiry.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+            </div>
           </div>
+          {/* Close Button */}
+          <button onClick={onClose} className="p-2 text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F3F4F6] rounded-xl transition-all duration-200 flex-shrink-0">
+            <X className="w-5 h-5" />
+          </button>
         </div>
+      </div>
 
-        {/* Inquiry Information */}
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto p-5 space-y-6">
+
+        {/* Customer Information - Clean Section */}
         <div>
-          <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2 mb-3"><FileText className="w-4 h-4 text-[#3B6FEB]"/> Inquiry Specifications</h3>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Product Interest</span><span className="font-semibold text-[#111111] text-right">{inquiry.productInterest || 'N/A'}</span></div>
-            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Quantity</span><span className="font-semibold text-[#111111] text-right">{inquiry.quantity ? `${inquiry.quantity} Pieces` : 'N/A'}</span></div>
-            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Printing Type</span><span className="font-semibold text-[#374151] text-right">{inquiry.printingType || 'N/A'}</span></div>
-            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Print Position</span><span className="font-semibold text-[#374151] text-right">{inquiry.printPosition || 'N/A'}</span></div>
-            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Colors</span><span className="font-semibold text-[#374151] text-right">{inquiry.colors || 'N/A'}</span></div>
-            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Sizes Breakdown</span><span className="font-semibold text-[#374151] text-right">{inquiry.sizes || 'N/A'}</span></div>
-            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Budget Range</span><span className="font-semibold text-[#10B981] text-right">{inquiry.budget || 'N/A'}</span></div>
-            <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Delivery Date</span><span className="font-semibold text-[#374151] text-right">{inquiry.deliveryDate ? new Date(inquiry.deliveryDate).toLocaleDateString() : 'N/A'}</span></div>
-            {inquiry.artworkUrl && (
-              <div className="flex justify-between border-b border-[#F3F4F6] pb-2"><span className="text-[#6B7280] text-xs">Artwork Link</span><a href={inquiry.artworkUrl} target="_blank" rel="noreferrer" className="text-[#3B6FEB] font-bold text-xs underline truncate max-w-[160px]">View Artwork</a></div>
-            )}
-            <div className="flex justify-between pb-2"><span className="text-[#6B7280] text-xs">Customization Notes</span><span className="font-medium text-[#4B5563] text-right text-xs max-w-[200px] leading-relaxed">{inquiry.customizationRequirements || inquiry.message || 'No requirements specified.'}</span></div>
-          </div>
-        </div>
-
-        {/* Assigned To & Follow Up */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-3">
-            <h3 className="text-[10px] font-bold text-[#6B7280] uppercase mb-2">Assigned To</h3>
+          <h3 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mb-4 flex items-center gap-2">
+            <User className="w-4 h-4 text-[#3B6FEB]" />
+            Customer Information
+          </h3>
+          <div className="bg-[#FAFAFA] rounded-xl p-4 space-y-3">
+            {/* Name */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-[#111111] text-white flex items-center justify-center text-xs font-bold">
-                  {inquiry.assignedTo ? inquiry.assignedTo.name.charAt(0) : 'U'}
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-[#111111]">{inquiry.assignedTo?.name || 'Unassigned'}</p>
-                </div>
+              <div className="flex items-center gap-2 text-[#9CA3AF]">
+                <UserCircle className="w-4 h-4" />
+                <span className="text-xs font-medium">Name</span>
               </div>
-              <button className="text-[#3B6FEB] text-xs font-bold">Edit</button>
+              <span className="text-xs font-semibold text-[#111111]">{inquiry.customerName || inquiry.customer?.name || 'N/A'}</span>
+            </div>
+            {/* Company */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#9CA3AF]">
+                <Building2 className="w-4 h-4" />
+                <span className="text-xs font-medium">Company</span>
+              </div>
+              <span className="text-xs font-semibold text-[#374151]">{inquiry.companyName || inquiry.company?.name || inquiry.customer?.company || 'Individual'}</span>
+            </div>
+            {/* Phone */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#9CA3AF]">
+                <Phone className="w-4 h-4" />
+                <span className="text-xs font-medium">Phone</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-[#374151]">{inquiry.phone || inquiry.customer?.phone || 'N/A'}</span>
+                {(inquiry.phone || inquiry.customer?.phone) && (
+                  <button onClick={openWhatsApp} title="Message on WhatsApp" className="text-green-500 hover:bg-green-50 p-1 rounded-lg transition-colors">
+                    <MessageSquare className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+            {/* Email */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#9CA3AF]">
+                <Mail className="w-4 h-4" />
+                <span className="text-xs font-medium">Email</span>
+              </div>
+              <span className="text-xs font-semibold text-[#3B6FEB] truncate max-w-[160px]">{inquiry.email || inquiry.customer?.email || 'N/A'}</span>
+            </div>
+            {/* Location */}
+            {inquiry.location && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[#9CA3AF]">
+                  <MapPin className="w-4 h-4" />
+                  <span className="text-xs font-medium">Location</span>
+                </div>
+                <span className="text-xs font-semibold text-[#374151]">{inquiry.location}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Inquiry Details - Specifications */}
+        <div>
+          <h3 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Package className="w-4 h-4 text-[#3B6FEB]" />
+            Product Specifications
+          </h3>
+          <div className="bg-[#FAFAFA] rounded-xl p-4 space-y-3">
+            {/* Product Interest */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#9CA3AF]">Product</span>
+              <span className="text-xs font-semibold text-[#111111] text-right max-w-[200px] truncate">{inquiry.productInterest || 'N/A'}</span>
+            </div>
+            {/* Quantity */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#9CA3AF]">Quantity</span>
+              <span className="text-xs font-semibold text-[#111111]">{inquiry.quantity ? `${inquiry.quantity} pieces` : 'N/A'}</span>
+            </div>
+            {/* Printing Type */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#9CA3AF]">Printing</span>
+              <span className="text-xs font-semibold text-[#374151]">{inquiry.printingType || 'N/A'}</span>
+            </div>
+            {/* Print Position */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#9CA3AF]">Position</span>
+              <span className="text-xs font-semibold text-[#374151]">{inquiry.printPosition || 'N/A'}</span>
+            </div>
+            {/* Colors */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#9CA3AF]">Colors</span>
+              <span className="text-xs font-semibold text-[#374151]">{inquiry.colors || 'N/A'}</span>
+            </div>
+            {/* Sizes */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#9CA3AF]">Sizes</span>
+              <span className="text-xs font-semibold text-[#374151]">{inquiry.sizes || 'N/A'}</span>
+            </div>
+            {/* Budget */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#9CA3AF]">Budget</span>
+              <span className="text-xs font-bold text-[#10B981]">{inquiry.budget || 'N/A'}</span>
+            </div>
+            {/* Delivery Date */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#9CA3AF]">Delivery</span>
+              <span className="text-xs font-semibold text-[#374151]">{inquiry.deliveryDate ? new Date(inquiry.deliveryDate).toLocaleDateString() : 'N/A'}</span>
+            </div>
+            {/* Artwork Link */}
+            {inquiry.artworkUrl && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[#9CA3AF]">Artwork</span>
+                <a href={inquiry.artworkUrl} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-[#3B6FEB] hover:underline truncate max-w-[160px]">View Link →</a>
+              </div>
+            )}
+          </div>
+          {/* Customization Notes */}
+          {(inquiry.customizationRequirements || inquiry.message) && (
+            <div className="mt-3 bg-[#F0F4FF] rounded-xl p-3 border border-[#E0E8FF]">
+              <p className="text-[10px] font-bold text-[#3B6FEB] uppercase tracking-wider mb-1.5">Notes</p>
+              <p className="text-xs text-[#374151] leading-relaxed">{inquiry.customizationRequirements || inquiry.message}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Assignment & Follow Up - Grid Cards */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Assigned To Card */}
+          <div className="bg-white border border-[#E5E7EB] rounded-xl p-3.5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Assigned To</p>
+              <button className="text-[#3B6FEB] text-[10px] font-bold hover:underline">Edit</button>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#3B6FEB] to-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-sm">
+                {inquiry.assignedTo ? inquiry.assignedTo.name.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <p className="text-xs font-semibold text-[#111111] truncate">{inquiry.assignedTo?.name || 'Unassigned'}</p>
             </div>
           </div>
-          <div className="bg-[#FFFBEB] border border-[#FEF3C7] rounded-xl p-3">
-            <h3 className="text-[10px] font-bold text-[#D97706] uppercase mb-2">Next Follow Up</h3>
-            <div className="flex items-center gap-2 text-xs font-bold text-[#B45309]">
-              <Clock className="w-4 h-4" />
-              {inquiry.nextFollowUpAt ? new Date(inquiry.nextFollowUpAt).toLocaleString() : 'Not Set'}
+          {/* Next Follow Up Card */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5">
+            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-2">Next Follow Up</p>
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-amber-500" />
+              <p className="text-[11px] font-semibold text-amber-700 leading-tight">
+                {inquiry.nextFollowUpAt ? new Date(inquiry.nextFollowUpAt).toLocaleDateString() : 'Not Set'}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Activity Timeline */}
+        {/* Activity Timeline - Clean Design */}
         <div>
-           <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider mb-3">Activity Timeline</h3>
-           <div className="space-y-4 pl-2 border-l-2 border-[#E5E7EB] ml-2">
-              {inquiry.activities?.map((act: any) => (
-                <div key={act.id} className="relative pl-4">
-                  <div className="absolute w-2.5 h-2.5 bg-[#3B6FEB] rounded-full -left-[21px] top-1 border-2 border-white"></div>
-                  <p className="text-xs font-semibold text-[#111111]">{act.message}</p>
-                  <p className="text-[10px] text-[#6B7280] mt-0.5">{new Date(act.createdAt).toLocaleString()} • {act.user?.name || 'System'}</p>
-                </div>
-              ))}
-           </div>
-           
-           <div className="mt-4 flex gap-2">
-              <input type="text" data-cy="inquiry-note-input" value={note} onChange={e=>setNote(e.target.value)} placeholder="Add a note..." className="flex-1 text-xs border border-[#E5E7EB] rounded-lg px-3 py-2 bg-[#F9FAFB] focus:outline-none focus:border-[#3B6FEB]"/>
-              <button onClick={handleAddNote} data-cy="add-note-btn" className="bg-[#F3F4F6] text-[#374151] px-3 py-2 rounded-lg text-xs font-bold hover:bg-[#E5E7EB]">Add</button>
-           </div>
+          <h3 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mb-4 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-[#3B6FEB]" />
+            Activity
+          </h3>
+
+          {inquiry.activities && inquiry.activities.length > 0 ? (
+            <div className="relative pl-5">
+              {/* Timeline Line */}
+              <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-[#3B6FEB] to-[#E5E7EB]" />
+
+              <div className="space-y-4">
+                {inquiry.activities.map((act: any, index: number) => (
+                  <div key={act.id} className="relative">
+                    {/* Timeline Dot */}
+                    <div className={`absolute -left-[13px] top-1 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm ${index === 0 ? 'bg-[#3B6FEB]' : 'bg-[#D1D5DB]'}`} />
+                    {/* Content */}
+                    <div className="bg-white border border-[#E5E7EB] rounded-lg p-3">
+                      <p className="text-xs font-medium text-[#111111] leading-snug">{act.message}</p>
+                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[#9CA3AF]">
+                        <span>{new Date(act.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        <span>·</span>
+                        <span>{new Date(act.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                        <span>·</span>
+                        <span>{act.user?.name || 'System'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6 bg-[#FAFAFA] rounded-xl border border-dashed border-[#E5E7EB]">
+              <FileText className="w-6 h-6 text-[#D1D5DB] mx-auto mb-2" />
+              <p className="text-xs text-[#9CA3AF]">No activity recorded yet</p>
+            </div>
+          )}
+
+          {/* Add Note Input */}
+          <div className="mt-4 flex gap-2">
+            <input
+              type="text"
+              data-cy="inquiry-note-input"
+              value={note}
+              onChange={e=>setNote(e.target.value)}
+              placeholder="Add a note..."
+              className="flex-1 text-xs border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 bg-[#FAFAFA] focus:outline-none focus:border-[#3B6FEB] focus:ring-2 focus:ring-[#3B6FEB]/10 transition-all"
+            />
+            <button
+              onClick={handleAddNote}
+              data-cy="add-note-btn"
+              className="px-4 py-2.5 bg-[#3B6FEB] text-white rounded-xl text-xs font-bold hover:bg-[#2563EB] transition-colors shadow-sm"
+            >
+              Add
+            </button>
+          </div>
         </div>
 
       </div>
 
-      {/* Drawer Actions */}
-      <div className="p-4 border-t border-[#E5E7EB] bg-[#FDFDFD] flex items-center justify-between gap-3">
-        <button className="px-4 py-2.5 border border-[#E5E7EB] bg-white rounded-lg text-sm font-bold text-[#374151] hover:bg-[#F9FAFB] flex-1 flex justify-center gap-2">
-          <Phone className="w-4 h-4" /> Call
-        </button>
-        {inquiry.status !== 'CONVERTED' ? (
-          <button onClick={handleConvertToQuote} className="px-4 py-2.5 bg-[#3B6FEB] rounded-lg text-sm font-bold text-white hover:bg-[#2563EB] flex-1 flex justify-center gap-2">
-            Convert to Quote <ArrowRight className="w-4 h-4" />
+      {/* Premium Footer Actions */}
+      <div className="p-4 border-t border-[#F3F4F6] bg-white">
+        <div className="flex items-center gap-3">
+          <button className="px-4 py-3 border border-[#E5E7EB] bg-white rounded-xl text-sm font-semibold text-[#374151] hover:bg-[#F9FAFB] hover:border-[#D1D5DB] transition-all flex items-center justify-center gap-2 flex-1">
+            <Phone className="w-4 h-4" />
+            <span>Call</span>
           </button>
-        ) : (
-          <Link href={`/dashboard/quotes/${inquiry.quote?.id}`} className="px-4 py-2.5 bg-emerald-600 rounded-lg text-sm font-bold text-white hover:bg-emerald-700 flex-1 flex justify-center gap-2 text-center">
-            View Quote {inquiry.quote?.quoteNumber}
-          </Link>
-        )}
+          {inquiry.status !== 'CONVERTED' ? (
+            <button onClick={handleConvertToQuote} className="px-5 py-3 bg-[#3B6FEB] rounded-xl text-sm font-bold text-white hover:bg-[#2563EB] transition-all flex items-center justify-center gap-2 flex-[2] shadow-sm shadow-[#3B6FEB]/20">
+              Convert to Quote
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <Link href={`/dashboard/quotes/${inquiry.quote?.id}`} className="px-5 py-3 bg-emerald-600 rounded-xl text-sm font-bold text-white hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 flex-[2] shadow-sm shadow-emerald-600/20">
+              View Quote
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );
