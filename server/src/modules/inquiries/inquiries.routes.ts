@@ -7,8 +7,9 @@ const router = Router();
 // GET /api/v1/inquiries/stats - Must be before /:id
 router.get('/stats', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.getStats);
 
-router.get('/', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.getAll);
-router.get('/:id', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.getById);
+// Customers can view their own inquiries
+router.get('/', authenticateJWT, authorizeRoles('ADMIN', 'SALES', 'CUSTOMER'), InquiryController.getAll);
+router.get('/:id', authenticateJWT, authorizeRoles('ADMIN', 'SALES', 'CUSTOMER'), InquiryController.getById);
 
 router.post('/', optionalAuth, InquiryController.create);
 

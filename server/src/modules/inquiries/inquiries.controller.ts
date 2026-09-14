@@ -6,6 +6,11 @@ export class InquiryController {
   
   static async getAll(req: Request, res: Response) {
     try {
+      let customerId = req.query.customerId as string;
+      if ((req as any).user?.role === 'CUSTOMER') {
+        customerId = (req as any).user.id;
+      }
+
       const result = await InquiryService.getAllInquiries({
         page: req.query.page ? Number(req.query.page) : undefined,
         limit: req.query.limit ? Number(req.query.limit) : undefined,
@@ -13,7 +18,7 @@ export class InquiryController {
         status: req.query.status as InquiryStatus,
         source: req.query.source as InquirySource,
         assignedToId: req.query.assignedToId as string,
-        customerId: req.query.customerId as string,
+        customerId: customerId,
       });
       res.json(result);
     } catch (error: any) {
@@ -25,6 +30,13 @@ export class InquiryController {
     try {
       const inquiry = await InquiryService.getInquiryById(req.params.id);
       if (!inquiry) return res.status(404).json({ message: 'Inquiry not found' });
+
+      if ((req as any).user?.role === 'CUSTOMER') {
+        if (inquiry.customerId !== (req as any).user.id && inquiry.companyId !== (req as any).user.companyId) {
+          return res.status(403).json({ message: 'Unauthorized' });
+        }
+      }
+
       res.json(inquiry);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

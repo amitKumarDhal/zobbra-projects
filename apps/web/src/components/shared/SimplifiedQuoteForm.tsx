@@ -94,8 +94,13 @@ export default function SimplifiedQuoteForm({ isCustomer = false, initialData = 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone || !productId || !quantity) {
+    if (!name || !phone || !quantity) {
       alert('Please fill in all required fields marked with *');
+      return;
+    }
+    
+    if (!productId && referenceFiles.length === 0) {
+      alert('Please select a product or upload a reference design.');
       return;
     }
 
@@ -114,8 +119,8 @@ export default function SimplifiedQuoteForm({ isCustomer = false, initialData = 
       resolvedProductId = products.find(p => p.name.toLowerCase().includes('welcome') || p.name.toLowerCase().includes('kit'))?.id;
     }
 
-    if (!resolvedProductId) {
-      alert(`The selected product category (${productId}) is currently unavailable in the catalog. Please select another option.`);
+    if (productId && !resolvedProductId && referenceFiles.length === 0) {
+      alert(`The selected product category (${productId}) is currently unavailable in the catalog. Please select another option or upload a reference design.`);
       return;
     }
 
@@ -125,19 +130,14 @@ export default function SimplifiedQuoteForm({ isCustomer = false, initialData = 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const endpoint = isCustomer ? '/quotes' : '/inquiries';
-      const payload = isCustomer ? {
+      const isMockupOnly = !resolvedProductId;
+      const endpoint = isMockupOnly ? '/inquiries' : (isCustomer ? '/quotes' : '/inquiries');
+      const payload = {
         customerName: name,
         phone,
         productId: resolvedProductId,
         quantity,
-        referenceFiles
-      } : {
-        customerName: name,
-        phone,
-        productId: resolvedProductId,
-        quantity,
-        referenceFiles
+        artworkUrl: referenceFiles.length > 0 ? referenceFiles.join(', ') : undefined
       };
 
       const res = await fetch(`${API_URL}${endpoint}`, {
@@ -243,10 +243,10 @@ export default function SimplifiedQuoteForm({ isCustomer = false, initialData = 
 
         <div>
           <label className="block font-bold text-[#374151] mb-1.5">
-            Product <span className="text-red-500">*</span>
+            Product Category <span className="text-gray-400 font-normal text-xs">(optional)</span>
           </label>
+          <p className="text-xs text-[#6B7280] mb-2 font-medium">Choose a product if you already know what you need.</p>
           <select 
-            required
             value={productId} 
             onChange={e => setProductId(e.target.value)} 
             disabled={loadingProducts}
@@ -278,8 +278,9 @@ export default function SimplifiedQuoteForm({ isCustomer = false, initialData = 
 
         <div>
           <label className="block font-bold text-[#374151] mb-1.5">
-            Reference Files (Images/Logos)
+            Reference Files / Mockup <span className="text-gray-400 font-normal text-xs">(optional)</span>
           </label>
+          <p className="text-xs text-[#6B7280] mb-2 font-medium">Upload a product image, logo, artwork, or reference design.</p>
           <div className="relative border-2 border-dashed border-[#D1D5DB] hover:border-[#3B6FEB] rounded-xl p-6 text-center transition-all bg-[#F8F9FC]">
             <input 
               type="file" 
