@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Filter, Download, ExternalLink, MoreVertical, MessageSquare, Phone, MapPin, X, Users, UserPlus, Star, Clock, CheckCircle2, UserCircle, Edit2, ChevronRight, Briefcase, FileText, ShoppingBag, CreditCard, ChevronDown } from 'lucide-react';
+import { Search, Filter, Download, ExternalLink, MoreVertical, MessageSquare, Phone, MapPin, X, Users, UserPlus, Star, Clock, CheckCircle2, UserCircle, Edit2, ChevronRight, Briefcase, FileText, ShoppingBag, CreditCard, ChevronDown, Trash2 } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
@@ -35,12 +35,20 @@ export default function CustomersPage() {
   // Drawer State
   const [selectedCustomer, setSelectedCustomer] = useState<Company | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Pagination
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1, pageSize: 10 });
+  const [userRole, setUserRole] = useState<string>('');
 
   useEffect(() => {
+    try {
+      const u = localStorage.getItem('user');
+      if (u) {
+        setUserRole(JSON.parse(u).role || '');
+      }
+    } catch (e) {}
     fetchData();
   }, [search, page]);
 
@@ -58,6 +66,7 @@ export default function CustomersPage() {
       if(resList.success) {
         setCustomers(resList.data || []);
         if (resList.pagination) setPagination(resList.pagination);
+        setSelectedIds([]);
       }
       
       if(resStats.success) {
@@ -67,6 +76,38 @@ export default function CustomersPage() {
       console.error('Failed to load customers:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedIds.length} customers?`)) return;
+    try {
+      const res = await fetch(`${API_URL}/customers/bulk`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+        body: JSON.stringify({ ids: selectedIds })
+      });
+      const data = await res.json();
+      if (!res.ok) alert(`Failed: ${data.message}`);
+      else fetchData();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this customer?')) return;
+    try {
+      const res = await fetch(`${API_URL}/customers/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+      });
+      const data = await res.json();
+      if (!res.ok) alert(`Failed: ${data.message}`);
+      else fetchData();
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -147,12 +188,22 @@ export default function CustomersPage() {
             </div>
           </div>
 
+          {/* Bulk Actions */}
+          {selectedIds.length > 0 && userRole === 'ADMIN' && (
+            <div className="bg-red-50 border-b border-red-100 px-4 py-2 flex items-center justify-between">
+              <span className="text-sm font-bold text-red-800">{selectedIds.length} customer(s) selected</span>
+              <button onClick={handleBulkDelete} className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm">
+                Delete Selected
+              </button>
+            </div>
+          )}
+
           {/* Table */}
           <div className="table-scroll">
             <table className="w-full min-w-[850px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#E5E7EB]">
-                  <th className="px-4 py-3 w-10 text-center"><input type="checkbox" className="rounded border-gray-300" /></th>
+                  <th className="px-4 py-3 w-10 text-center"><input type="checkbox" className="rounded border-gray-300" checked={customers.length > 0 && selectedIds.length === customers.length} onChange={(e) => setSelectedIds(e.target.checked ? customers.map(c => c.id) : [])} /></th>
                   <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Customer</th>
                   <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Contact</th>
                   <th className="px-4 py-3 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Company</th>
@@ -176,7 +227,7 @@ export default function CustomersPage() {
                   
                   return (
                     <tr key={c.id} className="hover:bg-[#F9FAFB] transition-colors cursor-pointer group" onClick={() => handleOpenCustomer(c.id)}>
-                      <td className="px-4 py-4 text-center"><input type="checkbox" className="rounded border-gray-300" onClick={e=>e.stopPropagation()} /></td>
+                      <td className="px-4 py-4 text-center"><input type="checkbox" className="rounded border-gray-300" checked={selectedIds.includes(c.id)} onChange={(e) => { e.stopPropagation(); setSelectedIds(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]); }} onClick={e=>e.stopPropagation()} /></td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-blue-50 text-[#3B6FEB] flex items-center justify-center font-bold text-xs uppercase border border-blue-100">
@@ -221,6 +272,9 @@ export default function CustomersPage() {
                         <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button className="p-1.5 text-[#6B7280] hover:text-[#111111] hover:bg-[#F3F4F6] rounded" title="View"><ExternalLink className="w-3.5 h-3.5" /></button>
                           <button className="p-1.5 text-[#6B7280] hover:text-[#111111] hover:bg-[#F3F4F6] rounded" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
+                          {userRole === 'ADMIN' && (
+                            <button onClick={(e) => handleDelete(c.id, e)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                          )}
                         </div>
                       </td>
                     </tr>

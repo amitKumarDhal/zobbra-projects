@@ -4,7 +4,12 @@ import { prisma } from '../../config/index.js';
 export const getProducts = async (req: Request, res: Response) => {
   const { category, search, status, page = '1', pageSize = '10' } = req.query;
 
-  const where: any = {};
+  const where: any = {
+    AND: [
+      { slug: { not: { contains: '-deleted-' } } }
+    ]
+  };
+
   if (status === 'All Status') {
     // Do not filter by isActive
   } else if (status === 'Draft') {
@@ -13,17 +18,21 @@ export const getProducts = async (req: Request, res: Response) => {
     // Default to 'Active'
     where.isActive = true;
   }
+
   if (category && category !== 'All Categories') {
     where.category = { slug: String(category) };
   }
+
   if (search) {
     const searchStr = String(search);
-    where.OR = [
-      { name: { contains: searchStr, mode: 'insensitive' } },
-      { description: { contains: searchStr, mode: 'insensitive' } },
-      { slug: { contains: searchStr, mode: 'insensitive' } },
-      { variants: { some: { sku: { contains: searchStr, mode: 'insensitive' } } } },
-    ];
+    where.AND.push({
+      OR: [
+        { name: { contains: searchStr, mode: 'insensitive' } },
+        { description: { contains: searchStr, mode: 'insensitive' } },
+        { slug: { contains: searchStr, mode: 'insensitive' } },
+        { variants: { some: { sku: { contains: searchStr, mode: 'insensitive' } } } },
+      ]
+    });
   }
 
   const pageNum = Math.max(1, parseInt(String(page), 10) || 1);
@@ -45,8 +54,8 @@ export const getProducts = async (req: Request, res: Response) => {
     prisma.product.count({ where }),
   ]);
 
-  return res.json({ 
-    success: true, 
+  return res.json({
+    success: true,
     data: products,
     products,
     pagination: {
@@ -63,10 +72,15 @@ export const getProductBySlug = async (req: Request, res: Response) => {
 
   const product = await prisma.product.findFirst({
     where: {
-      OR: [
-        { slug },
-        { id: slug },
-      ],
+      AND: [
+        { slug: { not: { contains: '-deleted-' } } },
+        {
+          OR: [
+            { slug },
+            { id: slug },
+          ]
+        }
+      ]
     },
     include: {
       category: true,
@@ -139,11 +153,39 @@ export const updateProduct = async (req: Request, res: Response) => {
 
 export const deleteProduct = async (req: Request, res: Response) => {
   const { id } = req.params;
-  await prisma.product.update({
-    where: { id },
-    data: { isActive: false },
-  });
-  return res.json({ success: true, message: 'Product deactivated' });
+
+  // 1. Check if it's referenced by any restricted relation (historical records)
+  const [quotes, orders, inquiries] = await Promise.all([
+    prisma.quoteItem.count({ where: { productId: id } }),
+    prisma.orderItem.count({ where: { productId: id } }),
+    prisma.inquiry.count({ where: { productId: id } }),
+  ]);
+
+  const isReferenced = quotes > 0 || orders > 0 || inquiries > 0;
+
+  if (!isReferenced) {
+    // Safe to physically delete
+    await prisma.product.delete({ where: { id } });
+    return res.json({ success: true, message: 'Product permanently deleted' });
+  } else {
+    // Fallback: Soft delete by identifying with -deleted- in slug
+    const product = await prisma.product.findUnique({ where: { id } });
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+
+    // Only append if not already there
+    const newSlug = product.slug.includes('-deleted-')
+      ? product.slug
+      : `${product.slug}-deleted-${Date.now()}`;
+
+    await prisma.product.update({
+      where: { id },
+      data: {
+        isActive: false,
+        slug: newSlug
+      },
+    });
+    return res.json({ success: true, message: 'Product archived (referenced by historical records)' });
+  }
 };
 
 export const getCategories = async (req: Request, res: Response) => {
@@ -154,12 +196,14 @@ export const getCategories = async (req: Request, res: Response) => {
 };
 
 export const getProductStats = async (req: Request, res: Response) => {
+  const baseWhere = { slug: { not: { contains: '-deleted-' } } };
+
   const [totalProducts, activeProducts, draftProducts, categories, variants] = await Promise.all([
-    prisma.product.count(),
-    prisma.product.count({ where: { isActive: true } }),
-    prisma.product.count({ where: { isActive: false } }),
+    prisma.product.count({ where: baseWhere }),
+    prisma.product.count({ where: { ...baseWhere, isActive: true } }),
+    prisma.product.count({ where: { ...baseWhere, isActive: false } }),
     prisma.category.count(),
-    prisma.productVariant.count(),
+    prisma.productVariant.count({ where: { product: baseWhere } }),
   ]);
 
   return res.json({
@@ -176,7 +220,7 @@ export const getProductStats = async (req: Request, res: Response) => {
 
 export const duplicateProduct = async (req: Request, res: Response) => {
   const { id } = req.params;
-  
+
   const original = await prisma.product.findUnique({
     where: { id },
     include: { bulkPricing: true, variants: true }
@@ -185,7 +229,7 @@ export const duplicateProduct = async (req: Request, res: Response) => {
   if (!original) return res.status(404).json({ success: false, message: 'Not found' });
 
   const newSlug = `${original.slug}-copy-${Date.now()}`;
-  
+
   const product = await prisma.product.create({
     data: {
       name: `${original.name} (Copy)`,
@@ -225,26 +269,63 @@ export const duplicateProduct = async (req: Request, res: Response) => {
 
 export const bulkDeleteProducts = async (req: Request, res: Response) => {
   const { ids } = req.body;
-  
+
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ success: false, message: 'No product IDs provided' });
   }
 
   try {
-    const result = await prisma.product.updateMany({
-      where: {
-        id: { in: ids }
+    // 1. Batched aggregate: which products are referenced?
+    const productCounts = await prisma.product.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        slug: true,
+        _count: {
+          select: {
+            quoteItems: true,
+            orderItems: true,
+            inquiries: true,
+          },
+        },
       },
-      data: { isActive: false },
     });
 
-    return res.json({ 
-      success: true, 
-      message: `${result.count} products deactivated`,
-      count: result.count
+    const deletable: string[] = [];
+    const toArchive: { id: string; slug: string }[] = [];
+
+    for (const p of productCounts) {
+      const refs = p._count.quoteItems + p._count.orderItems + p._count.inquiries;
+      if (refs === 0) {
+        deletable.push(p.id);
+      } else {
+        const newSlug = p.slug.includes('-deleted-') ? p.slug : `${p.slug}-deleted-${Date.now()}`;
+        toArchive.push({ id: p.id, slug: newSlug });
+      }
+    }
+
+    // 2. Batch hard delete
+    if (deletable.length > 0) {
+      await prisma.product.deleteMany({ where: { id: { in: deletable } } });
+    }
+
+    // 3. Batch soft delete
+    for (const { id, slug } of toArchive) {
+      await prisma.product.update({
+        where: { id },
+        data: { isActive: false, slug },
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Deleted ${deletable.length}, Archived ${toArchive.length}`,
+      deleted: deletable.length,
+      archived: toArchive.length,
+      count: deletable.length + toArchive.length,
     });
   } catch (error: any) {
     console.error('Bulk delete error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to deactivate products' });
+    return res.status(500).json({ success: false, message: 'Failed to delete products' });
   }
 };

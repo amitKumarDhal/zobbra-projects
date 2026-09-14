@@ -73,8 +73,8 @@ export default function ProductsPage() {
     }
   };
 
-  const handleArchive = async (id: string) => {
-    if (!confirm('Archive this product? It will be marked as inactive and hidden from customers.')) return;
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
     try {
       const res = await fetch(`${API_URL}/products/${id}`, {
         method: 'DELETE',
@@ -82,9 +82,10 @@ export default function ProductsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(`Failed to archive product: ${data.message || 'Unknown error'}`);
+        alert(`Failed to delete product: ${data.message || 'Unknown error'}`);
         return;
       }
+      setSelectedIds(prev => prev.filter(x => x !== id));
       fetchData();
     } catch (err) {
       alert('Network error. Please check your connection and try again.');
@@ -134,20 +135,20 @@ export default function ProductsPage() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`Are you sure you want to archive ${selectedIds.length} selected products? They will be marked inactive and hidden.`)) return;
-    
+    if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected products?`)) return;
+
     try {
       const res = await fetch(`${API_URL}/products/bulk`, {
         method: 'DELETE',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + localStorage.getItem('token') 
+          'Authorization': 'Bearer ' + localStorage.getItem('token')
         },
         body: JSON.stringify({ ids: selectedIds })
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(`Failed to bulk archive: ${data.message || 'Unknown error'}`);
+        alert(`Failed to bulk delete: ${data.message || 'Unknown error'}`);
         return;
       }
       setSelectedIds([]);
@@ -309,7 +310,7 @@ export default function ProductsPage() {
                         <div className="flex items-center justify-center gap-1">
                           <button onClick={() => openEdit(p.id)} className="p-1.5 text-[#6B7280] hover:text-[#111111] hover:bg-[#F3F4F6] rounded" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
                           <button onClick={() => handleDuplicate(p.id)} className="p-1.5 text-[#6B7280] hover:text-[#111111] hover:bg-[#F3F4F6] rounded" title="Duplicate"><Copy className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => handleArchive(p.id)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded" title="Archive"><Trash2 className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => handleDelete(p.id)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
                       </td>
                     </tr>

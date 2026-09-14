@@ -188,6 +188,7 @@ model Company {
   invoices  Invoice[]
   inquiries Inquiry[]
   testimonials Testimonial[]
+  isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

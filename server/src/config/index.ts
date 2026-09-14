@@ -9,9 +9,9 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET || 'zobra_b2b_secret_key_2026_super_secure',
   jwtExpiresIn: (process.env.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'],
   cloudinary: {
-    cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'demo_zobra',
-    apiKey: process.env.CLOUDINARY_API_KEY || '123456789',
-    apiSecret: process.env.CLOUDINARY_API_SECRET || 'secret',
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    apiKey: process.env.CLOUDINARY_API_KEY || '',
+    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
   },
   resendApiKey: process.env.RESEND_API_KEY || 're_mock_key',
   company: {

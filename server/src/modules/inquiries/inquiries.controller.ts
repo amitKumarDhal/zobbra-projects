@@ -50,7 +50,7 @@ export class InquiryController {
       let phone = data.phone;
       let email = data.email;
       const productInterest = data.productInterest || data.category || 'Custom Merchandise';
-      const quantity = Number(data.quantity) || 50;
+      const quantity = Number(data.quantity);
 
       const effectiveUserId = data.customerId || userId;
       if (effectiveUserId) {
@@ -63,10 +63,16 @@ export class InquiryController {
         }
       }
 
-      if (!customerName || !phone) {
+      if (!customerName || !phone || !data.productId || !quantity || quantity <= 0) {
         return res.status(400).json({
-          message: 'Missing required fields: customerName and phone are required.'
+          message: 'Missing or invalid required fields (Name, Phone, Product, Quantity).'
         });
+      }
+
+      // Handle Reference Files
+      let finalArtworkUrl = data.artworkUrl || data.artwork || undefined;
+      if (Array.isArray(data.referenceFiles) && data.referenceFiles.length > 0) {
+        finalArtworkUrl = data.referenceFiles.map((f: any) => f.url || f).join(', ');
       }
 
       const inquiry = await InquiryService.createInquiry({
@@ -75,6 +81,7 @@ export class InquiryController {
         customerName,
         phone,
         email: email || undefined,
+        productId: data.productId,
         productInterest,
         quantity,
         location: data.location || undefined,
@@ -84,7 +91,7 @@ export class InquiryController {
         printPosition: data.printPosition || undefined,
         budget: data.budget || undefined,
         customizationRequirements: data.customizationRequirements || data.message || undefined,
-        artworkUrl: data.artworkUrl || data.artwork || undefined,
+        artworkUrl: finalArtworkUrl,
         deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : undefined,
         source: data.source || InquirySource.WEBSITE,
       }, userId);
