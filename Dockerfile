@@ -23,5 +23,5 @@ RUN pnpm --filter zobra-server build
 
 ENV NODE_ENV=production
 
-# 5. Start production server
-CMD ["pnpm", "--filter", "zobra-server", "start"]
+# 5. Start production server (run migrations first, then start)
+CMD ["sh", "-c", "pnpm run db:migrate && exec pnpm --filter zobra-server start"]
