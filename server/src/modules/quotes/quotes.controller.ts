@@ -236,6 +236,8 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ success: false, message: 'Customer ID is required' });
   }
 
+  let resolvedCompanyId = companyId || req.user?.companyId || null;
+
   // Update customer and company profile if updated contact details are supplied
   if (targetCustomerId) {
     try {
@@ -256,16 +258,20 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
         include: { company: true },
       });
 
-      if (existingUser?.companyId && (companyName || gstin || address)) {
-        const companyUpdateData: any = {};
-        if (companyName) companyUpdateData.name = companyName;
-        if (gstin) companyUpdateData.gstin = gstin;
-        if (address) companyUpdateData.address = address;
+      if (existingUser?.companyId) {
+        resolvedCompanyId = existingUser.companyId;
 
-        await prisma.company.update({
-          where: { id: existingUser.companyId },
-          data: companyUpdateData,
-        });
+        if (companyName || gstin || address) {
+          const companyUpdateData: any = {};
+          if (companyName) companyUpdateData.name = companyName;
+          if (gstin) companyUpdateData.gstin = gstin;
+          if (address) companyUpdateData.address = address;
+
+          await prisma.company.update({
+            where: { id: existingUser.companyId },
+            data: companyUpdateData,
+          });
+        }
       }
     } catch (_err) {
       // Non-blocking profile enrichment
@@ -381,7 +387,7 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
     data: {
       quoteNumber,
       customerId: targetCustomerId,
-      companyId: companyId || req.user?.companyId || null,
+      companyId: resolvedCompanyId,
       status: finalStatus,
       subtotal,
       gstTotal: totalGst,

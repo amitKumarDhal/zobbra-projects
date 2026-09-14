@@ -191,7 +191,7 @@ export default function AdminQuoteDetailPage() {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
       const res = await fetch(`${API_URL}/quotes/${id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
