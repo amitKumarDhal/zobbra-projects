@@ -48,7 +48,9 @@ export default function CustomersPage() {
       if (u) {
         setUserRole(JSON.parse(u).role || '');
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Could not parse user from local storage', e);
+    }
     fetchData();
   }, [search, page]);
 
