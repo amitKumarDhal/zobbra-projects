@@ -166,149 +166,163 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
 };
 
 export const getOrders = async (req: AuthRequest, res: Response) => {
-  const { status, paymentStatus, search, page = '1', pageSize = '10' } = req.query;
+  try {
+    const { status, paymentStatus, search, page = '1', pageSize = '10' } = req.query;
 
-  const where: any = {};
-  if (status && status !== 'All Status') where.status = String(status);
-  if (paymentStatus && paymentStatus !== 'All Payment') where.paymentStatus = String(paymentStatus);
+    const where: any = {};
+    if (status && status !== 'All Status') where.status = String(status);
+    if (paymentStatus && paymentStatus !== 'All Payment') where.paymentStatus = String(paymentStatus);
 
-  if (search) {
-    const searchStr = String(search);
-    where.OR = [
-      { orderNumber: { contains: searchStr, mode: 'insensitive' } },
-      { customer: { name: { contains: searchStr, mode: 'insensitive' } } },
-      { customer: { email: { contains: searchStr, mode: 'insensitive' } } },
-      { company: { name: { contains: searchStr, mode: 'insensitive' } } },
-      { quote: { quoteNumber: { contains: searchStr, mode: 'insensitive' } } }
-    ];
-  }
-
-  // Customer role security filter
-  if (req.user?.role === 'CUSTOMER') {
-    if (where.OR) {
-      where.AND = [
-        {
-          OR: [
-            { customerId: req.user.id },
-            { companyId: req.user.companyId || undefined },
-          ]
-        }
-      ];
-    } else {
+    if (search) {
+      const searchStr = String(search);
       where.OR = [
+        { orderNumber: { contains: searchStr, mode: 'insensitive' } },
+        { customer: { name: { contains: searchStr, mode: 'insensitive' } } },
+        { customer: { email: { contains: searchStr, mode: 'insensitive' } } },
+        { company: { name: { contains: searchStr, mode: 'insensitive' } } },
+        { quote: { quoteNumber: { contains: searchStr, mode: 'insensitive' } } }
+      ];
+    }
+
+    // Customer role security filter
+    if (req.user?.role === 'CUSTOMER') {
+      if (where.OR) {
+        where.AND = [
+          {
+            OR: [
+              { customerId: req.user.id },
+              { companyId: req.user.companyId || undefined },
+            ]
+          }
+        ];
+      } else {
+        where.OR = [
+          { customerId: req.user.id },
+          { companyId: req.user.companyId || undefined },
+        ];
+      }
+    }
+
+    const pageNum = Math.max(1, parseInt(String(page), 10) || 1);
+    const limitNum = Math.max(1, parseInt(String(pageSize), 10) || 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        skip,
+        take: limitNum,
+        include: {
+          quote: {
+            select: {
+              quoteNumber: true,
+              inquiry: {
+                select: {
+                  customerName: true,
+                  artworkUrl: true,
+                  phone: true,
+                  email: true,
+                  productInterest: true,
+                },
+              },
+            },
+          },
+          customer: { select: { id: true, name: true, email: true, phone: true } },
+          company: { select: { id: true, name: true, gstin: true } },
+          items: { include: { product: true, variants: true } },
+          production: true,
+          dispatch: true,
+          invoices: true,
+          payments: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    return res.json({ 
+      success: true, 
+      data: orders,
+      orders,
+      pagination: {
+        page: pageNum,
+        pageSize: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum)
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching orders:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getOrderStats = async (req: AuthRequest, res: Response) => {
+  try {
+    const baseWhere: any = {};
+    if (req.user?.role === 'CUSTOMER') {
+      baseWhere.OR = [
         { customerId: req.user.id },
         { companyId: req.user.companyId || undefined },
       ];
     }
+
+    // Not CANCELLED
+    const validWhere = { ...baseWhere, status: { not: 'CANCELLED' } };
+
+    const [total, pending, confirmed, completed, revenueData] = await Promise.all([
+      prisma.order.count({ where: baseWhere }),
+      prisma.order.count({ where: { ...baseWhere, status: 'PENDING' } }),
+      prisma.order.count({ where: { ...baseWhere, status: { in: ['CONFIRMED', 'IN_PRODUCTION', 'READY_FOR_DISPATCH', 'DISPATCHED'] } } }),
+      prisma.order.count({ where: { ...baseWhere, status: 'DELIVERED' } }),
+      prisma.order.aggregate({ _sum: { totalAmount: true }, where: validWhere }),
+    ]);
+
+    return res.json({
+      success: true,
+      stats: {
+        total,
+        pending,
+        confirmed,
+        completed,
+        revenue: revenueData._sum.totalAmount || 0
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching order stats:', error);
+    return res.status(500).json({ success: false, message: error.message });
   }
+};
 
-  const pageNum = Math.max(1, parseInt(String(page), 10) || 1);
-  const limitNum = Math.max(1, parseInt(String(pageSize), 10) || 10);
-  const skip = (pageNum - 1) * limitNum;
+export const getOrderById = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
 
-  const [orders, total] = await Promise.all([
-    prisma.order.findMany({
-      where,
-      skip,
-      take: limitNum,
+    const order = await prisma.order.findUnique({
+      where: { id },
       include: {
-        quote: {
-          select: {
-            quoteNumber: true,
-            inquiry: {
-              select: {
-                customerName: true,
-                artworkUrl: true,
-                phone: true,
-                email: true,
-                productInterest: true,
-              },
-            },
-          },
-        },
         customer: { select: { id: true, name: true, email: true, phone: true } },
-        company: { select: { id: true, name: true, gstin: true } },
+        company: true,
         items: { include: { product: true, variants: true } },
         production: true,
         dispatch: true,
         invoices: true,
         payments: true,
       },
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.order.count({ where }),
-  ]);
+    });
 
-  return res.json({ 
-    success: true, 
-    data: orders,
-    orders,
-    pagination: {
-      page: pageNum,
-      pageSize: limitNum,
-      total,
-      totalPages: Math.ceil(total / limitNum)
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    // Ownership guard
+    if (req.user?.role === 'CUSTOMER' && order.customerId !== req.user.id && order.companyId !== req.user.companyId) {
+      return res.status(403).json({ success: false, message: 'Unauthorized to view this order' });
     }
-  });
-};
 
-export const getOrderStats = async (req: AuthRequest, res: Response) => {
-  const baseWhere: any = {};
-  if (req.user?.role === 'CUSTOMER') {
-    baseWhere.OR = [
-      { customerId: req.user.id },
-      { companyId: req.user.companyId || undefined },
-    ];
+    return res.json({ success: true, order });
+  } catch (error: any) {
+    console.error('Error fetching order by id:', error);
+    return res.status(500).json({ success: false, message: error.message });
   }
-
-  // Not CANCELLED
-  const validWhere = { ...baseWhere, status: { not: 'CANCELLED' } };
-
-  const [total, pending, confirmed, completed, revenueData] = await Promise.all([
-    prisma.order.count({ where: baseWhere }),
-    prisma.order.count({ where: { ...baseWhere, status: 'PENDING' } }),
-    prisma.order.count({ where: { ...baseWhere, status: { in: ['CONFIRMED', 'IN_PRODUCTION', 'READY_FOR_DISPATCH', 'DISPATCHED'] } } }),
-    prisma.order.count({ where: { ...baseWhere, status: 'DELIVERED' } }),
-    prisma.order.aggregate({ _sum: { totalAmount: true }, where: validWhere }),
-  ]);
-
-  return res.json({
-    success: true,
-    stats: {
-      total,
-      pending,
-      confirmed,
-      completed,
-      revenue: revenueData._sum.totalAmount || 0
-    }
-  });
-};
-
-export const getOrderById = async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
-
-  const order = await prisma.order.findUnique({
-    where: { id },
-    include: {
-      customer: { select: { id: true, name: true, email: true, phone: true } },
-      company: true,
-      items: { include: { product: true, variants: true } },
-      production: true,
-      dispatch: true,
-      invoices: true,
-      payments: true,
-    },
-  });
-
-
-  if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-
-  // Ownership guard
-  if (req.user?.role === 'CUSTOMER' && order.customerId !== req.user.id && order.companyId !== req.user.companyId) {
-    return res.status(403).json({ success: false, message: 'Unauthorized to view this order' });
-  }
-
-  return res.json({ success: true, order });
 };
 
 export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
