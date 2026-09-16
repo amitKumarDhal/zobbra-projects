@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { config, prisma } from './config/index.js';
+import { ensureDatabaseSchema } from './config/autoMigrate.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 import authRoutes from './modules/auth/auth.routes.js';
@@ -102,6 +103,7 @@ app.use('/api/v1/admin', reportRoutes);
 app.use(errorHandler);
 
 if (process.env.NODE_ENV !== 'test') {
+  ensureDatabaseSchema().catch((err) => console.warn('Database auto-sync error:', err));
   app.listen(config.port, '0.0.0.0', () => {
     console.log(`🚀 ZOBBRA B2B Server listening on http://0.0.0.0:${config.port}`);
   });
