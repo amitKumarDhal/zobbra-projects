@@ -36,7 +36,7 @@ interface Order {
   id: string;
   orderNumber: string;
   quoteId?: string;
-  quote?: { quoteNumber: string };
+  quote?: { quoteNumber: string; inquiry?: { customerName?: string; artworkUrl?: string; phone?: string; email?: string; productInterest?: string } };
   subtotal: number;
   gstTotal: number;
   totalAmount: number;
@@ -309,9 +309,9 @@ export default function OrdersPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           <button className="bg-white border border-[#E5E7EB] text-[#111111] px-4 sm:px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#F9FAFB] transition-colors flex items-center gap-2 min-h-[44px]">
-            <Download className="w-4 h-4"/> Export
+            <Download className="w-4 h-4" /> Export
           </button>
-          <Link href="/dashboard/quotes?status=APPROVED" className="bg-[#3B6FEB] text-white px-4 sm:px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2 min-h-[44px]">
+          <Link href="/dashboard/inquiries" className="bg-[#3B6FEB] text-white px-4 sm:px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2 min-h-[44px]">
             <Plus className="w-4 h-4" /> New Order
           </Link>
         </div>
@@ -411,9 +411,8 @@ export default function OrdersPage() {
                       <tr
                         id={`order-row-${o.id}`}
                         onClick={() => toggleOrderExpand(o.id)}
-                        className={`transition-colors cursor-pointer group ${
-                          isExpanded ? 'bg-[#F9FAFB] font-medium' : 'hover:bg-[#F9FAFB]'
-                        }`}
+                        className={`transition-colors cursor-pointer group ${isExpanded ? 'bg-[#F9FAFB] font-medium' : 'hover:bg-[#F9FAFB]'
+                          }`}
                       >
                         {/* Order ID with Expand Arrow */}
                         <td className="px-4 py-4 text-xs font-bold text-[#111111]">
@@ -427,11 +426,10 @@ export default function OrdersPage() {
                               aria-expanded={isExpanded}
                               aria-controls={`order-detail-${o.id}`}
                               aria-label={isExpanded ? `Collapse order ${o.orderNumber}` : `Expand order ${o.orderNumber}`}
-                              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[#3B6FEB] ${
-                                isExpanded
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[#3B6FEB] ${isExpanded
                                   ? 'bg-[#EEF2FF] text-[#3B6FEB]'
                                   : 'text-[#6B7280] hover:text-[#111111] hover:bg-[#E5E7EB]/60'
-                              }`}
+                                }`}
                             >
                               {isExpanded ? (
                                 <ChevronDown className="w-4 h-4 text-[#3B6FEB]" />
@@ -447,14 +445,23 @@ export default function OrdersPage() {
 
                         {/* Customer */}
                         <td className="px-4 py-4">
-                          <p className="text-xs font-bold text-[#111111]">{o.customer?.name}</p>
+                          <p className="text-xs font-bold text-[#111111]">{o.quote?.inquiry?.customerName || o.customer?.name}</p>
                           <p className="text-[10px] text-[#6B7280] mt-0.5">{o.company?.name || 'Individual'}</p>
                         </td>
 
                         {/* Product Summary */}
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 bg-[#F3F4F6] rounded border border-[#E5E7EB] flex items-center justify-center text-xs shrink-0">👕</div>
+                            {o.quote?.inquiry?.artworkUrl ? (
+                              <img
+                                src={o.quote.inquiry.artworkUrl}
+                                alt="Customer artwork"
+                                className="w-8 h-8 rounded border border-[#E5E7EB] object-cover shrink-0 bg-[#F3F4F6]"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            ) : (
+                              <div className="w-8 h-8 bg-[#F3F4F6] rounded border border-[#E5E7EB] flex items-center justify-center text-xs shrink-0">👕</div>
+                            )}
                             {o.items && o.items.length > 1 ? (
                               <div className="flex flex-col">
                                 <span className="text-[10px] font-bold text-[#111111]">+{o.items.length - 1}</span>
@@ -462,7 +469,7 @@ export default function OrdersPage() {
                               </div>
                             ) : (
                               <span className="text-[10px] font-medium text-[#374151] line-clamp-1 max-w-[120px]">
-                                {o.items?.[0]?.product?.name || 'Custom Item'}
+                                {o.quote?.inquiry?.productInterest || o.items?.[0]?.product?.name || 'Custom Item'}
                               </span>
                             )}
                           </div>
@@ -552,11 +559,10 @@ export default function OrdersPage() {
                                 {/* Feedback Alert */}
                                 {statusFeedback?.orderId === o.id && (
                                   <div
-                                    className={`p-3.5 rounded-xl text-xs flex items-center justify-between gap-2 transition-all ${
-                                      statusFeedback.type === 'success'
+                                    className={`p-3.5 rounded-xl text-xs flex items-center justify-between gap-2 transition-all ${statusFeedback.type === 'success'
                                         ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                                         : 'bg-rose-50 text-rose-800 border border-rose-200'
-                                    }`}
+                                      }`}
                                   >
                                     <div className="flex items-center gap-2">
                                       {statusFeedback.type === 'success' ? (
@@ -579,18 +585,15 @@ export default function OrdersPage() {
                                   {/* Card 1: Customer Information */}
                                   <div className="bg-white p-4 sm:p-5 rounded-xl border border-[#E5E7EB] shadow-xs flex flex-col justify-between">
                                     <div>
-                                      <div className="flex items-center justify-between pb-3 border-b border-[#F3F4F6] mb-3">
+                                      <div className="flex items-center pb-3 border-b border-[#F3F4F6] mb-3">
                                         <h4 className="text-xs font-bold text-[#111111] uppercase tracking-wider">Customer Info</h4>
-                                        <span className="text-[10px] text-[#6B7280]">
-                                          ID: {o.customer?.id?.substring(0, 8).toUpperCase() || 'N/A'}
-                                        </span>
                                       </div>
                                       <div className="flex items-center gap-3 mb-3">
                                         <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-sm shrink-0">
                                           <UserCircle className="w-6 h-6 text-slate-400" />
                                         </div>
                                         <div className="min-w-0">
-                                          <p className="font-bold text-sm text-[#111111] truncate">{o.customer?.name || 'Customer'}</p>
+                                          <p className="font-bold text-sm text-[#111111] truncate">{o.quote?.inquiry?.customerName || o.customer?.name || 'Customer'}</p>
                                           <p className="text-[11px] text-[#6B7280] truncate">{o.company?.name || 'Individual Customer'}</p>
                                         </div>
                                       </div>
@@ -598,19 +601,10 @@ export default function OrdersPage() {
                                         <div className="flex items-center">
                                           <Phone className="w-3.5 h-3.5 text-[#6B7280] mr-2 shrink-0" />
                                           <a
-                                            href={`tel:${o.customer?.phone || ''}`}
+                                            href={`tel:${o.quote?.inquiry?.phone || o.customer?.phone || ''}`}
                                             className="font-medium text-[#374151] hover:text-[#3B6FEB]"
                                           >
-                                            {o.customer?.phone || '+91 98765 43210'}
-                                          </a>
-                                        </div>
-                                        <div className="flex items-center">
-                                          <MessageSquare className="w-3.5 h-3.5 text-[#6B7280] mr-2 shrink-0" />
-                                          <a
-                                            href={`mailto:${o.customer?.email || ''}`}
-                                            className="font-medium text-[#4B5563] hover:text-[#3B6FEB] truncate"
-                                          >
-                                            {o.customer?.email}
+                                            {o.quote?.inquiry?.phone || o.customer?.phone || 'No phone'}
                                           </a>
                                         </div>
                                       </div>
@@ -646,21 +640,55 @@ export default function OrdersPage() {
                                       <div className="space-y-3 max-h-48 overflow-y-auto hide-scrollbar pr-1">
                                         {o.items && o.items.length > 0 ? (
                                           o.items.map((item: any) => (
-                                            <div key={item.id} className="flex gap-2.5 items-center">
-                                              <div className="w-10 h-10 bg-[#F3F4F6] rounded-lg flex items-center justify-center text-lg shrink-0 border border-[#E5E7EB]">
-                                                👕
+                                            <div key={item.id} className="flex flex-col gap-2 border-b border-[#F3F4F6] pb-2 last:border-0">
+                                              <div className="flex gap-2.5 items-center">
+                                                {o.quote?.inquiry?.artworkUrl ? (
+                                                  <img
+                                                    src={o.quote.inquiry.artworkUrl}
+                                                    alt="Customer artwork"
+                                                    className="w-10 h-10 rounded-lg object-cover shrink-0 border border-[#E5E7EB] bg-[#F3F4F6]"
+                                                    onError={(e) => {
+                                                      const parent = (e.target as HTMLImageElement).parentElement;
+                                                      if (parent) {
+                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                        parent.innerHTML += '<div class="w-10 h-10 bg-[#F3F4F6] rounded-lg flex items-center justify-center text-lg shrink-0 border border-[#E5E7EB]">👕</div>';
+                                                      }
+                                                    }}
+                                                  />
+                                                ) : (
+                                                  <div className="w-10 h-10 bg-[#F3F4F6] rounded-lg flex items-center justify-center text-lg shrink-0 border border-[#E5E7EB]">
+                                                    👕
+                                                  </div>
+                                                )}
+                                                <div className="flex-1 min-w-0">
+                                                  <p className="text-xs font-bold text-[#111111] truncate">
+                                                    {o.quote?.inquiry?.productInterest || item.product?.name || 'Custom Product'}
+                                                  </p>
+                                                  <p className="text-[10px] text-[#6B7280]">
+                                                    {item.quantity} Qty ({item.size || 'L'}, {item.color || 'Standard'}) • {item.printType || 'Standard'}
+                                                  </p>
+                                                </div>
+                                                <div className="font-bold text-xs text-[#111111] shrink-0">
+                                                  {formatCurrency(item.totalPrice)}
+                                                </div>
                                               </div>
-                                              <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-bold text-[#111111] truncate">
-                                                  {item.product?.name || 'Custom Product'}
-                                                </p>
-                                                <p className="text-[10px] text-[#6B7280]">
-                                                  {item.quantity} Qty ({item.size || 'L'}, {item.color || 'Standard'}) • {item.printType || 'Standard'}
-                                                </p>
-                                              </div>
-                                              <div className="font-bold text-xs text-[#111111] shrink-0">
-                                                {formatCurrency(item.totalPrice)}
-                                              </div>
+                                              {item.variants && item.variants.length > 0 && (
+                                                <div className="ml-12 flex flex-wrap gap-1.5 mt-1">
+                                                  <span className="text-[9px] font-bold text-[#6B7280] uppercase mt-0.5 mr-1">Breakdown:</span>
+                                                  {item.variants.map((v: any, idx: number) => (
+                                                    <div key={idx} className="flex items-center gap-1 text-[10px] bg-[#F8F9FC] border border-[#E5E7EB] px-1.5 py-0.5 rounded">
+                                                      {v.color && (
+                                                        <span className="flex items-center gap-1">
+                                                          <div className="w-1.5 h-1.5 rounded-full border border-gray-300" style={{ backgroundColor: v.color.toLowerCase() }}></div>
+                                                          <span className="font-medium text-[#374151]">{v.color}</span>
+                                                        </span>
+                                                      )}
+                                                      {v.size && <span className="text-[#6B7280] font-bold bg-gray-200 px-1 rounded">{v.size}</span>}
+                                                      <span className="font-bold text-[#111111]">× {v.quantity}</span>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              )}
                                             </div>
                                           ))
                                         ) : (
@@ -673,11 +701,16 @@ export default function OrdersPage() {
                                     <div className="mt-4 pt-3 border-t border-[#F3F4F6] space-y-1 text-xs">
                                       <div className="flex justify-between text-[#6B7280]">
                                         <span>Subtotal</span>
-                                        <span>{formatCurrency(o.subtotal || o.totalAmount * 0.95)}</span>
+                                        <span>{formatCurrency(o.subtotal)}</span>
                                       </div>
                                       <div className="flex justify-between text-[#6B7280]">
-                                        <span>GST (5%)</span>
-                                        <span>{formatCurrency(o.gstTotal || o.totalAmount * 0.05)}</span>
+                                        <span>
+                                          GST
+                                          {o.subtotal > 0
+                                            ? ` (${Math.round((o.gstTotal / o.subtotal) * 100)}%)`
+                                            : ''}
+                                        </span>
+                                        <span>{formatCurrency(o.gstTotal)}</span>
                                       </div>
                                       <div className="flex justify-between font-bold text-sm text-[#111111] pt-1 border-t border-[#F3F4F6]">
                                         <span>Total</span>
@@ -710,9 +743,8 @@ export default function OrdersPage() {
                                       {/* 2. Payment Received */}
                                       <div className="relative flex items-start justify-between">
                                         <div
-                                          className={`absolute left-[-20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ${
-                                            o.paymentStatus === 'PAID' ? 'bg-emerald-500 ring-emerald-50' : 'bg-slate-300 ring-white'
-                                          }`}
+                                          className={`absolute left-[-20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ${o.paymentStatus === 'PAID' ? 'bg-emerald-500 ring-emerald-50' : 'bg-slate-300 ring-white'
+                                            }`}
                                         ></div>
                                         <div>
                                           <p className={`text-[11px] font-bold ${o.paymentStatus === 'PAID' ? 'text-[#111111]' : 'text-[#6B7280]'}`}>
@@ -722,16 +754,15 @@ export default function OrdersPage() {
                                             {o.paymentStatus === 'PAID'
                                               ? 'Verified'
                                               : o.paymentStatus === 'PARTIAL'
-                                              ? 'Partial'
-                                              : 'Awaiting'}
+                                                ? 'Partial'
+                                                : 'Awaiting'}
                                           </p>
                                         </div>
                                         <span
-                                          className={`text-[9px] font-bold px-1 rounded border ${
-                                            o.paymentStatus === 'PAID'
+                                          className={`text-[9px] font-bold px-1 rounded border ${o.paymentStatus === 'PAID'
                                               ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
                                               : 'text-slate-500 bg-slate-50 border-slate-200'
-                                          }`}
+                                            }`}
                                         >
                                           {o.paymentStatus === 'PAID' ? 'Paid' : 'Pending'}
                                         </span>
@@ -740,9 +771,8 @@ export default function OrdersPage() {
                                       {/* 3. Order Confirmed */}
                                       <div className="relative flex items-start justify-between">
                                         <div
-                                          className={`absolute left-[-20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ${
-                                            currentRank >= 1 ? 'bg-emerald-500 ring-emerald-50' : 'bg-slate-300 ring-white'
-                                          }`}
+                                          className={`absolute left-[-20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ${currentRank >= 1 ? 'bg-emerald-500 ring-emerald-50' : 'bg-slate-300 ring-white'
+                                            }`}
                                         ></div>
                                         <div>
                                           <p className={`text-[11px] font-bold ${currentRank >= 1 ? 'text-[#111111]' : 'text-[#6B7280]'}`}>
@@ -751,11 +781,10 @@ export default function OrdersPage() {
                                           <p className="text-[9px] text-[#6B7280]">{currentRank >= 1 ? 'Confirmed' : 'Pending'}</p>
                                         </div>
                                         <span
-                                          className={`text-[9px] font-bold px-1 rounded border ${
-                                            currentRank >= 1
+                                          className={`text-[9px] font-bold px-1 rounded border ${currentRank >= 1
                                               ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
                                               : 'text-slate-500 bg-slate-50 border-slate-200'
-                                          }`}
+                                            }`}
                                         >
                                           {currentRank >= 1 ? 'Done' : 'Pending'}
                                         </span>
@@ -764,9 +793,8 @@ export default function OrdersPage() {
                                       {/* 4. In Production */}
                                       <div className="relative flex items-start justify-between">
                                         <div
-                                          className={`absolute left-[-20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ${
-                                            currentRank >= 2 ? 'bg-emerald-500 ring-emerald-50' : 'bg-slate-300 ring-white'
-                                          }`}
+                                          className={`absolute left-[-20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ${currentRank >= 2 ? 'bg-emerald-500 ring-emerald-50' : 'bg-slate-300 ring-white'
+                                            }`}
                                         ></div>
                                         <div>
                                           <p className={`text-[11px] font-bold ${currentRank >= 2 ? 'text-[#111111]' : 'text-[#6B7280]'}`}>
@@ -777,11 +805,10 @@ export default function OrdersPage() {
                                           </p>
                                         </div>
                                         <span
-                                          className={`text-[9px] font-bold px-1 rounded border ${
-                                            currentRank >= 2
+                                          className={`text-[9px] font-bold px-1 rounded border ${currentRank >= 2
                                               ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
                                               : 'text-slate-500 bg-slate-50 border-slate-200'
-                                          }`}
+                                            }`}
                                         >
                                           {currentRank >= 2 ? 'Active' : 'Pending'}
                                         </span>
@@ -790,9 +817,8 @@ export default function OrdersPage() {
                                       {/* 5. Ready for Dispatch */}
                                       <div className="relative flex items-start justify-between">
                                         <div
-                                          className={`absolute left-[-20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ${
-                                            currentRank >= 3 ? 'bg-emerald-500 ring-emerald-50' : 'bg-slate-300 ring-white'
-                                          }`}
+                                          className={`absolute left-[-20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ${currentRank >= 3 ? 'bg-emerald-500 ring-emerald-50' : 'bg-slate-300 ring-white'
+                                            }`}
                                         ></div>
                                         <div>
                                           <p className={`text-[11px] font-bold ${currentRank >= 3 ? 'text-[#111111]' : 'text-[#6B7280]'}`}>
@@ -801,11 +827,10 @@ export default function OrdersPage() {
                                           <p className="text-[9px] text-[#6B7280]">{currentRank >= 3 ? 'Packed & QC' : 'Pending'}</p>
                                         </div>
                                         <span
-                                          className={`text-[9px] font-bold px-1 rounded border ${
-                                            currentRank >= 3
+                                          className={`text-[9px] font-bold px-1 rounded border ${currentRank >= 3
                                               ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
                                               : 'text-slate-500 bg-slate-50 border-slate-200'
-                                          }`}
+                                            }`}
                                         >
                                           {currentRank >= 3 ? 'Ready' : 'Pending'}
                                         </span>
@@ -814,9 +839,8 @@ export default function OrdersPage() {
                                       {/* 6. Dispatched */}
                                       <div className="relative flex items-start justify-between">
                                         <div
-                                          className={`absolute left-[-20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ${
-                                            currentRank >= 4 ? 'bg-emerald-500 ring-emerald-50' : 'bg-slate-300 ring-white'
-                                          }`}
+                                          className={`absolute left-[-20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ${currentRank >= 4 ? 'bg-emerald-500 ring-emerald-50' : 'bg-slate-300 ring-white'
+                                            }`}
                                         ></div>
                                         <div>
                                           <p className={`text-[11px] font-bold ${currentRank >= 4 ? 'text-[#111111]' : 'text-[#6B7280]'}`}>
@@ -829,11 +853,10 @@ export default function OrdersPage() {
                                           </p>
                                         </div>
                                         <span
-                                          className={`text-[9px] font-bold px-1 rounded border ${
-                                            currentRank >= 4
+                                          className={`text-[9px] font-bold px-1 rounded border ${currentRank >= 4
                                               ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
                                               : 'text-slate-500 bg-slate-50 border-slate-200'
-                                          }`}
+                                            }`}
                                         >
                                           {currentRank >= 4 ? 'Dispatched' : 'Pending'}
                                         </span>
@@ -842,9 +865,8 @@ export default function OrdersPage() {
                                       {/* 7. Delivered */}
                                       <div className="relative flex items-start justify-between">
                                         <div
-                                          className={`absolute left-[-20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ${
-                                            o.status === 'DELIVERED' ? 'bg-emerald-500 ring-emerald-50' : 'bg-slate-300 ring-white'
-                                          }`}
+                                          className={`absolute left-[-20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ${o.status === 'DELIVERED' ? 'bg-emerald-500 ring-emerald-50' : 'bg-slate-300 ring-white'
+                                            }`}
                                         ></div>
                                         <div>
                                           <p className={`text-[11px] font-bold ${o.status === 'DELIVERED' ? 'text-[#111111]' : 'text-[#6B7280]'}`}>
@@ -855,11 +877,10 @@ export default function OrdersPage() {
                                           </p>
                                         </div>
                                         <span
-                                          className={`text-[9px] font-bold px-1 rounded border ${
-                                            o.status === 'DELIVERED'
+                                          className={`text-[9px] font-bold px-1 rounded border ${o.status === 'DELIVERED'
                                               ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
                                               : 'text-slate-500 bg-slate-50 border-slate-200'
-                                          }`}
+                                            }`}
                                         >
                                           {o.status === 'DELIVERED' ? 'Delivered' : 'Pending'}
                                         </span>

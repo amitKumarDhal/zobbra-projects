@@ -23,7 +23,7 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
   // 1. Fetch Quote with items, customer, and company
   const quote = await prisma.quote.findUnique({
     where: { id: quoteId },
-    include: { items: { include: { product: true } }, customer: true, company: true },
+    include: { items: { include: { product: true, variants: true } }, customer: true, company: true },
   });
 
   if (!quote) {
@@ -96,6 +96,13 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               totalPrice: item.totalPrice,
+              variants: item.variants ? {
+                create: item.variants.map((v) => ({
+                  color: v.color,
+                  size: v.size,
+                  quantity: v.quantity
+                }))
+              } : undefined
             })),
           },
           production: {
@@ -119,11 +126,32 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
         include: {
           customer: { select: { id: true, name: true, email: true } },
           company: { select: { id: true, name: true, gstin: true } },
-          items: { include: { product: true } },
+          items: { include: { product: true, variants: true } },
           production: true,
           invoices: true,
         },
       });
+
+        // Mark linked inquiry as closed / converted to order
+        const linkedInquiry = await tx.inquiry.findFirst({
+          where: { quoteId: quote.id }
+        });
+
+        if (linkedInquiry) {
+          await tx.inquiry.update({
+            where: { id: linkedInquiry.id },
+            data: { status: 'CLOSED' }
+          });
+
+          await tx.inquiryActivity.create({
+            data: {
+              inquiryId: linkedInquiry.id,
+              type: 'STATUS_CHANGE',
+              message: `Converted to Order #${orderNumber}`,
+              userId: req.user?.id || null,
+            }
+          });
+        }
 
         return newOrder;
       },
@@ -184,10 +212,23 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
       skip,
       take: limitNum,
       include: {
-        quote: { select: { quoteNumber: true } },
+        quote: {
+          select: {
+            quoteNumber: true,
+            inquiry: {
+              select: {
+                customerName: true,
+                artworkUrl: true,
+                phone: true,
+                email: true,
+                productInterest: true,
+              },
+            },
+          },
+        },
         customer: { select: { id: true, name: true, email: true, phone: true } },
         company: { select: { id: true, name: true, gstin: true } },
-        items: { include: { product: true } },
+        items: { include: { product: true, variants: true } },
         production: true,
         dispatch: true,
         invoices: true,
@@ -251,7 +292,7 @@ export const getOrderById = async (req: AuthRequest, res: Response) => {
     include: {
       customer: { select: { id: true, name: true, email: true, phone: true } },
       company: true,
-      items: { include: { product: true } },
+      items: { include: { product: true, variants: true } },
       production: true,
       dispatch: true,
       invoices: true,
@@ -304,7 +345,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
     include: {
       customer: { select: { id: true, name: true, email: true } },
       company: true,
-      items: { include: { product: true } },
+      items: { include: { product: true, variants: true } },
       production: true,
       dispatch: true,
     },

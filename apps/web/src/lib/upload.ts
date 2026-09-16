@@ -2,7 +2,7 @@ import { API_URL } from './api';
 
 export const uploadToCloudinary = async (file: File): Promise<string> => {
   try {
-    const token = localStorage.getItem('token');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
     
     // 1. Get signature from our backend
     const signatureRes = await fetch(`${API_URL}/media/signature`, {
@@ -50,7 +50,7 @@ export const uploadToCloudinary = async (file: File): Promise<string> => {
 
 export const deleteFromCloudinary = async (url: string): Promise<boolean> => {
   try {
-    const token = localStorage.getItem('token');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
     const res = await fetch(`${API_URL}/media`, {
       method: 'DELETE',
       headers: {

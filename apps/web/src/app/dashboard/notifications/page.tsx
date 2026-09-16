@@ -105,12 +105,12 @@ export default function AdminNotificationsPage() {
               <ShoppingBag className="w-4 h-4 text-[#3B6FEB]" /> VIEW ORDERS
             </Button>
           </Link>
-          <Link href="/dashboard/quotes" data-cy="admin-view-quotes-btn">
+          <Link href="/dashboard/inquiries" data-cy="admin-view-inquiries-btn">
             <Button
               variant="outline"
               className="w-full sm:w-auto px-6 py-3 font-bold border-[#D1D5DB] flex items-center justify-center gap-2 rounded-xl"
             >
-              <FileText className="w-4 h-4 text-[#3B6FEB]" /> VIEW QUOTES
+              <MessageSquare className="w-4 h-4 text-[#3B6FEB]" /> VIEW INQUIRIES
             </Button>
           </Link>
         </div>

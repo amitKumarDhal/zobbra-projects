@@ -42,7 +42,6 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
 
   const navItems = [
     { name: 'Inquiry', href: '/dashboard/inquiries', icon: MessageSquare, badge: counts.inquiries, hasBadge: true },
-    { name: 'Quote', href: '/dashboard/quotes', icon: FileText, badge: counts.quotes, hasBadge: true },
     { name: 'Order', href: '/dashboard/orders', icon: ShoppingBag, badge: counts.orders, hasBadge: true },
     { name: 'Report', href: '/dashboard/reports', icon: BarChart3 },
     { name: 'Customers', href: '/dashboard/customers', icon: Users },
@@ -58,10 +57,10 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
 
   // PHASE 2 - ADMIN V1 Allowlist
   const adminV1Allowlist = [
+    '/dashboard/inquiries',
     '/dashboard/orders',
     '/dashboard/products',
     '/dashboard/customers',
-    '/dashboard/inquiries',
     '/dashboard/payments',
     '/dashboard/settings'
   ];

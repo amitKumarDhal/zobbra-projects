@@ -22,10 +22,18 @@ export function generateWhatsAppMessage(
     quoteNumber: string;
     productName: string;
     quantity: number;
+    printType?: string;
+    color?: string;
+    size?: string;
+    subtotal?: number;
+    discount?: number;
+    isGstApplied?: boolean;
+    gstRate?: number;
+    gstTotal?: number;
     totalAmount?: number;
   }
 ): string {
-  const { customerName, salesUserName = 'Zobra Sales', quoteNumber, productName, quantity, totalAmount } = params;
+  const { customerName, salesUserName = 'Zobra Sales', quoteNumber, productName, quantity, printType, color, size, subtotal, discount, isGstApplied, gstRate, gstTotal, totalAmount } = params;
 
   switch (template) {
     case 'NEW_QUOTE':
@@ -35,7 +43,22 @@ export function generateWhatsAppMessage(
       return `Hi ${customerName},\n\nYour quotation #${quoteNumber} for ${productName} (${quantity} units) has been revised.\n• New Total: ₹${(totalAmount || 0).toLocaleString('en-IN')}\n\nPlease review the updated quotation details in your Zobra portal.\n\nRegards,\nZOBBRA Team`;
 
     case 'QUOTE_READY':
-      return `Hi ${customerName},\n\nYour official quotation #${quoteNumber} is ready.\n• Total Amount: ₹${(totalAmount || 0).toLocaleString('en-IN')}\n\nPlease review the quote and let us know if you would like to proceed.\n\nRegards,\nZOBBRA Team`;
+      const specs = [
+        printType ? `• Print: ${printType}` : null,
+        color ? `• Color: ${color}` : null,
+        size ? `• Size: ${size}` : null
+      ].filter(Boolean).join('\n');
+
+      let pricingText = `• Subtotal: ₹${(subtotal || 0).toLocaleString('en-IN')}`;
+      if (discount && discount > 0) pricingText += `\n• Discount: -₹${discount.toLocaleString('en-IN')}`;
+      if (isGstApplied && gstTotal !== undefined) {
+        pricingText += `\n• GST (${gstRate || 5}%): ₹${gstTotal.toLocaleString('en-IN')}`;
+      } else if (!isGstApplied) {
+        pricingText += `\n• GST: ₹0`;
+      }
+      pricingText += `\n• Grand Total: ₹${(totalAmount || 0).toLocaleString('en-IN')}`;
+
+      return `Hi ${customerName},\n\nYour official quotation #${quoteNumber} is ready.\n\n*Product Details:*\n• Product: ${productName}\n• Quantity: ${quantity} units\n${specs}\n\n*Pricing Breakdown:*\n${pricingText}\n\nPlease review the quote and let us know if you would like to proceed.\n\nRegards,\nZOBBRA Team`;
 
     case 'FOLLOW_UP':
       return `Hi ${customerName},\n\nJust following up regarding quotation #${quoteNumber} for ${productName} (${quantity} units).\n\nPlease let us know if you would like to proceed or if you'd like us to revise any specifications.\n\nRegards,\nZOBBRA Team`;

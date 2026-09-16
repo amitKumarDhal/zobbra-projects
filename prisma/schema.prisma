@@ -219,8 +219,11 @@ model Product {
   images      String[]         @default([])
   categoryId  String
   category    Category         @relation(fields: [categoryId], references: [id])
-  isActive    Boolean          @default(true)
-  variants    ProductVariant[]
+  isActive              Boolean          @default(true)
+  requiresColor         Boolean          @default(true)
+  requiresSize          Boolean          @default(true)
+  supportsVariantMatrix Boolean          @default(true)
+  variants              ProductVariant[]
   bulkPricing BulkPricing[]
   quoteItems  QuoteItem[]
   orderItems  OrderItem[]
@@ -268,9 +271,11 @@ model Quote {
   companyId   String?
   company     Company?        @relation(fields: [companyId], references: [id])
   status      QuoteStatus     @default(DRAFT)
-  subtotal    Float
-  gstTotal    Float
-  discount    Float           @default(0.0)
+  subtotal      Float
+  isGstApplied  Boolean         @default(true)
+  gstRate       Float?
+  gstTotal      Float
+  discount      Float           @default(0.0)
   totalAmount Float
   notes       String?
   validUntil  DateTime
@@ -304,10 +309,24 @@ model QuoteItem {
   quantity    Int
   unitPrice   Float
   totalPrice  Float
+  variants    QuoteItemVariant[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@map("quote_items")
+}
+
+model QuoteItemVariant {
+  id          String    @id @default(uuid())
+  quoteItemId String
+  quoteItem   QuoteItem @relation(fields: [quoteItemId], references: [id], onDelete: Cascade)
+  color       String?
+  size        String?
+  quantity    Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("quote_item_variants")
 }
 
 model QuoteActivity {
@@ -393,11 +412,25 @@ model OrderItem {
   quantity             Int
   unitPrice            Float
   totalPrice           Float
+  variants             OrderItemVariant[]
   customizationDetails String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
   @@map("order_items")
+}
+
+model OrderItemVariant {
+  id          String    @id @default(uuid())
+  orderItemId String
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  color       String?
+  size        String?
+  quantity    Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("order_item_variants")
 }
 
 model ProductionJob {
@@ -519,11 +552,25 @@ model Inquiry {
   nextFollowUpAt  DateTime?
   activities      InquiryActivity[]
   tasks           Task[]
+  variants        InquiryVariant[]
   
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
   @@map("inquiries")
+}
+
+model InquiryVariant {
+  id          String    @id @default(uuid())
+  inquiryId   String
+  inquiry     Inquiry   @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  color       String?
+  size        String?
+  quantity    Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("inquiry_variants")
 }
 
 model InquiryActivity {

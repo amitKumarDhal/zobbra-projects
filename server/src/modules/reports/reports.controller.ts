@@ -46,30 +46,34 @@ export const getSalesReport = async (req: AuthRequest, res: Response) => {
 export const getSidebarCounts = async (req: AuthRequest, res: Response) => {
   try {
     const [inquiries, quotes, orders, todo] = await Promise.all([
-      // 1. Open / Actionable inquiries (NEW, CONTACTED, FOLLOW_UP)
+      // 1. Open / Actionable inquiries (NEW, CONTACTED, FOLLOW_UP) excluding converted to orders
       prisma.inquiry.count({
         where: {
-          status: { in: ['NEW', 'CONTACTED', 'FOLLOW_UP'] }
-        }
+          status: { in: ['NEW', 'CONTACTED', 'FOLLOW_UP'] },
+          OR: [
+            { quoteId: null },
+            { quote: { order: null } },
+          ],
+        },
       }),
       // 2. Pending / Active quotes (DRAFT, SENT)
       prisma.quote.count({
         where: {
-          status: { in: ['DRAFT', 'SENT'] }
-        }
+          status: { in: ['DRAFT', 'SENT'] },
+        },
       }),
       // 3. Active / In-progress orders (not DELIVERED or CANCELLED)
       prisma.order.count({
         where: {
-          status: { in: ['PENDING', 'CONFIRMED', 'IN_PRODUCTION', 'READY_FOR_DISPATCH', 'DISPATCHED'] }
-        }
+          status: { in: ['PENDING', 'CONFIRMED', 'IN_PRODUCTION', 'READY_FOR_DISPATCH', 'DISPATCHED'] },
+        },
       }),
       // 4. Open / Incomplete tasks (PENDING, IN_PROGRESS, OVERDUE)
       prisma.task.count({
         where: {
-          status: { in: ['PENDING', 'IN_PROGRESS', 'OVERDUE'] }
-        }
-      })
+          status: { in: ['PENDING', 'IN_PROGRESS', 'OVERDUE'] },
+        },
+      }),
     ]);
 
     return res.json({
@@ -78,8 +82,8 @@ export const getSidebarCounts = async (req: AuthRequest, res: Response) => {
         inquiries,
         quotes,
         orders,
-        todo
-      }
+        todo,
+      },
     });
   } catch (error: any) {
     console.error('Error fetching sidebar counts:', error);
@@ -95,4 +99,3 @@ export const getActivity = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-

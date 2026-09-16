@@ -13,11 +13,14 @@ router.get('/:id', authenticateJWT, authorizeRoles('ADMIN', 'SALES', 'CUSTOMER')
 
 router.post('/', optionalAuth, InquiryController.create);
 
+router.put('/:id', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.update);
 router.patch('/:id/status', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.updateStatus);
 router.patch('/:id/assign', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.assign);
 
 router.post('/:id/activity', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.addActivity);
 router.post('/:id/whatsapp', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.generateWhatsappLink);
 router.post('/:id/convert-to-quote', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.convertToQuote);
+router.post('/:id/approve', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.approve);
+router.post('/:id/reject', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), InquiryController.reject);
 
 export default router;

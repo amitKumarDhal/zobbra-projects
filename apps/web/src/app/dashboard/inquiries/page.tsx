@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Filter, MessageSquare, Phone, Globe, Camera, Eye, MoreVertical, Plus, UserCircle, FileText, ArrowRight, X, Clock, AlertCircle, Users, FileCheck, CheckCircle, Calendar, Building2, MapPin, Package, User, Mail } from 'lucide-react';
+import { Search, Filter, MessageSquare, Phone, Globe, Camera, Eye, MoreVertical, Plus, UserCircle, FileText, ArrowRight, X, Clock, AlertCircle, Users, FileCheck, CheckCircle, Calendar, Building2, MapPin, Package, User, Mail, Link as LinkIcon, Image as ImageIcon, ExternalLink, ShoppingBag } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
@@ -40,9 +40,11 @@ interface Inquiry {
   customizationRequirements?: string;
   customer: { name: string; company?: string; email: string; phone: string };
   company?: { name: string };
+  product?: { id: string; name: string; slug: string; category?: { name: string } };
   assignedTo?: { id: string; name: string };
   activities?: any[];
-  quote?: { id: string; quoteNumber: string };
+  quote?: { id: string; quoteNumber: string; order?: { id: string; orderNumber: string } };
+  variants?: Array<{ color: string | null; size: string | null; quantity: number }>;
 }
 
 export default function InquiriesPage() {
@@ -52,10 +54,10 @@ export default function InquiriesPage() {
   const [filterType, setFilterType] = useState('ALL');
   const [loading, setLoading] = useState(true);
   
-  // Drawer state
-  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedInquiryId, setSelectedInquiryId] = useState<string | null>(null);
+  const [selectedInquiryDetails, setSelectedInquiryDetails] = useState<Inquiry | null>(null);
   const [isNewInquiryModalOpen, setIsNewInquiryModalOpen] = useState(false);
+  const [note, setNote] = useState('');
 
   // Fetch Data
   useEffect(() => {
@@ -90,15 +92,71 @@ export default function InquiriesPage() {
     }
   };
 
-  const handleOpenInquiry = async (id: string) => {
-    try {
-      const res = await fetch(`${API_URL}/inquiries/${id}`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } }).then(r => r.json());
-      setSelectedInquiry(res);
-      setIsDrawerOpen(true);
-    } catch (err: any) {
-      console.error('Failed to load inquiry details');
+  const toggleRow = async (id: string) => {
+    if (selectedInquiryId === id) {
+      setSelectedInquiryId(null);
+      setSelectedInquiryDetails(null);
+      setNote('');
+    } else {
+      setSelectedInquiryId(id);
+      setSelectedInquiryDetails(null);
+      setNote('');
+      try {
+        const res = await fetch(`${API_URL}/inquiries/${id}`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } }).then(r => r.json());
+        setSelectedInquiryDetails(res);
+      } catch (err: any) {
+        console.error('Failed to load inquiry details');
+      }
     }
   };
+
+  const handleConvertToQuote = async (inq: Inquiry) => {
+    try {
+      const res = await fetch(`${API_URL}/inquiries/${inq.id}/convert-to-quote`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+      }).then(r => r.json());
+      if(res.quote || res.inquiry) {
+         window.location.href = `/dashboard/inquiries/${inq.id}`;
+      }
+    } catch (err: any) {
+      console.error('Conversion failed');
+    }
+  };
+
+  const handleAddNote = async (inq: Inquiry) => {
+    if(!note) return;
+    try {
+      await fetch(`${API_URL}/inquiries/${inq.id}/activity`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+        body: JSON.stringify({ type: 'NOTE', message: note })
+      });
+      setNote('');
+      // Refresh just this inquiry details
+      const res = await fetch(`${API_URL}/inquiries/${inq.id}`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } }).then(r => r.json());
+      setSelectedInquiryDetails(res);
+      fetchData(); // Refresh list to update any aggregated status
+    } catch(err) {
+      console.error('Failed to add note');
+    }
+  };
+
+  const openWhatsApp = (inq: Inquiry) => {
+    const phone = inq.phone || inq.customer?.phone;
+    if (!phone) return alert('Customer phone number is unavailable.');
+    const text = `Hello ${inq.customerName || inq.customer?.name || 'Customer'},\n\nThis is ZOBBRA Sales regarding your inquiry ${inq.inquiryNumber} (${inq.product?.category?.name || inq.product?.name || inq.productInterest || 'Custom Request'}, ${inq.quantity || 100} units).\n\nWe would like to discuss your requirements and share an official quote.\n\nThank you,\nZOBBRA Team`;
+    const url = buildWhatsAppUrl(phone, text);
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      alert('Customer phone number is invalid.');
+    }
+  };
+
+  const filteredInquiries = inquiries.filter(
+    (inq) => (filterType === 'ALL' || inq.customerType === filterType) && !inq.quote?.order
+  );
 
   return (
     <div className="space-y-6 pb-12 font-sans bg-[#F8F9FC] min-h-screen relative flex flex-col">
@@ -129,10 +187,9 @@ export default function InquiriesPage() {
 
       {/* MAIN CONTENT AREA */}
       <div className="flex flex-1 gap-6 relative">
-        {/* LIST TABLE (Takes full width if drawer is closed, or partial if open) */}
-        <div className={`bg-white border border-[#E5E7EB] rounded-2xl shadow-sm transition-all duration-300 flex-1 ${isDrawerOpen ? 'w-full lg:w-2/3' : 'w-full'}`}>
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-sm transition-all duration-300 flex-1 w-full overflow-hidden">
           {/* Toolbar */}
-          <div className="p-4 border-b border-[#E5E7EB] flex flex-col sm:flex-row sm:flex-wrap gap-3 justify-between items-stretch sm:items-center bg-[#FDFDFD] rounded-t-2xl">
+          <div className="p-4 border-b border-[#E5E7EB] flex flex-col sm:flex-row sm:flex-wrap gap-3 justify-between items-stretch sm:items-center bg-[#FDFDFD]">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
               <input 
@@ -152,14 +209,11 @@ export default function InquiriesPage() {
                 <option value="REGISTERED">Registered</option>
                 <option value="GUEST">Guest</option>
               </select>
-              <button className="flex items-center gap-2 px-4 py-2 border border-[#E5E7EB] rounded-lg text-sm font-semibold text-[#374151] hover:bg-[#F9FAFB] transition-colors bg-white">
-                <Filter className="w-4 h-4" /> Filter
-              </button>
             </div>
           </div>
 
           {/* Table */}
-          <div className="table-scroll">
+          <div className="table-scroll overflow-x-auto">
             <table className="w-full min-w-[900px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#E5E7EB] bg-[#FAFAFA]">
@@ -176,58 +230,329 @@ export default function InquiriesPage() {
               <tbody className="divide-y divide-[#F3F4F6]">
                 {loading ? (
                   <tr><td colSpan={8} className="p-8 text-center text-gray-500">Loading inquiries...</td></tr>
-                ) : inquiries.length === 0 ? (
+                ) : filteredInquiries.length === 0 ? (
                   <tr><td colSpan={8} className="p-8 text-center text-gray-500">No inquiries found.</td></tr>
-                ) : inquiries.filter(inq => filterType === 'ALL' || inq.customerType === filterType).map((inq) => {
-                  const isActive = isDrawerOpen && selectedInquiry?.id === inq.id;
+                ) : filteredInquiries.map((inq) => {
+                  const isExpanded = selectedInquiryId === inq.id;
+                  const detail = isExpanded ? selectedInquiryDetails : null;
+                  
                   return (
-                    <tr key={inq.id} className={`${isActive ? 'bg-[#EEF2FF]' : 'hover:bg-[#F9FAFB]'} transition-all duration-150 ease-out cursor-pointer group`} onClick={() => handleOpenInquiry(inq.id)}>
-                      <td className="px-4 py-4 text-xs font-bold text-[#111111]">{inq.inquiryNumber}</td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-bold text-[#111111]">{inq.customerName || inq.customer?.name}</p>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${inq.customerType === 'REGISTERED' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
-                            {inq.customerType}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-[#6B7280] mt-0.5">{inq.companyName || inq.customer?.company || inq.company?.name || 'Individual'}</p>
-                      </td>
-                      <td className="px-4 py-4">
-                        <p className="text-xs font-medium text-[#374151] line-clamp-1">{inq.quantity ? `${inq.quantity} ` : ''}{inq.productInterest || 'N/A'}</p>
-                      </td>
-                      <td className="px-4 py-4 text-xs font-medium text-[#4B5563]">
-                        {getSourceIcon(inq.source)}
-                      </td>
-                      <td className="px-4 py-4">
-                        <p className="text-xs text-[#111111]">{new Date(inq.createdAt).toLocaleDateString()}</p>
-                        <p className="text-[10px] text-[#6B7280]">{new Date(inq.createdAt).toLocaleTimeString()}</p>
-                      </td>
-                      <td className="px-4 py-4">
-                        <StatusBadge status={inq.status} />
-                      </td>
-                      <td className="px-4 py-4">
-                        {inq.assignedTo ? (
+                    <React.Fragment key={inq.id}>
+                      <tr 
+                        className={`${isExpanded ? 'bg-[#EEF2FF]' : 'hover:bg-[#F9FAFB]'} transition-all duration-150 ease-out cursor-pointer group`} 
+                        onClick={() => toggleRow(inq.id)}
+                      >
+                        <td className="px-4 py-4 text-xs font-bold text-[#111111]">
+                          <Link
+                            href={`/dashboard/inquiries/${inq.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:text-[#3B6FEB] transition-colors underline-offset-2 hover:underline"
+                            title="Open Full Inquiry Desk"
+                          >
+                            {inq.inquiryNumber}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-4">
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[10px] font-bold text-[#374151]">
-                              {inq.assignedTo.name.charAt(0)}
-                            </div>
-                            <span className="text-xs font-medium text-[#374151]">{inq.assignedTo.name}</span>
+                            <p className="text-xs font-bold text-[#111111]">{inq.customerName || inq.customer?.name}</p>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${inq.customerType === 'REGISTERED' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                              {inq.customerType === 'REGISTERED' ? 'REGISTERED' : 'INDIVIDUAL / GUEST'}
+                            </span>
                           </div>
-                        ) : (
-                          <span className="text-xs text-[#9CA3AF] italic">Unassigned</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="p-1.5 bg-white border border-[#E5E7EB] text-[#6B7280] hover:text-[#3B6FEB] rounded shadow-sm" title="View Details">
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
-                          <button className="p-1.5 bg-white border border-[#E5E7EB] text-[#6B7280] hover:text-[#111111] rounded shadow-sm" title="More Options">
-                            <MoreVertical className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="px-4 py-4">
+                          <p className="text-xs font-medium text-[#374151] line-clamp-1">{inq.quantity ? `${inq.quantity} ` : ''}{inq.product?.name || inq.productInterest || inq.product?.category?.name || 'Custom Request / Not specified'}</p>
+                        </td>
+                        <td className="px-4 py-4 text-xs font-medium text-[#4B5563]">
+                          {getSourceIcon(inq.source)}
+                        </td>
+                        <td className="px-4 py-4">
+                          <p className="text-xs text-[#111111]">{new Date(inq.createdAt).toLocaleDateString()}</p>
+                          <p className="text-[10px] text-[#6B7280]">{new Date(inq.createdAt).toLocaleTimeString()}</p>
+                        </td>
+                        <td className="px-4 py-4">
+                          <StatusBadge status={inq.status} />
+                        </td>
+                        <td className="px-4 py-4">
+                          {inq.assignedTo ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-[#E5E7EB] flex items-center justify-center text-[10px] font-bold text-[#374151]">
+                                {inq.assignedTo.name.charAt(0)}
+                              </div>
+                              <span className="text-xs font-medium text-[#374151]">{inq.assignedTo.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-[#9CA3AF] italic">Unassigned</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Link
+                              href={`/dashboard/inquiries/${inq.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-1.5 bg-white border border-[#E5E7EB] text-[#6B7280] hover:text-[#3B6FEB] hover:border-[#3B6FEB] rounded-lg shadow-sm transition-colors"
+                              title="Open Full Inquiry Desk"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </Link>
+                            <button className="p-1.5 bg-white border border-[#E5E7EB] text-[#6B7280] hover:text-[#3B6FEB] rounded-lg shadow-sm" title="Expand Details">
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* EXPANDED ROW */}
+                      {isExpanded && (
+                        <tr className="bg-[#FAFAFA] border-b border-[#E5E7EB]">
+                          <td colSpan={8} className="p-0">
+                            {detail ? (
+                              <div className="p-6 md:p-8 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+                                  
+                                  {/* Left Column - Core Info */}
+                                  <div className="space-y-6">
+                                    <div>
+                                      <h3 className="text-xs font-bold text-[#6B7280] uppercase tracking-wider mb-3">Customer Information</h3>
+                                      <div className="bg-white border border-[#E5E7EB] rounded-xl p-4 space-y-3 shadow-sm">
+                                        <div>
+                                          <span className="text-xs text-[#6B7280] block mb-1">Name</span>
+                                          <span className="text-sm font-semibold text-[#111111]">{detail.customerName || detail.customer?.name}</span>
+                                        </div>
+                                        <div>
+                                          <span className="text-xs text-[#6B7280] block mb-1">Phone</span>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-sm font-semibold text-[#111111]">{detail.phone || detail.customer?.phone}</span>
+                                          </div>
+                                        </div>
+
+                                        {(detail.companyName || detail.company?.name || detail.customer?.company) && (
+                                          <div>
+                                            <span className="text-xs text-[#6B7280] block mb-1">Company</span>
+                                            <span className="text-sm font-semibold text-[#111111]">{detail.companyName || detail.company?.name || detail.customer?.company}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div>
+                                      <h3 className="text-xs font-bold text-[#6B7280] uppercase tracking-wider mb-3">Request</h3>
+                                      <div className="bg-white border border-[#E5E7EB] rounded-xl p-4 space-y-3 shadow-sm">
+                                          <div>
+                                            <span className="text-xs text-[#6B7280] block mb-1">Product</span>
+                                            <span className="text-sm font-semibold text-[#111111]">{detail.product?.name || detail.productInterest || detail.product?.category?.name || 'Custom Request / Not specified'}</span>
+                                          </div>
+                                        <div>
+                                          <span className="text-xs text-[#6B7280] block mb-1">Quantity</span>
+                                          <span className="text-sm font-semibold text-[#111111]">{detail.quantity}</span>
+                                        </div>
+                                        {detail.variants && detail.variants.length > 0 && (
+                                          <div>
+                                            <span className="text-xs font-bold text-[#6B7280] block mb-1.5 uppercase tracking-wider">Breakdown</span>
+                                            <div className="flex flex-wrap gap-1.5">
+                                              {detail.variants.map((v: any, idx: number) => (
+                                                <div key={idx} className="flex items-center gap-1 text-[11px] bg-[#F8F9FC] border border-[#E5E7EB] px-2 py-1 rounded shadow-sm">
+                                                  {v.color && (
+                                                    <span className="flex items-center gap-1">
+                                                      <div className="w-2 h-2 rounded-full border border-gray-300" style={{ backgroundColor: v.color.toLowerCase() }}></div>
+                                                      <span className="font-medium text-[#374151]">{v.color}</span>
+                                                    </span>
+                                                  )}
+                                                  {v.size && <span className="text-[#6B7280] font-bold bg-gray-200 px-1.5 rounded">{v.size}</span>}
+                                                  <span className="font-bold text-[#111111] ml-1">× {v.quantity}</span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                        
+                                        {/* Legacy Fields Conditionally Rendered */}
+                                        <div>
+                                          <span className="text-xs text-[#6B7280] block mb-1">Printing & Position</span>
+                                          <span className={`text-sm font-semibold ${!(detail.printPosition || detail.printingType) ? 'text-[#9CA3AF] font-normal italic' : 'text-[#111111]'}`}>
+                                            {(() => {
+                                              const raw = (detail.printPosition || detail.printingType || '').trim().toLowerCase();
+                                              if (!raw || raw === 'null' || raw === 'undefined' || raw === 'not provided' || raw === 'none' || raw === 'n/a') {
+                                                return 'Not provided';
+                                              }
+                                              if (raw.includes('both') || raw.includes('&')) return 'Both';
+                                              if (raw.includes('back')) return 'Back';
+                                              if (raw.includes('front')) return 'Front';
+                                              return detail.printPosition || detail.printingType;
+                                            })()}
+                                          </span>
+                                        </div>
+                                        {detail.colors && (
+                                          <div>
+                                            <span className="text-xs text-[#6B7280] block mb-1">Colors</span>
+                                            <span className="text-sm text-[#374151]">{detail.colors}</span>
+                                          </div>
+                                        )}
+                                        {detail.sizes && (
+                                          <div>
+                                            <span className="text-xs text-[#6B7280] block mb-1">Sizes</span>
+                                            <span className="text-sm text-[#374151]">{detail.sizes}</span>
+                                          </div>
+                                        )}
+                                        {detail.budget && (
+                                          <div>
+                                            <span className="text-xs text-[#6B7280] block mb-1">Budget</span>
+                                            <span className="text-sm font-medium text-[#10B981]">{detail.budget}</span>
+                                          </div>
+                                        )}
+                                        {detail.deliveryDate && (
+                                          <div>
+                                            <span className="text-xs text-[#6B7280] block mb-1">Delivery</span>
+                                            <span className="text-sm text-[#374151]">{new Date(detail.deliveryDate).toLocaleDateString()}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Middle Column - Reference & Notes */}
+                                  <div className="space-y-6">
+                                    {detail.artworkUrl && (
+                                      <div>
+                                        <h3 className="text-xs font-bold text-[#6B7280] uppercase tracking-wider mb-3">Reference / Mockup</h3>
+                                        <div className="grid grid-cols-2 gap-3">
+                                          {detail.artworkUrl.split(',').map((url, i) => {
+                                            const cleanUrl = url.trim();
+                                            const isPdf = cleanUrl.toLowerCase().endsWith('.pdf');
+                                            return (
+                                              <a key={i} href={cleanUrl} target="_blank" rel="noreferrer" className="block relative group bg-white border border-[#E5E7EB] rounded-xl overflow-hidden aspect-video flex items-center justify-center hover:border-[#3B6FEB] transition-colors shadow-sm">
+                                                {isPdf ? (
+                                                  <div className="flex flex-col items-center text-[#6B7280] group-hover:text-[#3B6FEB]">
+                                                    <FileText className="w-8 h-8 mb-2" />
+                                                    <span className="text-xs font-semibold">View PDF</span>
+                                                  </div>
+                                                ) : (
+                                                  <img src={cleanUrl} alt="Reference" className="w-full h-full object-cover" />
+                                                )}
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                                  <LinkIcon className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 drop-shadow-md" />
+                                                </div>
+                                              </a>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {(detail.customizationRequirements || detail.message) && (
+                                      <div>
+                                        <h3 className="text-xs font-bold text-[#6B7280] uppercase tracking-wider mb-3">Notes</h3>
+                                        <div className="bg-white border border-[#E5E7EB] rounded-xl p-4 shadow-sm text-sm text-[#374151] leading-relaxed">
+                                          {detail.customizationRequirements || detail.message}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Right Column - System & Actions */}
+                                  <div className="space-y-6">
+                                    <div>
+                                      <h3 className="text-xs font-bold text-[#6B7280] uppercase tracking-wider mb-3">System</h3>
+                                      <div className="bg-white border border-[#E5E7EB] rounded-xl p-4 space-y-3 shadow-sm">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs text-[#6B7280]">Type</span>
+                                          <span className="text-sm font-semibold text-[#111111]">{detail.customerType === 'REGISTERED' ? 'Registered' : 'Individual / Guest'}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs text-[#6B7280]">Status</span>
+                                          <StatusBadge status={detail.status} />
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs text-[#6B7280]">Source</span>
+                                          <span className="text-sm font-semibold text-[#111111] capitalize">{detail.source.toLowerCase()}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs text-[#6B7280]">Created</span>
+                                          <span className="text-sm font-semibold text-[#111111]">{new Date(detail.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs text-[#6B7280]">Assigned To</span>
+                                          <span className="text-sm font-semibold text-[#111111]">{detail.assignedTo?.name || 'Unassigned'}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div>
+                                      <h3 className="text-xs font-bold text-[#6B7280] uppercase tracking-wider mb-3">Actions</h3>
+                                      <div className="flex flex-col gap-3">
+                                        <button onClick={() => openWhatsApp(detail)} className="w-full px-4 py-3 bg-white border border-[#E5E7EB] hover:border-green-500 hover:text-green-600 hover:bg-green-50 rounded-xl text-sm font-bold text-[#374151] transition-all flex items-center justify-center gap-2 shadow-sm">
+                                          <Phone className="w-4 h-4" /> Call / WhatsApp
+                                        </button>
+                                        
+                                        {detail.quote?.order ? (
+                                          <Link href={`/dashboard/orders`} className="w-full px-4 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-sm shadow-emerald-600/20">
+                                            <ShoppingBag className="w-4 h-4" /> View Order ({detail.quote.order.orderNumber})
+                                          </Link>
+                                        ) : detail.status !== 'CONVERTED' ? (
+                                          <div className="flex flex-col gap-2">
+                                            <Link href={`/dashboard/inquiries/${detail.id}`} className="w-full px-4 py-3 bg-[#3B6FEB] text-white rounded-xl text-sm font-bold hover:bg-[#2563EB] transition-all flex items-center justify-center gap-2 shadow-sm shadow-[#3B6FEB]/20">
+                                              Open Inquiry Desk <ArrowRight className="w-4 h-4" />
+                                            </Link>
+                                            <button onClick={() => handleConvertToQuote(detail)} className="w-full px-4 py-2 bg-white border border-[#E5E7EB] text-[#374151] rounded-xl text-xs font-bold hover:bg-[#F9FAFB] transition-all flex items-center justify-center gap-1.5 shadow-sm">
+                                              Convert to Quote <ArrowRight className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <Link href={`/dashboard/inquiries/${detail.id}`} className="w-full px-4 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-sm shadow-emerald-600/20">
+                                            View Quote <ArrowRight className="w-4 h-4" />
+                                          </Link>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Quick Notes inside expanded row */}
+                                    <div>
+                                      <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Activity Log</h3>
+                                      </div>
+                                      <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm overflow-hidden flex flex-col h-48">
+                                        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                                          {detail.activities && detail.activities.length > 0 ? (
+                                            detail.activities.map((act: any) => (
+                                              <div key={act.id} className="text-xs p-2 bg-[#F9FAFB] rounded-lg border border-[#F3F4F6]">
+                                                <p className="font-medium text-[#111111]">{act.message}</p>
+                                                <p className="text-[#9CA3AF] text-[10px] mt-1">{new Date(act.createdAt).toLocaleString()} · {act.user?.name || 'System'}</p>
+                                              </div>
+                                            ))
+                                          ) : (
+                                            <p className="text-xs text-[#9CA3AF] text-center mt-6">No activity recorded.</p>
+                                          )}
+                                        </div>
+                                        <div className="p-2 border-t border-[#E5E7EB] bg-[#FAFAFA] flex gap-2">
+                                          <input
+                                            type="text"
+                                            value={note}
+                                            onChange={e => setNote(e.target.value)}
+                                            placeholder="Add a note..."
+                                            className="flex-1 text-xs border border-[#E5E7EB] rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-[#3B6FEB]"
+                                          />
+                                          <button
+                                            onClick={() => handleAddNote(detail)}
+                                            className="px-3 py-2 bg-[#111111] text-white rounded-lg text-xs font-bold hover:bg-black transition-colors"
+                                          >
+                                            Add
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="p-12 flex justify-center items-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#3B6FEB] border-t-transparent"></div>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
@@ -242,15 +567,6 @@ export default function InquiriesPage() {
             </div>
           </div>
         </div>
-
-        {/* RIGHT DRAWER */}
-        {isDrawerOpen && selectedInquiry && (
-          <InquiryDrawer
-            inquiry={selectedInquiry}
-            onClose={() => setIsDrawerOpen(false)}
-            onRefresh={() => { handleOpenInquiry(selectedInquiry.id); fetchData(); }}
-          />
-        )}
       </div>
 
       {/* NEW INQUIRY MODAL */}
@@ -260,328 +576,6 @@ export default function InquiriesPage() {
           onSuccess={() => { setIsNewInquiryModalOpen(false); fetchData(); }}
         />
       )}
-    </div>
-  );
-}
-
-
-// ---------------------------------------------------------
-// RIGHT SIDE DRAWER COMPONENT - PREMIUM REDESIGN
-// ---------------------------------------------------------
-function InquiryDrawer({ inquiry, onClose, onRefresh }: { inquiry: Inquiry, onClose: () => void, onRefresh: () => void }) {
-  const [note, setNote] = useState('');
-
-
-  const handleConvertToQuote = async () => {
-    try {
-      const res = await fetch(`${API_URL}/inquiries/${inquiry.id}/convert-to-quote`, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-      }).then(r => r.json());
-      if(res.quote) {
-         window.location.href = `/dashboard/quotes/${res.quote.id}`;
-      }
-    } catch (err: any) {
-      console.error('Conversion failed');
-    }
-  };
-
-  const handleAddNote = async () => {
-    if(!note) return;
-    try {
-      await fetch(`${API_URL}/inquiries/${inquiry.id}/activity`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
-        body: JSON.stringify({ type: 'NOTE', message: note })
-      });
-      setNote('');
-      onRefresh();
-    } catch(err) {
-      console.error('Failed to add note');
-    }
-  };
-
-  const openWhatsApp = () => {
-    const phone = inquiry.phone || inquiry.customer?.phone;
-    if (!phone) return alert('Customer phone number is unavailable.');
-    const text = `Hello ${inquiry.customerName || inquiry.customer?.name || 'Customer'},\n\nThis is ZOBBRA Sales regarding your inquiry ${inquiry.inquiryNumber} (${inquiry.productInterest || 'Custom Merchandise'}, ${inquiry.quantity || 100} units).\n\nWe would like to discuss your requirements and share an official quote.\n\nThank you,\nZOBBRA Team`;
-    const url = buildWhatsAppUrl(phone, text);
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-      onRefresh();
-    } else {
-      alert('Customer phone number is invalid.');
-    }
-  };
-
-  return (
-    <div data-cy="inquiry-drawer" className="w-full lg:w-[400px] xl:w-[440px] bg-white border border-[#E5E7EB] rounded-2xl shadow-2xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
-      {/* Premium Header */}
-      <div className="p-5 border-b border-[#F3F4F6] bg-gradient-to-b from-white to-[#FAFAFA]">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0 pr-4">
-            {/* Label */}
-            <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider mb-1">Inquiry ID</p>
-            {/* Inquiry Number - Prominent */}
-            <h2 className="text-2xl font-heading font-black text-[#111111] leading-tight tracking-tight">
-              {inquiry.inquiryNumber}
-            </h2>
-            {/* Status Badges */}
-            <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-              <StatusBadge status={inquiry.status} />
-              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${inquiry.customerType === 'REGISTERED' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
-                {inquiry.customerType}
-              </span>
-            </div>
-            {/* Date */}
-            <div className="flex items-center gap-1.5 mt-2.5 text-[11px] text-[#6B7280]">
-              <Calendar className="w-3.5 h-3.5" />
-              <span>{new Date(inquiry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-              <span className="text-[#D1D5DB]">·</span>
-              <span>{new Date(inquiry.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
-            </div>
-          </div>
-          {/* Close Button */}
-          <button onClick={onClose} className="p-2 text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F3F4F6] rounded-xl transition-all duration-200 flex-shrink-0">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-6">
-
-        {/* Customer Information - Clean Section */}
-        <div>
-          <h3 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mb-4 flex items-center gap-2">
-            <User className="w-4 h-4 text-[#3B6FEB]" />
-            Customer Information
-          </h3>
-          <div className="bg-[#FAFAFA] rounded-xl p-4 space-y-3">
-            {/* Name */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[#9CA3AF]">
-                <UserCircle className="w-4 h-4" />
-                <span className="text-xs font-medium">Name</span>
-              </div>
-              <span className="text-xs font-semibold text-[#111111]">{inquiry.customerName || inquiry.customer?.name || 'N/A'}</span>
-            </div>
-            {/* Company */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[#9CA3AF]">
-                <Building2 className="w-4 h-4" />
-                <span className="text-xs font-medium">Company</span>
-              </div>
-              <span className="text-xs font-semibold text-[#374151]">{inquiry.companyName || inquiry.company?.name || inquiry.customer?.company || 'Individual'}</span>
-            </div>
-            {/* Phone */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[#9CA3AF]">
-                <Phone className="w-4 h-4" />
-                <span className="text-xs font-medium">Phone</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-[#374151]">{inquiry.phone || inquiry.customer?.phone || 'N/A'}</span>
-                {(inquiry.phone || inquiry.customer?.phone) && (
-                  <button onClick={openWhatsApp} title="Message on WhatsApp" className="text-green-500 hover:bg-green-50 p-1 rounded-lg transition-colors">
-                    <MessageSquare className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-            {/* Email */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[#9CA3AF]">
-                <Mail className="w-4 h-4" />
-                <span className="text-xs font-medium">Email</span>
-              </div>
-              <span className="text-xs font-semibold text-[#3B6FEB] truncate max-w-[160px]">{inquiry.email || inquiry.customer?.email || 'N/A'}</span>
-            </div>
-            {/* Location */}
-            {inquiry.location && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[#9CA3AF]">
-                  <MapPin className="w-4 h-4" />
-                  <span className="text-xs font-medium">Location</span>
-                </div>
-                <span className="text-xs font-semibold text-[#374151]">{inquiry.location}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Inquiry Details - Specifications */}
-        <div>
-          <h3 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mb-4 flex items-center gap-2">
-            <Package className="w-4 h-4 text-[#3B6FEB]" />
-            Product Specifications
-          </h3>
-          <div className="bg-[#FAFAFA] rounded-xl p-4 space-y-3">
-            {/* Product Interest */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[#9CA3AF]">Product</span>
-              <span className="text-xs font-semibold text-[#111111] text-right max-w-[200px] truncate">{inquiry.productInterest || 'N/A'}</span>
-            </div>
-            {/* Quantity */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[#9CA3AF]">Quantity</span>
-              <span className="text-xs font-semibold text-[#111111]">{inquiry.quantity ? `${inquiry.quantity} pieces` : 'N/A'}</span>
-            </div>
-            {/* Printing Type */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[#9CA3AF]">Printing</span>
-              <span className="text-xs font-semibold text-[#374151]">{inquiry.printingType || 'N/A'}</span>
-            </div>
-            {/* Print Position */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[#9CA3AF]">Position</span>
-              <span className="text-xs font-semibold text-[#374151]">{inquiry.printPosition || 'N/A'}</span>
-            </div>
-            {/* Colors */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[#9CA3AF]">Colors</span>
-              <span className="text-xs font-semibold text-[#374151]">{inquiry.colors || 'N/A'}</span>
-            </div>
-            {/* Sizes */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[#9CA3AF]">Sizes</span>
-              <span className="text-xs font-semibold text-[#374151]">{inquiry.sizes || 'N/A'}</span>
-            </div>
-            {/* Budget */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[#9CA3AF]">Budget</span>
-              <span className="text-xs font-bold text-[#10B981]">{inquiry.budget || 'N/A'}</span>
-            </div>
-            {/* Delivery Date */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[#9CA3AF]">Delivery</span>
-              <span className="text-xs font-semibold text-[#374151]">{inquiry.deliveryDate ? new Date(inquiry.deliveryDate).toLocaleDateString() : 'N/A'}</span>
-            </div>
-            {/* Artwork Link */}
-            {inquiry.artworkUrl && (
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-[#9CA3AF]">Artwork</span>
-                <a href={inquiry.artworkUrl} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-[#3B6FEB] hover:underline truncate max-w-[160px]">View Link →</a>
-              </div>
-            )}
-          </div>
-          {/* Customization Notes */}
-          {(inquiry.customizationRequirements || inquiry.message) && (
-            <div className="mt-3 bg-[#F0F4FF] rounded-xl p-3 border border-[#E0E8FF]">
-              <p className="text-[10px] font-bold text-[#3B6FEB] uppercase tracking-wider mb-1.5">Notes</p>
-              <p className="text-xs text-[#374151] leading-relaxed">{inquiry.customizationRequirements || inquiry.message}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Assignment & Follow Up - Grid Cards */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Assigned To Card */}
-          <div className="bg-white border border-[#E5E7EB] rounded-xl p-3.5">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Assigned To</p>
-              <button className="text-[#3B6FEB] text-[10px] font-bold hover:underline">Edit</button>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#3B6FEB] to-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-sm">
-                {inquiry.assignedTo ? inquiry.assignedTo.name.charAt(0).toUpperCase() : 'U'}
-              </div>
-              <p className="text-xs font-semibold text-[#111111] truncate">{inquiry.assignedTo?.name || 'Unassigned'}</p>
-            </div>
-          </div>
-          {/* Next Follow Up Card */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5">
-            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-2">Next Follow Up</p>
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-amber-500" />
-              <p className="text-[11px] font-semibold text-amber-700 leading-tight">
-                {inquiry.nextFollowUpAt ? new Date(inquiry.nextFollowUpAt).toLocaleDateString() : 'Not Set'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Activity Timeline - Clean Design */}
-        <div>
-          <h3 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mb-4 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-[#3B6FEB]" />
-            Activity
-          </h3>
-
-          {inquiry.activities && inquiry.activities.length > 0 ? (
-            <div className="relative pl-5">
-              {/* Timeline Line */}
-              <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-[#3B6FEB] to-[#E5E7EB]" />
-
-              <div className="space-y-4">
-                {inquiry.activities.map((act: any, index: number) => (
-                  <div key={act.id} className="relative">
-                    {/* Timeline Dot */}
-                    <div className={`absolute -left-[13px] top-1 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm ${index === 0 ? 'bg-[#3B6FEB]' : 'bg-[#D1D5DB]'}`} />
-                    {/* Content */}
-                    <div className="bg-white border border-[#E5E7EB] rounded-lg p-3">
-                      <p className="text-xs font-medium text-[#111111] leading-snug">{act.message}</p>
-                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[#9CA3AF]">
-                        <span>{new Date(act.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                        <span>·</span>
-                        <span>{new Date(act.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
-                        <span>·</span>
-                        <span>{act.user?.name || 'System'}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-6 bg-[#FAFAFA] rounded-xl border border-dashed border-[#E5E7EB]">
-              <FileText className="w-6 h-6 text-[#D1D5DB] mx-auto mb-2" />
-              <p className="text-xs text-[#9CA3AF]">No activity recorded yet</p>
-            </div>
-          )}
-
-          {/* Add Note Input */}
-          <div className="mt-4 flex gap-2">
-            <input
-              type="text"
-              data-cy="inquiry-note-input"
-              value={note}
-              onChange={e=>setNote(e.target.value)}
-              placeholder="Add a note..."
-              className="flex-1 text-xs border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 bg-[#FAFAFA] focus:outline-none focus:border-[#3B6FEB] focus:ring-2 focus:ring-[#3B6FEB]/10 transition-all"
-            />
-            <button
-              onClick={handleAddNote}
-              data-cy="add-note-btn"
-              className="px-4 py-2.5 bg-[#3B6FEB] text-white rounded-xl text-xs font-bold hover:bg-[#2563EB] transition-colors shadow-sm"
-            >
-              Add
-            </button>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Premium Footer Actions */}
-      <div className="p-4 border-t border-[#F3F4F6] bg-white">
-        <div className="flex items-center gap-3">
-          <button className="px-4 py-3 border border-[#E5E7EB] bg-white rounded-xl text-sm font-semibold text-[#374151] hover:bg-[#F9FAFB] hover:border-[#D1D5DB] transition-all flex items-center justify-center gap-2 flex-1">
-            <Phone className="w-4 h-4" />
-            <span>Call</span>
-          </button>
-          {inquiry.status !== 'CONVERTED' ? (
-            <button onClick={handleConvertToQuote} className="px-5 py-3 bg-[#3B6FEB] rounded-xl text-sm font-bold text-white hover:bg-[#2563EB] transition-all flex items-center justify-center gap-2 flex-[2] shadow-sm shadow-[#3B6FEB]/20">
-              Convert to Quote
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          ) : (
-            <Link href={`/dashboard/quotes/${inquiry.quote?.id}`} className="px-5 py-3 bg-emerald-600 rounded-xl text-sm font-bold text-white hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 flex-[2] shadow-sm shadow-emerald-600/20">
-              View Quote
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

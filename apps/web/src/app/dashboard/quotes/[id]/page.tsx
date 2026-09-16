@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
+import VariantBreakdownEntry, { VariantData } from '@/components/shared/VariantBreakdownEntry';
 
 interface QuoteActivity {
   id: string;
@@ -37,6 +38,8 @@ interface QuoteDetail {
   status: 'DRAFT' | 'SENT' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
   subtotal: number;
   gstTotal: number;
+  isGstApplied: boolean;
+  gstRate: number | null;
   discount: number;
   totalAmount: number;
   notes?: string;
@@ -53,6 +56,7 @@ interface QuoteDetail {
     quantity: number;
     unitPrice: number;
     totalPrice: number;
+    variants?: Array<{ color: string | null; size: string | null; quantity: number }>;
   }>;
   activities?: QuoteActivity[];
 }
@@ -71,6 +75,9 @@ export default function AdminQuoteDetailPage() {
   const [editPrintType, setEditPrintType] = useState<string>('Front Only');
   const [editColor, setEditColor] = useState<string>('Charcoal Black');
   const [editSize, setEditSize] = useState<string>('XL');
+  const [editIsGstApplied, setEditIsGstApplied] = useState<boolean>(true);
+  const [editGstRate, setEditGstRate] = useState<number>(5.0);
+  const [editVariants, setEditVariants] = useState<VariantData[]>([]);
   const [updating, setUpdating] = useState<boolean>(false);
 
   const fetchQuoteDetail = async () => {
@@ -83,13 +90,20 @@ export default function AdminQuoteDetailPage() {
       });
       const data = await res.json();
       if (res.ok && data.success && data.quote) {
+        if (data.quote.inquiry?.id) {
+          router.replace(`/dashboard/inquiries/${data.quote.inquiry.id}`);
+          return;
+        }
         setQuote(data.quote);
         if (data.quote.items && data.quote.items[0]) {
           setEditQty(data.quote.items[0].quantity);
           setEditPrintType(data.quote.items[0].printType);
           setEditColor(data.quote.items[0].color);
           setEditSize(data.quote.items[0].size);
+          setEditVariants(data.quote.items[0].variants || []);
         }
+        setEditIsGstApplied(data.quote.isGstApplied ?? true);
+        setEditGstRate(data.quote.gstRate ?? (data.quote.items?.[0]?.product?.gstRate || 5.0));
       }
     } catch (error) {
       console.error('Failed to load quote detail:', error);
@@ -186,7 +200,7 @@ export default function AdminQuoteDetailPage() {
     }
   };
 
-  const handleSaveEdits = async () => {
+  const handleSaveEdits = async (): Promise<boolean> => {
     setUpdating(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('zobra_token') : null;
@@ -201,17 +215,37 @@ export default function AdminQuoteDetailPage() {
           printType: editPrintType,
           color: editColor,
           size: editSize,
+          isGstApplied: editIsGstApplied,
+          gstRate: editGstRate,
+          variants: editVariants
         }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         setIsEditing(false);
-        fetchQuoteDetail();
+        await fetchQuoteDetail();
+        return true;
+      } else {
+        alert(data.message || 'Failed to save quote');
+        return false;
       }
     } catch (err) {
       console.error('Failed to save quote edits:', err);
+      alert('An error occurred while saving the quote.');
+      return false;
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleSaveAndSend = async () => {
+    if (!quote?.customer?.phone) {
+      alert('Customer phone number is unavailable. Please update the customer profile first.');
+      return;
+    }
+    const saved = await handleSaveEdits();
+    if (saved) {
+      handleWhatsAppClick('QUOTE_READY');
     }
   };
 
@@ -255,9 +289,9 @@ export default function AdminQuoteDetailPage() {
     return (
       <div className="p-8 text-center bg-[#F8F9FC] min-h-screen">
         <h2 className="text-2xl font-bold text-[#111111]">Quote Not Found</h2>
-        <Link href="/dashboard/quotes">
+        <Link href="/dashboard/inquiries">
           <Button variant="outline" className="mt-4">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Quotes
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Inquiries
           </Button>
         </Link>
       </div>
@@ -270,8 +304,8 @@ export default function AdminQuoteDetailPage() {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <Link href="/dashboard/quotes" className="text-xs text-[#6B7280] hover:text-[#111111] flex items-center gap-1 font-bold mb-2 transition-colors w-fit">
-            <ArrowLeft className="w-3.5 h-3.5" /> BACK TO QUOTES
+          <Link href="/dashboard/inquiries" className="text-xs text-[#6B7280] hover:text-[#111111] flex items-center gap-1 font-bold mb-2 transition-colors w-fit">
+            <ArrowLeft className="w-3.5 h-3.5" /> BACK TO INQUIRIES
           </Link>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-heading font-black text-[#111111]">{quote.quoteNumber}</h1>
@@ -454,10 +488,50 @@ export default function AdminQuoteDetailPage() {
                   />
                 </div>
               </div>
-              <div className="flex gap-2 justify-end pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-bold text-[#374151] pt-2 border-t border-[#BFDBFE]">
+                <div className="space-y-1.5 flex items-center gap-2 mt-5">
+                  <input
+                    type="checkbox"
+                    id="apply-gst"
+                    checked={editIsGstApplied}
+                    onChange={(e) => setEditIsGstApplied(e.target.checked)}
+                    className="w-4 h-4 text-[#3B6FEB] bg-white border-[#BFDBFE] rounded focus:ring-[#3B6FEB]"
+                  />
+                  <label htmlFor="apply-gst" className="text-[#111111] cursor-pointer">Apply GST</label>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[#6B7280]">GST Rate</label>
+                  <select
+                    value={editGstRate}
+                    onChange={(e) => setEditGstRate(Number(e.target.value))}
+                    disabled={!editIsGstApplied}
+                    className="w-full p-2.5 border border-[#BFDBFE] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3B6FEB]/50 disabled:opacity-50"
+                  >
+                    <option value="0">0%</option>
+                    <option value="5">5%</option>
+                    <option value="12">12%</option>
+                    <option value="18">18%</option>
+                    <option value="28">28%</option>
+                  </select>
+                </div>
+              </div>
+              <div className="pt-4 border-t border-[#BFDBFE]">
+                <VariantBreakdownEntry
+                  totalQuantity={editQty}
+                  variants={editVariants}
+                  onChange={setEditVariants}
+                  requiresColor={true}
+                  requiresSize={true}
+                  supportsMatrix={true}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2 justify-end pt-4 border-t border-[#BFDBFE] mt-4">
                 <Button variant="outline" size="sm" onClick={() => setIsEditing(false)} className="bg-white border-[#BFDBFE] text-[#374151]">Cancel</Button>
                 <Button variant="primary" size="sm" data-cy="admin-save-quote-btn" onClick={handleSaveEdits} disabled={updating}>
                   SAVE & RECALCULATE
+                </Button>
+                <Button variant="success" size="sm" onClick={handleSaveAndSend} disabled={updating} className="font-bold">
+                  SAVE & SEND TO CUSTOMER →
                 </Button>
               </div>
             </div>
@@ -485,14 +559,37 @@ export default function AdminQuoteDetailPage() {
                 </thead>
                 <tbody className="divide-y divide-[#E5E7EB] font-semibold text-[#111111]">
                   {quote.items?.map((item) => (
-                    <tr key={item.id} className="hover:bg-[#F9FAFB] transition-colors">
-                      <td className="px-4 py-4 font-bold text-[#111111]">{item.product?.name || 'Customized Polo T-Shirt (200 GSM)'}</td>
-                      <td className="px-4 py-4 text-[#6B7280]">{item.printType}</td>
-                      <td className="px-4 py-4 text-[#374151]">{item.color} / {item.size}</td>
-                      <td className="px-4 py-4">{item.quantity} Pcs</td>
-                      <td className="px-4 py-4 font-mono text-sm">₹{item.unitPrice}</td>
-                      <td className="px-4 py-4 text-right font-black font-mono text-sm">₹{item.totalPrice.toLocaleString('en-IN')}</td>
-                    </tr>
+                    <React.Fragment key={item.id}>
+                      <tr className="hover:bg-[#F9FAFB] transition-colors">
+                        <td className="px-4 py-4 font-bold text-[#111111]">{item.product?.name || 'Customized Polo T-Shirt (200 GSM)'}</td>
+                        <td className="px-4 py-4 text-[#6B7280]">{item.printType}</td>
+                        <td className="px-4 py-4 text-[#374151]">{item.color} / {item.size}</td>
+                        <td className="px-4 py-4">{item.quantity} Pcs</td>
+                        <td className="px-4 py-4 font-mono text-sm">₹{item.unitPrice}</td>
+                        <td className="px-4 py-4 text-right font-black font-mono text-sm">₹{item.totalPrice.toLocaleString('en-IN')}</td>
+                      </tr>
+                      {item.variants && item.variants.length > 0 && (
+                        <tr className="bg-[#F8F9FC]">
+                          <td colSpan={6} className="px-4 py-3 border-t border-[#E5E7EB]/50">
+                            <div className="flex flex-wrap gap-2 items-center">
+                              <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider pr-2 border-r border-[#D1D5DB] mr-1">Breakdown</span>
+                              {item.variants.map((v, idx) => (
+                                <div key={idx} className="flex items-center gap-1.5 text-xs bg-white border border-[#E5E7EB] px-2 py-1 rounded shadow-sm">
+                                  {v.color && (
+                                    <span className="flex items-center gap-1">
+                                      <div className="w-2 h-2 rounded-full border border-gray-300" style={{ backgroundColor: v.color.toLowerCase() }}></div>
+                                      <span className="font-medium text-[#374151]">{v.color}</span>
+                                    </span>
+                                  )}
+                                  {v.size && <span className="text-[#6B7280] font-bold bg-gray-100 px-1 rounded">{v.size}</span>}
+                                  <span className="font-black text-[#111111] ml-1">× {v.quantity}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
@@ -506,7 +603,7 @@ export default function AdminQuoteDetailPage() {
                   <span className="text-[#111111] font-mono text-sm">₹{quote.subtotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-[#6B7280] items-center">
-                  <span>GST (5% HSN 6109)</span>
+                  <span>{quote.isGstApplied === false ? 'GST (Off)' : `GST (${quote.gstRate ?? 5}%)`}</span>
                   <span className="text-[#111111] font-mono text-sm">₹{quote.gstTotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-[#111111] font-black text-sm pt-3 border-t border-[#E5E7EB] items-center">

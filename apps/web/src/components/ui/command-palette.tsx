@@ -28,7 +28,6 @@ export function CommandPalette({ isOpen, onClose, onToggle }: CommandPaletteProp
   const commands = [
     { name: 'Dashboard Overview', href: '/dashboard', icon: LayoutDashboard, category: 'Admin' },
     { name: 'Customer Inquiries', href: '/dashboard/inquiries', icon: FileText, category: 'Sales' },
-    { name: 'Quote Builder', href: '/dashboard/quotes', icon: FileText, category: 'Sales' },
     { name: 'Orders Pipeline', href: '/dashboard/orders', icon: ShoppingBag, category: 'Operations' },
     { name: 'Product Catalog', href: '/dashboard/products', icon: Package, category: 'Inventory' },
     { name: 'Payments & Revenue', href: '/dashboard/payments', icon: CreditCard, category: 'Finance' },

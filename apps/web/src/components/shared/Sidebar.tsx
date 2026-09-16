@@ -24,7 +24,6 @@ export const Sidebar: React.FC = () => {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Products', href: '/dashboard/products', icon: Package },
     { name: 'Customers', href: '/dashboard/customers', icon: Users },
-    { name: 'Quotes', href: '/dashboard/quotes', icon: FileText },
     { name: 'Orders', href: '/dashboard/orders', icon: ShoppingBag },
     { name: 'Production', href: '/dashboard/production', icon: Kanban },
     { name: 'Dispatch', href: '/dashboard/dispatch', icon: Truck },

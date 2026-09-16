@@ -5,11 +5,15 @@ import { useSearchParams } from 'next/navigation';
 import { UploadCloud, CheckCircle2, Loader2, X } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 import { uploadToCloudinary, deleteFromCloudinary } from '@/lib/upload';
+import VariantBreakdownEntry, { VariantData } from './VariantBreakdownEntry';
 
 interface Product {
   id: string;
   name: string;
   slug?: string;
+  requiresColor?: boolean;
+  requiresSize?: boolean;
+  supportsVariantMatrix?: boolean;
 }
 
 interface SimplifiedQuoteFormProps {
@@ -31,7 +35,9 @@ export default function SimplifiedQuoteForm({ isCustomer = false, initialData = 
   const [phone, setPhone] = useState(initialData.phone || '');
   const [productId, setProductId] = useState(initialData.productId || '');
   const [quantity, setQuantity] = useState<number>(100);
+  const [printPosition, setPrintPosition] = useState<string>('');
   const [referenceFiles, setReferenceFiles] = useState<string[]>([]);
+  const [variants, setVariants] = useState<VariantData[]>([]);
   
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -104,13 +110,28 @@ export default function SimplifiedQuoteForm({ isCustomer = false, initialData = 
       return;
     }
 
+    const selectedProduct = products.find(p => p.id === productId || p.name === productId || p.slug === productId);
+    const hasVariants = variants.length > 0;
+    
+    // Variant breakdown is optional — skip sum validation if no breakdown entered
+    if (hasVariants) {
+      const sum = variants.reduce((acc, v) => acc + (v.quantity || 0), 0);
+      if (sum > 0 && sum !== quantity) {
+        alert(`Your size/colour breakdown total (${sum}) must match the overall quantity (${quantity}).`);
+        return;
+      }
+    }
+
     let resolvedProductId: string | undefined = undefined;
     const lowerCategory = productId.toLowerCase();
 
-    if (lowerCategory === 'polo') {
-      resolvedProductId = products.find(p => p.name.toLowerCase().includes('polo') && !p.name.toLowerCase().includes('round neck'))?.id;
-    } else if (lowerCategory === 'round neck') {
-      resolvedProductId = products.find(p => p.name.toLowerCase().includes('round neck'))?.id;
+    if (lowerCategory === 'tshirt') {
+      resolvedProductId = products.find(p =>
+        p.name.toLowerCase().includes('polo') ||
+        p.name.toLowerCase().includes('round neck') ||
+        p.name.toLowerCase().includes('t-shirt') ||
+        p.name.toLowerCase().includes('tshirt')
+      )?.id;
     } else if (lowerCategory === 'cap') {
       resolvedProductId = products.find(p => p.name.toLowerCase().includes('cap'))?.id;
     } else if (lowerCategory === 'bag') {
@@ -132,18 +153,25 @@ export default function SimplifiedQuoteForm({ isCustomer = false, initialData = 
 
       const isMockupOnly = !resolvedProductId;
       const endpoint = isMockupOnly ? '/inquiries' : (isCustomer ? '/quotes' : '/inquiries');
-      const payload = {
-        customerName: name,
+      const requestBody: any = {
+        name,
         phone,
-        productId: resolvedProductId,
+        productId: resolvedProductId || productId || undefined,
+        productCategory: resolvedProductId ? undefined : productId || undefined,
         quantity,
-        artworkUrl: referenceFiles.length > 0 ? referenceFiles.join(', ') : undefined
+        printPosition,
+        referenceFiles,
+        source: 'WEBSITE',
       };
+
+      if (hasVariants) {
+        requestBody.variants = variants;
+      }
 
       const res = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(payload)
+        body: JSON.stringify(requestBody)
       });
 
       const data = await res.json();
@@ -199,6 +227,7 @@ export default function SimplifiedQuoteForm({ isCustomer = false, initialData = 
             onClick={() => {
               setSubmitted(false);
               setQuantity(100);
+              setVariants([]);
               setReferenceFiles([]);
             }} 
             className="px-8 py-3 bg-[#111111] hover:bg-[#000000] text-white text-sm font-bold rounded-xl transition-all shadow-sm"
@@ -252,9 +281,8 @@ export default function SimplifiedQuoteForm({ isCustomer = false, initialData = 
             disabled={loadingProducts}
             className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all font-medium disabled:opacity-50"
           >
-            <option value="">[ Select Product ]</option>
-            <option value="Polo">Polo</option>
-            <option value="Round Neck">Round Neck</option>
+            <option value="">[ Select Product Category ]</option>
+            <option value="TShirt">T-Shirt</option>
             <option value="Cap">Cap</option>
             <option value="Bag">Bag</option>
             <option value="Welcome Kit">Welcome Kit</option>
@@ -274,6 +302,75 @@ export default function SimplifiedQuoteForm({ isCustomer = false, initialData = 
             placeholder="100" 
             className="w-full px-4 py-2.5 bg-white border border-[#D1D5DB] rounded-lg text-[#111111] outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB] shadow-sm transition-all font-semibold" 
           />
+        </div>
+
+        {/* Quantity Breakdown — optional collapsible */}
+        {(() => {
+          const p = products.find(x => x.id === productId || x.name === productId || x.slug === productId);
+          const rColor = p ? p.requiresColor : true;
+          const rSize = p ? p.requiresSize : true;
+          const matrix = p ? p.supportsVariantMatrix : true;
+
+          return (rColor || rSize) ? (
+            <div className="border border-[#E5E7EB] rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setVariants(variants.length > 0 ? [] : [{ color: '', size: '', quantity: 0 }])}
+                className="w-full flex items-center justify-between px-4 py-3 bg-[#F9FAFB] hover:bg-[#F3F4F6] transition-colors text-left"
+              >
+                <div>
+                  <span className="text-sm font-bold text-[#374151]">Size / Colour Breakdown</span>
+                  <span className="ml-2 text-xs text-[#9CA3AF] font-normal">(optional)</span>
+                </div>
+                <span className="text-xs font-semibold text-[#3B6FEB]">
+                  {variants.length > 0 ? 'Hide ▲' : 'Add breakdown ▼'}
+                </span>
+              </button>
+              {variants.length > 0 && (
+                <div className="p-4 border-t border-[#E5E7EB] bg-white">
+                  <VariantBreakdownEntry
+                    totalQuantity={quantity}
+                    requiresColor={rColor}
+                    requiresSize={rSize}
+                    supportsMatrix={matrix}
+                    variants={variants}
+                    onChange={setVariants}
+                  />
+                </div>
+              )}
+            </div>
+          ) : null;
+        })()}
+
+        <div>
+          <label className="block font-bold text-[#374151] mb-1.5">
+            Print Position <span className="text-gray-400 font-normal text-xs">(optional)</span>
+          </label>
+          <div className="grid grid-cols-4 gap-2">
+            {['Front', 'Back', 'Both'].map((pos) => (
+              <button
+                key={pos}
+                type="button"
+                onClick={() => setPrintPosition(printPosition === pos ? '' : pos)}
+                className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all cursor-pointer text-center ${
+                  printPosition === pos
+                    ? 'bg-[#EEF2FF] text-[#3B6FEB] border-[#3B6FEB] shadow-sm'
+                    : 'bg-[#F9FAFB] text-[#374151] border-[#D1D5DB] hover:border-gray-400'
+                }`}
+              >
+                {pos}
+              </button>
+            ))}
+            {printPosition && (
+              <button
+                type="button"
+                onClick={() => setPrintPosition('')}
+                className="py-2 px-3 rounded-lg text-xs font-bold border border-dashed border-[#D1D5DB] text-[#9CA3AF] hover:text-red-400 hover:border-red-300 transition-all cursor-pointer text-center"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
 
         <div>

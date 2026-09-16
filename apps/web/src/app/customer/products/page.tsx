@@ -32,7 +32,7 @@ export default function CustomerProductsPage() {
   const [color, setColor] = useState('Charcoal Black');
   const [size, setSize] = useState('XL');
   const [qty, setQty] = useState(100);
-  const [printPosition, setPrintPosition] = useState('Front & Back Print');
+  const [printPosition, setPrintPosition] = useState('Front');
 
   // Submission State
   const [submitting, setSubmitting] = useState(false);
@@ -115,10 +115,10 @@ export default function CustomerProductsPage() {
 
   const colorsList = ['Charcoal Black', 'Navy Blue', 'Pure White', 'Royal Maroon', 'Olive Green'];
   const sizesList = ['S', 'M', 'L', 'XL', 'XXL'];
-  const positionsList = ['Front & Back Print', 'Front Chest Logo', 'Back Full Print', 'Left Sleeve Embroidery'];
+  const positionsList = ['Front', 'Back', 'Both'];
 
   const calculatedEstimate = selectedProduct
-    ? (selectedProduct.priceNum * qty + (printPosition === 'Front & Back Print' ? 40 * qty : 20 * qty)).toLocaleString('en-IN')
+    ? (selectedProduct.priceNum * qty + (printPosition === 'Both' || printPosition.includes('&') ? 40 * qty : 20 * qty)).toLocaleString('en-IN')
     : '0';
 
   return (
@@ -275,15 +275,15 @@ export default function CustomerProductsPage() {
               <label className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider block">
                 Print Position
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {positionsList.map((pos) => (
                   <button
                     key={pos}
                     type="button"
                     onClick={() => setPrintPosition(pos)}
-                    className={`p-2.5 rounded-lg text-xs font-semibold border text-left transition-all cursor-pointer ${
+                    className={`p-2.5 rounded-lg text-xs font-semibold border text-center transition-all cursor-pointer ${
                       printPosition === pos
-                        ? 'bg-[#EEF2FF] text-[#3B6FEB] border-[#3B6FEB] font-bold'
+                        ? 'bg-[#EEF2FF] text-[#3B6FEB] border-[#3B6FEB] font-bold shadow-sm'
                         : 'bg-[#F9FAFB] text-[#111111] border-[#E5E7EB] hover:border-gray-300'
                     }`}
                   >

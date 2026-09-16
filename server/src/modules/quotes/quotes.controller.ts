@@ -10,7 +10,8 @@ export function calculateServerPricing(
   basePrice: number,
   quantity: number,
   printType: string = 'Front Only',
-  gstRate: number = 5.0
+  gstRate: number = 5.0,
+  isGstApplied: boolean = true
 ) {
   let positionAddon = 20;
   const printLower = printType.toLowerCase();
@@ -32,7 +33,7 @@ export function calculateServerPricing(
 
   const unitPrice = volumePrice + positionAddon;
   const subtotal = unitPrice * quantity;
-  const gstTotal = Math.round(subtotal * (gstRate / 100));
+  const gstTotal = isGstApplied ? Math.round(subtotal * (gstRate / 100)) : 0;
   const totalAmount = subtotal + gstTotal;
 
   return { unitPrice, subtotal, gstTotal, totalAmount };
@@ -90,7 +91,7 @@ export const getQuotes = async (req: AuthRequest, res: Response) => {
       include: {
         customer: { select: { id: true, name: true, email: true, phone: true } },
         company: { select: { id: true, name: true, gstin: true } },
-        items: { include: { product: true } },
+        items: { include: { product: true, variants: true } },
         activities: {
           include: { user: { select: { id: true, name: true, role: true } } },
           orderBy: { createdAt: 'asc' },
@@ -167,7 +168,8 @@ export const getQuoteById = async (req: AuthRequest, res: Response) => {
     include: {
       customer: { select: { id: true, name: true, email: true, phone: true } },
       company: true,
-      items: { include: { product: true } },
+      items: { include: { product: true, variants: true } },
+      inquiry: { select: { id: true, inquiryNumber: true } },
       activities: {
         include: { user: { select: { id: true, name: true, role: true } } },
         orderBy: { createdAt: 'asc' },
@@ -207,9 +209,9 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
     productCategory,
     items,
     quantity = 50,
-    color = 'Navy Blue',
+    color,
     fabric,
-    size = 'L',
+    size,
     sizes,
     printingType,
     printPosition,
@@ -231,12 +233,19 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
     status
   } = req.body;
 
-  const targetCustomerId = customerId || req.user?.id;
+  let targetCustomerId = customerId;
+  if (!targetCustomerId && req.user?.role === 'CUSTOMER') {
+    targetCustomerId = req.user.id;
+  }
+  
   if (!targetCustomerId) {
     return res.status(400).json({ success: false, message: 'Customer ID is required' });
   }
 
-  let resolvedCompanyId = companyId || req.user?.companyId || null;
+  let resolvedCompanyId = companyId;
+  if (!resolvedCompanyId && req.user?.role === 'CUSTOMER') {
+    resolvedCompanyId = req.user.companyId || null;
+  }
 
   // Update customer and company profile if updated contact details are supplied
   if (targetCustomerId) {
@@ -317,9 +326,9 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
     });
   }
 
-  const resolvedPrintType = printType || [printingType, printPosition].filter(Boolean).join(' - ') || 'Front Only';
-  const resolvedSize = sizes || size || 'L';
-  const resolvedColor = color || 'Navy Blue';
+  const resolvedPrintType = printType || [printingType, printPosition].filter(Boolean).join(' - ') || 'Not provided';
+  const resolvedSize = sizes || size || '';
+  const resolvedColor = color || '';
   const resolvedQty = Number(quantity) || 50;
 
   const normalizedItems = Array.isArray(items) && items.length > 0 ? items : [
@@ -350,6 +359,17 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
     subtotal += pricing.subtotal;
     totalGst += pricing.gstTotal;
 
+    const variants = Array.isArray(item.variants) && item.variants.length > 0 ? item.variants : [{
+      color: item.color || resolvedColor,
+      size: item.size || resolvedSize,
+      quantity: itemQty
+    }];
+
+    const variantsTotal = variants.reduce((sum: number, v: any) => sum + (Number(v.quantity) || 0), 0);
+    if (variantsTotal !== itemQty) {
+      return res.status(400).json({ success: false, message: `Variants total (${variantsTotal}) does not match item quantity (${itemQty}).` });
+    }
+
     quoteItemsData.push({
       productId: itemProduct.id,
       printType: itemPrintType,
@@ -358,6 +378,13 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
       quantity: itemQty,
       unitPrice: pricing.unitPrice,
       totalPrice: pricing.subtotal,
+      variants: {
+        create: variants.map((v: any) => ({
+          color: v.color || null,
+          size: v.size || null,
+          quantity: Number(v.quantity) || 0
+        }))
+      }
     });
   }
 
@@ -395,7 +422,7 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
       totalAmount: grandTotal,
       notes: combinedNotes,
       validUntil,
-      items: { createMany: { data: quoteItemsData } },
+      items: { create: quoteItemsData },
       activities: {
         create: {
           userId: req.user?.id || null,
@@ -405,7 +432,7 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
       },
     },
     include: {
-      items: { include: { product: true } },
+      items: { include: { product: true, variants: true } },
       customer: { select: { id: true, name: true, email: true, phone: true } },
       company: true,
       activities: { include: { user: { select: { id: true, name: true, role: true } } } },
@@ -436,14 +463,14 @@ export const calculateQuotePricing = async (req: AuthRequest, res: Response) => 
     if (!product) continue;
 
     const itemQty = Number(item.quantity) || 1;
-    const pricing = calculateServerPricing(product.basePrice, itemQty, item.printType || 'Front Only', product.gstRate);
+    const pricing = calculateServerPricing(product.basePrice, itemQty, item.printType || 'Not provided', product.gstRate);
 
     subtotal += pricing.subtotal;
     totalGst += pricing.gstTotal;
 
     calculatedItems.push({
       productId: product.id,
-      printType: item.printType || 'Front Only',
+      printType: item.printType || 'Not provided',
       quantity: itemQty,
       unitPrice: pricing.unitPrice,
       totalPrice: pricing.subtotal,
@@ -520,7 +547,7 @@ export const updateQuoteStatus = async (req: AuthRequest, res: Response) => {
     include: {
       customer: { select: { id: true, name: true, email: true, phone: true } },
       company: true,
-      items: { include: { product: true } },
+      items: { include: { product: true, variants: true } },
       activities: { include: { user: { select: { id: true, name: true, role: true } } } },
     },
   });
@@ -530,11 +557,11 @@ export const updateQuoteStatus = async (req: AuthRequest, res: Response) => {
 
 export const editQuote = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  const { quantity, color, size, printType, notes } = req.body;
+  const { quantity, color, size, printType, notes, isGstApplied, gstRate: reqGstRate, variants } = req.body;
 
   const quote = await prisma.quote.findUnique({
     where: { id },
-    include: { items: { include: { product: true } } },
+    include: { items: { include: { product: true, variants: true } } },
   });
 
   if (!quote) return res.status(404).json({ success: false, message: 'Quote not found' });
@@ -545,15 +572,30 @@ export const editQuote = async (req: AuthRequest, res: Response) => {
 
   const firstItem = quote.items[0];
   const newQty = quantity ? Number(quantity) : firstItem?.quantity || 50;
-  const newColor = color || firstItem?.color || 'Black';
-  const newSize = size || firstItem?.size || 'L';
-  const newPrintType = printType || firstItem?.printType || 'Front Only';
+  const newColor = color !== undefined ? color : (firstItem?.color || '');
+  const newSize = size !== undefined ? size : (firstItem?.size || '');
+  const newPrintType = printType || firstItem?.printType || 'Not provided';
 
   const product = firstItem?.product || (await prisma.product.findFirst());
   const basePrice = product?.basePrice || 249;
-  const gstRate = product?.gstRate || 5.0;
+  
+  // Resolve GST logic
+  const finalIsGstApplied = isGstApplied !== undefined ? Boolean(isGstApplied) : quote.isGstApplied;
+  let finalGstRate = reqGstRate !== undefined ? Number(reqGstRate) : quote.gstRate;
+  if (finalGstRate === null || finalGstRate === undefined) {
+    finalGstRate = product?.gstRate || 5.0;
+  }
 
-  const pricing = calculateServerPricing(basePrice, newQty, newPrintType, gstRate);
+  const pricing = calculateServerPricing(basePrice, newQty, newPrintType, finalGstRate, finalIsGstApplied);
+
+  const finalVariants = Array.isArray(variants) ? variants : [];
+
+  if (finalVariants.length > 0) {
+    const variantsTotal = finalVariants.reduce((sum: number, v: any) => sum + (Number(v.quantity) || 0), 0);
+    if (variantsTotal !== newQty) {
+      return res.status(400).json({ success: false, message: `Variants total (${variantsTotal}) does not match item quantity (${newQty}).` });
+    }
+  }
 
   if (firstItem) {
     await prisma.quoteItem.update({
@@ -565,6 +607,16 @@ export const editQuote = async (req: AuthRequest, res: Response) => {
         printType: newPrintType,
         unitPrice: pricing.unitPrice,
         totalPrice: pricing.subtotal,
+        variants: {
+          deleteMany: {},
+          ...(finalVariants.length > 0 ? {
+            create: finalVariants.map((v: any) => ({
+              color: v.color || null,
+              size: v.size || null,
+              quantity: Number(v.quantity) || 0
+            }))
+          } : {})
+        }
       },
     });
   }
@@ -573,6 +625,8 @@ export const editQuote = async (req: AuthRequest, res: Response) => {
     where: { id },
     data: {
       subtotal: pricing.subtotal,
+      isGstApplied: finalIsGstApplied,
+      gstRate: finalGstRate,
       gstTotal: pricing.gstTotal,
       discount: 0,
       totalAmount: pricing.totalAmount,
@@ -582,14 +636,14 @@ export const editQuote = async (req: AuthRequest, res: Response) => {
         create: {
           userId: req.user?.id || null,
           type: 'PRICE_UPDATE',
-          message: `Quote specs updated. Quantity: ${newQty}, Print: ${newPrintType}. Server recalculated total: ₹${pricing.totalAmount.toLocaleString('en-IN')} (Any previous coupon was automatically revoked)`,
+          message: `Quote specs updated. Quantity: ${newQty}, Print: ${newPrintType}, GST: ${finalIsGstApplied ? finalGstRate+'%' : 'OFF'}. Server recalculated total: ₹${pricing.totalAmount.toLocaleString('en-IN')}`,
         },
       },
     },
     include: {
       customer: { select: { id: true, name: true, email: true, phone: true } },
       company: true,
-      items: { include: { product: true } },
+      items: { include: { product: true, variants: true } },
       activities: { include: { user: { select: { id: true, name: true, role: true } } } },
     },
   });
@@ -631,7 +685,7 @@ export const triggerWhatsAppAction = async (req: AuthRequest, res: Response) => 
 
   const quote = await prisma.quote.findUnique({
     where: { id },
-    include: { customer: true, items: { include: { product: true } } },
+    include: { customer: true, items: { include: { product: true, variants: true } } },
   });
 
   if (!quote) return res.status(404).json({ success: false, message: 'Quote not found' });
@@ -652,8 +706,23 @@ export const triggerWhatsAppAction = async (req: AuthRequest, res: Response) => 
     quoteNumber: quote.quoteNumber,
     productName,
     quantity,
+    printType: firstItem?.printType,
+    color: firstItem?.color,
+    size: firstItem?.size,
+    subtotal: quote.subtotal,
+    discount: quote.discount,
+    isGstApplied: quote.isGstApplied,
+    gstRate: quote.gstRate ?? undefined,
+    gstTotal: quote.gstTotal,
     totalAmount: quote.totalAmount,
   });
+
+  if (quote.status === 'DRAFT') {
+    await prisma.quote.update({
+      where: { id: quote.id },
+      data: { status: 'SENT' }
+    });
+  }
 
   const whatsappUrl = buildWhatsAppClickUrl(customerPhone, messageText);
 
@@ -680,7 +749,7 @@ export const downloadQuotePDF = async (req: AuthRequest, res: Response) => {
 
   const quote = await prisma.quote.findUnique({
     where: { id },
-    include: { customer: true, company: true, items: { include: { product: true } } },
+    include: { customer: true, company: true, items: { include: { product: true, variants: true } } },
   });
 
   if (!quote) return res.status(404).json({ success: false, message: 'Quote not found' });
@@ -716,7 +785,7 @@ export const emailQuote = async (req: AuthRequest, res: Response) => {
 
   const quote = await prisma.quote.findUnique({
     where: { id },
-    include: { customer: true, company: true, items: { include: { product: true } } },
+    include: { customer: true, company: true, items: { include: { product: true, variants: true } } },
   });
 
   if (!quote) return res.status(404).json({ success: false, message: 'Quote not found' });
@@ -773,7 +842,7 @@ export const applyCoupon = async (req: AuthRequest, res: Response) => {
 
     const quote = await prisma.quote.findUnique({
       where: { id },
-      include: { items: { include: { product: true } } }
+      include: { items: { include: { product: true, variants: true } } }
     });
 
     if (!quote) return res.status(404).json({ success: false, message: 'Quote not found' });
@@ -853,7 +922,7 @@ export const applyCoupon = async (req: AuthRequest, res: Response) => {
              }
           }
        },
-       include: { customer: true, company: true, items: { include: { product: true } }, activities: { include: { user: true }, orderBy: { createdAt: 'asc' } } }
+       include: { customer: true, company: true, items: { include: { product: true, variants: true } }, activities: { include: { user: true }, orderBy: { createdAt: 'asc' } } }
     });
 
     return res.json({ success: true, message: 'Coupon applied successfully', quote: updatedQuote });
@@ -871,7 +940,7 @@ export const removeCoupon = async (req: AuthRequest, res: Response) => {
   
       const quote = await prisma.quote.findUnique({
         where: { id },
-        include: { items: { include: { product: true } } }
+        include: { items: { include: { product: true, variants: true } } }
       });
   
       if (!quote) return res.status(404).json({ success: false, message: 'Quote not found' });
@@ -910,7 +979,7 @@ export const removeCoupon = async (req: AuthRequest, res: Response) => {
                }
             }
          },
-         include: { customer: true, company: true, items: { include: { product: true } }, activities: { include: { user: true }, orderBy: { createdAt: 'asc' } } }
+         include: { customer: true, company: true, items: { include: { product: true, variants: true } }, activities: { include: { user: true }, orderBy: { createdAt: 'asc' } } }
       });
   
       return res.json({ success: true, message: 'Coupon removed successfully', quote: updatedQuote });

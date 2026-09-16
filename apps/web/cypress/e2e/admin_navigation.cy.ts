@@ -9,7 +9,6 @@ describe('ZOBBRA Admin Navigation E2E', () => {
     const modules = [
       { name: 'Dashboard', url: '/dashboard' },
       { name: 'Inquiry', url: '/dashboard/inquiries' },
-      { name: 'Quote', url: '/dashboard/quotes' },
       { name: 'Order', url: '/dashboard/orders' },
       { name: 'Customers', url: '/dashboard/customers' },
       { name: 'Products', url: '/dashboard/products' },

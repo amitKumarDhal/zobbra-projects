@@ -222,7 +222,7 @@ export default function CreateQuotePage() {
           <div className="flex items-center text-sm text-[#6B7280] font-medium mb-1">
             <Link href="/dashboard" className="hover:text-[#3B6FEB] transition-colors">Dashboard</Link>
             <span className="mx-2">/</span>
-            <Link href="/dashboard/quotes" className="hover:text-[#3B6FEB] transition-colors">Quotes</Link>
+            <Link href="/dashboard/inquiries" className="hover:text-[#3B6FEB] transition-colors">Inquiries</Link>
             <span className="mx-2">/</span>
             <span className="text-[#111111] font-semibold">Create New Quote</span>
           </div>
@@ -230,11 +230,11 @@ export default function CreateQuotePage() {
           <p className="text-[#6B7280] mt-1 text-[15px] font-medium">Create and manage a quotation for your customer.</p>
         </div>
         <Link 
-          href="/dashboard/quotes"
+          href="/dashboard/inquiries"
           className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#E5E7EB] text-[#111111] font-semibold text-sm rounded-xl hover:bg-[#F9FAFB] transition-colors self-start md:self-auto shadow-sm"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Quotes
+          Back to Inquiries
         </Link>
       </div>
 
