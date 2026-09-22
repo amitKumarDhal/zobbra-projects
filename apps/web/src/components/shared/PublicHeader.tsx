@@ -53,8 +53,8 @@ export function PublicHeader() {
             {/* Center: Email */}
             <div className="flex items-center justify-center gap-1.5 text-gray-300">
               <Mail className="w-3 h-3 text-gray-400" />
-              <a href="mailto:hello@zobbra.com" className="hover:text-white transition-colors min-h-0">
-                hello@zobbra.com
+              <a href="mailto:sales@zobbra.com" className="hover:text-white transition-colors min-h-0">
+                sales@zobbra.com
               </a>
             </div>
 
@@ -62,8 +62,8 @@ export function PublicHeader() {
             <div className="flex-1 flex items-center justify-end gap-6">
               <div className="flex items-center gap-1.5 text-gray-300">
                 <Phone className="w-3 h-3 text-gray-400" />
-                <a href="tel:+919124449666" className="hover:text-white transition-colors min-h-0">
-                  +91 91244 49666
+                <a href="tel:+919124449665" className="hover:text-white transition-colors min-h-0">
+                  +91 91244 49665
                 </a>
               </div>
 
@@ -184,10 +184,10 @@ export function PublicHeader() {
           <div className="md:hidden fixed top-[60px] sm:top-[66px] left-0 right-0 max-h-[calc(100vh-66px)] overflow-y-auto bg-white border-b border-[#E5E5E5] px-4 pb-6 pt-3 space-y-1 z-50 shadow-xl animate-in slide-in-from-top-2 duration-200">
             <div className="flex flex-wrap gap-3 text-xs text-[#666666] pb-3 border-b border-[#E5E5E5] mb-3">
               <span className="flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-gray-500" /> +91 91244 49666
+                <Phone className="w-3.5 h-3.5 text-gray-500" /> +91 91244 49665
               </span>
               <span className="flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-gray-500" /> hello@zobbra.com
+                <Mail className="w-3.5 h-3.5 text-gray-500" /> sales@zobbra.com
               </span>
             </div>
             {navLinks.map((link) => {

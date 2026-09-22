@@ -159,11 +159,11 @@ const sections = [
         <div className="flex flex-wrap gap-5 text-xs text-[#6B7280]">
           <span className="flex items-center gap-1.5">
             <Mail className="w-3.5 h-3.5 text-[#3B6FEB]" />
-            hello@zobbra.com
+            sales@zobbra.com
           </span>
           <span className="flex items-center gap-1.5">
             <Phone className="w-3.5 h-3.5 text-[#3B6FEB]" />
-            +91 91244 49666
+            +91 91244 49665
           </span>
           <span className="flex items-center gap-1.5">
             <MapPin className="w-3.5 h-3.5 text-[#3B6FEB]" />

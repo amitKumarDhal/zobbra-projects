@@ -1,15 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Lock, Mail, AlertCircle, Eye, EyeOff, ShieldCheck, User, Building, Phone, MapPin, Map } from 'lucide-react';
+import { ArrowLeft, Lock, Mail, AlertCircle, Eye, EyeOff, ShieldCheck, User, Building, Phone, MapPin, Map, Sparkles } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 import { ZobbraLogo } from '@/components/shared/ZobbraLogo';
+import { sanitizeReturnUrl } from '@/lib/customizerDraft';
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = sanitizeReturnUrl(searchParams.get('returnUrl'));
+  const isFromCustomizer = returnUrl && returnUrl.includes('/customize');
   const [formData, setFormData] = useState({
     name: '',
     companyName: '',
@@ -78,7 +82,11 @@ export default function RegisterPage() {
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('zobra_user', JSON.stringify(data.user));
 
-        router.push('/customer');
+        if (returnUrl) {
+          router.push(returnUrl);
+        } else {
+          router.push('/customer');
+        }
       } else {
         // Provide status-based error messages
         if (res.status === 400) {
@@ -161,7 +169,7 @@ export default function RegisterPage() {
         className="flex flex-col p-4 sm:p-8 lg:p-16 bg-white overflow-y-auto"
       >
         <div className="flex justify-between items-center mb-6 sm:mb-12">
-          <Link href="/login" className="inline-flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#050505] font-bold transition-colors min-h-[44px]">
+          <Link href={returnUrl ? `/login?returnUrl=${encodeURIComponent(returnUrl)}` : '/login'} className="inline-flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#050505] font-bold transition-colors min-h-[44px]">
             <ArrowLeft className="w-4 h-4" /> Back to Login
           </Link>
           <div className="lg:hidden">
@@ -174,6 +182,13 @@ export default function RegisterPage() {
             <h2 className="text-3xl font-black tracking-tight text-[#050505] font-heading">Create your Zobra account</h2>
             <p className="text-[#6B7280] font-medium">Set up your company profile and start requesting quotes.</p>
           </div>
+
+          {isFromCustomizer && (
+            <div className="bg-[#3B6FEB]/10 border border-[#3B6FEB]/30 text-[#1E40AF] p-4 rounded-xl text-sm font-medium flex items-center gap-3">
+              <Sparkles className="w-5 h-5 shrink-0 text-[#3B6FEB]" />
+              <span>Your custom design is waiting! Create your account to submit your quote request.</span>
+            </div>
+          )}
 
           {error && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-sm font-medium flex items-center gap-3">
@@ -400,5 +415,13 @@ export default function RegisterPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-sm font-bold text-gray-500">Loading...</div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }

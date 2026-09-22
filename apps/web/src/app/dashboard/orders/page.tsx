@@ -37,6 +37,10 @@ interface Order {
   orderNumber: string;
   quoteId?: string;
   quote?: { quoteNumber: string; inquiry?: { customerName?: string; artworkUrl?: string; phone?: string; email?: string; productInterest?: string } };
+  artworkUrl?: string;
+  previewFrontUrl?: string;
+  previewBackUrl?: string;
+  canvasStateJson?: string;
   subtotal: number;
   gstTotal: number;
   totalAmount: number;
@@ -452,10 +456,10 @@ export default function OrdersPage() {
                         {/* Product Summary */}
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2">
-                            {o.quote?.inquiry?.artworkUrl ? (
+                            {o.previewFrontUrl || o.artworkUrl || o.quote?.inquiry?.artworkUrl ? (
                               <img
-                                src={o.quote.inquiry.artworkUrl}
-                                alt="Customer artwork"
+                                src={o.previewFrontUrl || o.artworkUrl || o.quote?.inquiry?.artworkUrl}
+                                alt="Order artwork"
                                 className="w-8 h-8 rounded border border-[#E5E7EB] object-cover shrink-0 bg-[#F3F4F6]"
                                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                               />
@@ -642,10 +646,10 @@ export default function OrdersPage() {
                                           o.items.map((item: any) => (
                                             <div key={item.id} className="flex flex-col gap-2 border-b border-[#F3F4F6] pb-2 last:border-0">
                                               <div className="flex gap-2.5 items-center">
-                                                {o.quote?.inquiry?.artworkUrl ? (
+                                                {o.previewFrontUrl || o.artworkUrl || o.quote?.inquiry?.artworkUrl ? (
                                                   <img
-                                                    src={o.quote.inquiry.artworkUrl}
-                                                    alt="Customer artwork"
+                                                    src={o.previewFrontUrl || o.artworkUrl || o.quote?.inquiry?.artworkUrl}
+                                                    alt="Order artwork"
                                                     className="w-10 h-10 rounded-lg object-cover shrink-0 border border-[#E5E7EB] bg-[#F3F4F6]"
                                                     onError={(e) => {
                                                       const parent = (e.target as HTMLImageElement).parentElement;

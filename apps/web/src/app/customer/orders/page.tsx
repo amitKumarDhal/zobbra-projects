@@ -17,6 +17,9 @@ interface CustomerOrder {
   subtotal: number;
   gstTotal: number;
   totalAmount: number;
+  artworkUrl?: string;
+  previewFrontUrl?: string;
+  previewBackUrl?: string;
   company?: { name: string };
   customer?: { name: string };
 }
@@ -108,7 +111,14 @@ export default function CustomerOrdersPage() {
                 {orders.map((ord) => (
                   <tr key={ord.id} className="hover:bg-[#F9FAFB] transition-colors" data-cy={`order-row-${ord.orderNumber}`}>
                     <td className="p-4 font-mono font-bold text-[#111111]" data-cy="order-number-cell">
-                      {ord.orderNumber}
+                      <div className="flex items-center gap-2.5">
+                        {(ord.previewFrontUrl || ord.artworkUrl) && (
+                          <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center shadow-inner">
+                            <img src={ord.previewFrontUrl || ord.artworkUrl} alt="Design Preview" className="w-full h-full object-contain" />
+                          </div>
+                        )}
+                        <span>{ord.orderNumber}</span>
+                      </div>
                     </td>
                     <td className="p-4 text-[#6B7280]">{new Date(ord.createdAt).toLocaleDateString('en-IN')}</td>
                     <td className="p-4">

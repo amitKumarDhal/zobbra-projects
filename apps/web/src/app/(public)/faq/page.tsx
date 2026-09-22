@@ -125,7 +125,7 @@ const faqs = [
     icon: Headphones,
     question: 'How can I contact ZOBBRA support?',
     answer:
-      'Reach us via WhatsApp at +91 91244 49666, email at hello@zobbra.com, or use the Contact page. Our support team is available Monday to Saturday, 10:00 AM – 7:00 PM IST.',
+      'Reach us via WhatsApp at +91 91244 49665, email at sales@zobbra.com, or use the Contact page. Our support team is available Monday to Saturday, 10:00 AM – 7:00 PM IST.',
   },
 ];
 

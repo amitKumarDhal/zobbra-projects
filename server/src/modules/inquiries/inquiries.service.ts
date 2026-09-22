@@ -322,8 +322,7 @@ export class InquiryService {
       }
 
       if (!customerId) {
-        const defaultCustomer = await tx.user.findFirst({ where: { role: 'CUSTOMER' } });
-        customerId = defaultCustomer ? defaultCustomer.id : userId;
+        throw new Error('Cannot convert inquiry to quote: Customer account could not be resolved.');
       }
 
       // 1. Create the Quote
@@ -338,6 +337,7 @@ export class InquiryService {
           totalAmount: 0,
           validUntil,
           notes: `Converted from Inquiry ${inquiry.inquiryNumber}`,
+          artworkUrl: inquiry.artworkUrl || null,
         }
       });
 
@@ -362,17 +362,12 @@ export class InquiryService {
         }
 
         if (!product || !productId) {
-          const fallbackProduct = await tx.product.findFirst({
-            orderBy: { createdAt: 'asc' }
-          });
-          if (!fallbackProduct) throw new Error("No products available in the system to create a Quote.");
-          product = fallbackProduct;
-          productId = fallbackProduct.id;
+          throw new Error(`Cannot convert inquiry to quote: Product '${inquiry.productInterest || 'Not specified'}' could not be resolved from catalog. Please configure or link a product.`);
         }
       }
 
       const qty = inquiry.quantity || 50;
-      const basePrice = product.basePrice || 249;
+      const basePrice = product.basePrice;
       const printType = inquiry.printPosition 
         ? `${inquiry.printingType || 'Standard Print'} (${inquiry.printPosition})`
         : (inquiry.printingType || 'Not provided');

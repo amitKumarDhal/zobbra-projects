@@ -2,7 +2,11 @@ import request from 'supertest';
 import app from '../src/app.js';
 import jwt from 'jsonwebtoken';
 import { config } from '../src/config/index.js';
+import { PrismaClient } from '@prisma/client';
 import { normalizePhoneForWhatsApp, buildWhatsAppClickUrl, generateWhatsAppMessage } from '../src/utils/whatsappTemplates.js';
+
+const prisma = new PrismaClient();
+jest.setTimeout(30000);
 
 describe('Sales Conversation & WhatsApp Click-to-Chat Integration', () => {
   const adminToken = jwt.sign(
@@ -17,11 +21,65 @@ describe('Sales Conversation & WhatsApp Click-to-Chat Integration', () => {
     { expiresIn: '1h' }
   );
 
+  beforeAll(async () => {
+    await prisma.company.upsert({
+      where: { id: 'comp-101' },
+      update: {},
+      create: {
+        id: 'comp-101',
+        name: 'Acme Corp',
+        gstin: '21TESTA1234A1Z5',
+        address: 'Plot 101, Test Road',
+        city: 'Bhubaneswar',
+        state: 'Odisha',
+        pincode: '751024',
+      },
+    });
+
+    await prisma.user.upsert({
+      where: { id: 'cust-101' },
+      update: { companyId: 'comp-101', phone: '+919876543210' },
+      create: {
+        id: 'cust-101',
+        email: 'customer@acme.com',
+        passwordHash: '$2a$10$abcdefghijklmnopqrstuvwxyz123456',
+        name: 'Customer A',
+        role: 'CUSTOMER',
+        companyId: 'comp-101',
+        phone: '+919876543210',
+      },
+    });
+
+    await prisma.user.upsert({
+      where: { id: 'admin-101' },
+      update: {},
+      create: {
+        id: 'admin-101',
+        email: 'admin@zobbra.com',
+        passwordHash: '$2a$10$abcdefghijklmnopqrstuvwxyz123456',
+        name: 'Admin Test',
+        role: 'ADMIN',
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
   describe('Phone Normalization & WhatsApp Link Generator', () => {
     it('normalizes 10-digit Indian phone number with 91 prefix', () => {
       expect(normalizePhoneForWhatsApp('9876543210')).toBe('919876543210');
       expect(normalizePhoneForWhatsApp('+91 98765 43210')).toBe('919876543210');
       expect(normalizePhoneForWhatsApp('09876543210')).toBe('919876543210');
+    });
+
+    it('returns empty string when phone is null, empty, or invalid', () => {
+      expect(normalizePhoneForWhatsApp(null)).toBe('');
+      expect(normalizePhoneForWhatsApp(undefined)).toBe('');
+      expect(normalizePhoneForWhatsApp('')).toBe('');
+      expect(normalizePhoneForWhatsApp('abc')).toBe('');
+      expect(buildWhatsAppClickUrl('', 'hello')).toBe('');
     });
 
     it('generates valid WhatsApp click-to-chat URL with encoded text', () => {
@@ -44,7 +102,7 @@ describe('Sales Conversation & WhatsApp Click-to-Chat Integration', () => {
       const createRes = await request(app)
         .post('/api/v1/quotes')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ quantity: 50 });
+        .send({ customerId: 'cust-101', quantity: 50 });
 
       const quoteId = createRes.body.quote.id;
 
@@ -65,7 +123,7 @@ describe('Sales Conversation & WhatsApp Click-to-Chat Integration', () => {
       const createRes = await request(app)
         .post('/api/v1/quotes')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ quantity: 50 });
+        .send({ customerId: 'cust-101', quantity: 50 });
 
       const quoteId = createRes.body.quote.id;
 
@@ -83,7 +141,7 @@ describe('Sales Conversation & WhatsApp Click-to-Chat Integration', () => {
       const createRes = await request(app)
         .post('/api/v1/quotes')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ quantity: 50 });
+        .send({ customerId: 'cust-101', quantity: 50 });
 
       const quoteId = createRes.body.quote.id;
 
@@ -102,7 +160,7 @@ describe('Sales Conversation & WhatsApp Click-to-Chat Integration', () => {
       const createRes = await request(app)
         .post('/api/v1/quotes')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ quantity: 50 });
+        .send({ customerId: 'cust-101', quantity: 50 });
 
       const quoteId = createRes.body.quote.id;
 

@@ -1,15 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Lock, Mail, AlertCircle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Lock, Mail, AlertCircle, Eye, EyeOff, ShieldCheck, Sparkles } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 import { ZobbraLogo } from '@/components/shared/ZobbraLogo';
+import { sanitizeReturnUrl } from '@/lib/customizerDraft';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = sanitizeReturnUrl(searchParams.get('returnUrl'));
+  const isFromCustomizer = returnUrl && returnUrl.includes('/customize');
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -42,7 +47,9 @@ export default function LoginPage() {
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('zobra_user', JSON.stringify(data.user));
 
-        if (data.user?.role === 'CUSTOMER') {
+        if (returnUrl) {
+          router.push(returnUrl);
+        } else if (data.user?.role === 'CUSTOMER') {
           router.push('/customer');
         } else if (data.user?.role === 'ADMIN') {
           router.push('/dashboard/orders');
@@ -183,6 +190,13 @@ export default function LoginPage() {
             </div>
           )}
 
+          {isFromCustomizer && (
+            <div className="bg-[#3B6FEB]/10 border border-[#3B6FEB]/30 text-[#1E40AF] p-4 rounded-xl text-sm font-medium flex items-center gap-3">
+              <Sparkles className="w-5 h-5 shrink-0 text-[#3B6FEB]" />
+              <span>You have a customized product waiting! Sign in to continue and request your quote.</span>
+            </div>
+          )}
+
           {error && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-sm font-medium flex items-center gap-3">
               <AlertCircle className="w-5 h-5 shrink-0" />
@@ -255,7 +269,7 @@ export default function LoginPage() {
             </button>
             
             <Link 
-              href="/register" 
+              href={returnUrl ? `/register?returnUrl=${encodeURIComponent(returnUrl)}` : '/register'} 
               className="flex items-center justify-center w-full py-3.5 mt-3 bg-white border-2 border-[#050505] text-[#050505] hover:bg-[#050505] hover:text-white rounded-xl text-[15px] font-bold transition-all active:scale-[0.98] tracking-wide shadow-sm"
             >
               Create an account
@@ -268,5 +282,13 @@ export default function LoginPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-sm font-bold text-gray-500">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

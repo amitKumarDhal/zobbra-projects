@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Plus, FileText, CheckCircle2, Tags, Package, UploadCloud, X, Edit2, Copy, Trash2, IndianRupee, Image as ImageIcon } from 'lucide-react';
+import { Search, Filter, Download, Plus, FileText, CheckCircle2, Tags, Package, UploadCloud, X, Edit2, Copy, Trash2, IndianRupee, Image as ImageIcon, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -169,9 +169,17 @@ export default function ProductsPage() {
             Dashboard <span className="text-[#D1D5DB]">&gt;</span> Products
           </div>
         </div>
-        <button onClick={openAdd} className="bg-[#3B6FEB] text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2 min-h-[44px]">
-          <Plus className="w-4 h-4"/> Add New Product
-        </button>
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/dashboard/products/new"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2.5 border border-[#E5E7EB] bg-white hover:bg-gray-50 text-[#374151] rounded-lg text-sm font-bold transition-colors"
+          >
+            Full Page Editor
+          </Link>
+          <button onClick={openAdd} className="bg-[#3B6FEB] text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-[#2563EB] transition-colors flex items-center gap-2 min-h-[44px]">
+            <Plus className="w-4 h-4"/> Add New Product
+          </button>
+        </div>
       </div>
 
       {/* KPI CARDS */}
@@ -347,6 +355,40 @@ export default function ProductsPage() {
 }
 
 
+const CAP_DESCRIPTION_TEMPLATE = `Premium 6-panel structured baseball cap crafted from 100% heavy brushed cotton twill.
+
+### Key Features & Specifications:
+- **Fabric**: 100% Heavy Brushed Compact Cotton Twill for enhanced durability and superior crown shape retention.
+- **Structure**: 6-Panel structured design with fused hard buckram interior support preventing collapse.
+- **Visor**: Pre-curved visor with 6 rows of contrast/tonal edge stitching.
+- **Ventilation**: 6 sewn embroidered eyelets (one per panel) ensuring breathability in all seasons.
+- **Sweatband**: Cotton twill interior moisture-wicking sweatband for all-day comfort.
+- **Closure**: Adjustable brass metal slide buckle with hidden grommet tuck-in (Free Size / Fits 54cm–60cm circumference).
+- **Branding Methods**: Engineered specifically for 3D Puff Embroidery, Flat Embroidery, Woven Badges, and HD DTF Transfer.
+- **MOQ**: 20 Pieces. Ideal for corporate merchandise, trade shows, delivery teams, and promotional events.`;
+
+const BAG_DESCRIPTION_TEMPLATE = `Executive 28L corporate laptop backpack engineered with high-density water-resistant ballistic polyester, dual reinforced compartments, and a dedicated 15.6" padded laptop sleeve.
+
+### Key Features & Specifications:
+- **Material**: 900D Heavy-Duty Water-Repellent Ballistic Polyester with scratch-resistant coating.
+- **Laptop Protection**: Dedicated shock-absorbing padded sleeve accommodates up to 15.6-inch laptops and tablets.
+- **Capacity & Compartments**: 28-Litre capacity featuring 2 large zippered main compartments, 1 quick-access front zippered organizer, and 1 side elastic mesh water bottle holder.
+- **Ergonomics**: Contoured multi-panel airflow back padding with breathable mesh and adjustable padded shoulder straps for maximum lumbar support.
+- **Hardware & Finish**: Heavy-duty dual metal zippers with corded pullers, reinforced top padded grab handle, and subtle cyan-blue contrast piping.
+- **Branding Methods**: Tailored for High-Density Embroidery, Rubberized 3D Badges, Silk Screen Printing, and HD DTF Transfer on the front corporate branding zone (12cm × 8cm).
+- **MOQ**: 20 Pieces. Ideal for new hire welcome kits, corporate gifting, tech conferences, and executive teams.`;
+
+const MUG_DESCRIPTION_TEMPLATE = `Premium 330ml (11oz) matte-finish ceramic coffee mug engineered for corporate gifting, welcome kits, and daily office use.
+
+### Key Features & Specifications:
+- **Material**: Premium Grade-A Ceramic Stoneware with chip-resistant rim and durable glaze.
+- **Capacity**: 330 ml / 11 oz. Ergonomic C-shaped comfort handle.
+- **Finish**: Modern ultra-smooth matte exterior with food-grade non-porous interior.
+- **Safety Standards**: 100% Lead-Free, Cadmium-Free, Microwave Safe & Dishwasher Safe.
+- **Branding Methods**: High-precision Screen Printing, UV DTF Wrap, Sublimation Printing, and Metallic Gold/Silver Foil stamping on dual-sided branding areas (7cm × 7cm per side or full wrap 20cm × 8cm).
+- **Packaging**: Individually packed in protective thermocol bubble-wrap and corrugated Kraft gift box.
+- **MOQ**: 25 Pieces. Ideal for employee onboarding kits, client appreciation, executive desk accessories, and corporate events.`;
+
 function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mode: 'ADD'|'EDIT', productId: string|null, categories: any[], onClose: () => void, onRefresh: () => void }) {
   const [activeTab, setActiveTab] = useState<'Basic Info' | 'Variants' | 'Pricing' | 'Design Studio'>('Basic Info');
   const [saving, setSaving] = useState(false);
@@ -357,23 +399,141 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
   const [variants, setVariants] = useState<any[]>([]);
   const [pricing, setPricing] = useState<any[]>([]);
 
+  const selectedCat = categories.find(c => c.id === basic.categoryId);
+  const isCapCategory = selectedCat?.slug === 'caps' || selectedCat?.name?.toLowerCase().includes('cap');
+  const isBagCategory = selectedCat?.slug === 'bags' || selectedCat?.name?.toLowerCase().includes('bag');
+  const isMugCategory = selectedCat?.slug === 'drinkware' || selectedCat?.name?.toLowerCase().includes('mug') || selectedCat?.name?.toLowerCase().includes('cup') || selectedCat?.name?.toLowerCase().includes('bottle');
+
+  const applyTemplate = (type: 'CAP' | 'POLO' | 'BAG' | 'MUG' | 'CLEAR') => {
+    if (type === 'CLEAR') {
+      setBasic({ name: '', sku: '', categoryId: '', description: '', basePrice: 0, isActive: true, images: [] });
+      setVariants([]);
+      setPricing([]);
+      return;
+    }
+
+    if (type === 'MUG') {
+      const mugCat = categories.find(c => c.slug === 'drinkware' || c.name?.toLowerCase().includes('mug') || c.name?.toLowerCase().includes('bottle') || c.name?.toLowerCase().includes('drink')) || categories[0];
+      setBasic({
+        name: 'Classic Corporate Ceramic Coffee Mug',
+        sku: 'classic-corporate-ceramic-mug',
+        categoryId: mugCat?.id || '',
+        basePrice: 149,
+        isActive: true,
+        description: MUG_DESCRIPTION_TEMPLATE,
+        images: [
+          'https://res.cloudinary.com/e3sasmyr/image/upload/v1790086438/products/corporate-ceramic-coffee-mug-black.jpg',
+          '/images/products/corporate-ceramic-mug.jpg'
+        ]
+      });
+      setVariants([
+        { color: 'Matte Black', size: '330ml (Standard)', sku: 'MUG-CER-BLK', stock: 1000 },
+        { color: 'Classic White', size: '330ml (Standard)', sku: 'MUG-CER-WHT', stock: 800 },
+        { color: 'Navy Blue', size: '330ml (Standard)', sku: 'MUG-CER-NVY', stock: 500 },
+      ]);
+      setPricing([
+        { minQuantity: 25, maxQuantity: 49, pricePerUnit: 149, printType: 'Screen Print / UV DTF' },
+        { minQuantity: 50, maxQuantity: 99, pricePerUnit: 129, printType: 'Screen Print / UV DTF' },
+        { minQuantity: 100, maxQuantity: 249, pricePerUnit: 109, printType: 'Screen Print / UV DTF' },
+        { minQuantity: 250, maxQuantity: 499, pricePerUnit: 95, printType: 'Screen Print / UV DTF' },
+        { minQuantity: 500, maxQuantity: 9999, pricePerUnit: 79, printType: 'Screen Print / UV DTF' },
+      ]);
+    } else if (type === 'CAP') {
+      const capCat = categories.find(c => c.slug === 'caps' || c.name?.toLowerCase().includes('cap')) || categories[0];
+      setBasic({
+        name: 'Classic Promotional Structured Cotton Cap',
+        sku: 'classic-promotional-cotton-cap',
+        categoryId: capCat?.id || '',
+        basePrice: 149,
+        isActive: true,
+        description: CAP_DESCRIPTION_TEMPLATE,
+        images: [
+          'https://res.cloudinary.com/e3sasmyr/image/upload/v1790083669/products/classic-cotton-cap-black.jpg',
+          '/images/products/classic-cotton-cap.jpg'
+        ]
+      });
+      setVariants([
+        { color: 'Charcoal Black', size: 'Free Size', sku: 'CAP-BLK-FS', stock: 500 },
+        { color: 'Navy Blue', size: 'Free Size', sku: 'CAP-NVY-FS', stock: 350 },
+        { color: 'Classic White', size: 'Free Size', sku: 'CAP-WHT-FS', stock: 250 },
+        { color: 'Royal Blue', size: 'Free Size', sku: 'CAP-RBL-FS', stock: 200 },
+        { color: 'Crimson Red', size: 'Free Size', sku: 'CAP-RED-FS', stock: 150 },
+      ]);
+      setPricing([
+        { minQuantity: 20, maxQuantity: 49, pricePerUnit: 149, printType: 'Front 3D Embroidery' },
+        { minQuantity: 50, maxQuantity: 99, pricePerUnit: 129, printType: 'Front 3D Embroidery' },
+        { minQuantity: 100, maxQuantity: 249, pricePerUnit: 109, printType: 'Front 3D Embroidery' },
+        { minQuantity: 250, maxQuantity: 499, pricePerUnit: 95, printType: 'Front 3D Embroidery' },
+        { minQuantity: 500, maxQuantity: 9999, pricePerUnit: 85, printType: 'Front 3D Embroidery' },
+      ]);
+    } else if (type === 'POLO') {
+      const poloCat = categories.find(c => c.slug === 't-shirts' || c.name?.toLowerCase().includes('t-shirt')) || categories[0];
+      setBasic({
+        name: 'Classic Corporate Pique Polo T-Shirt',
+        sku: 'classic-corporate-polo-tshirt',
+        categoryId: poloCat?.id || '',
+        basePrice: 299,
+        isActive: true,
+        description: '220-240 GSM heavy-duty 100% Combed Compact Cotton Pique knit fabric with 3-button placket and ribbed cuffs.',
+        images: [
+          'https://res.cloudinary.com/e3sasmyr/image/upload/v1790080446/products/custom-corporate-polo-black.jpg',
+          '/images/products/classic-black-polo.jpg'
+        ]
+      });
+    } else if (type === 'BAG') {
+      const bagCat = categories.find(c => c.slug === 'bags' || c.name?.toLowerCase().includes('bag')) || categories[0];
+      setBasic({
+        name: 'Executive Corporate Laptop Backpack',
+        sku: 'executive-corporate-laptop-backpack',
+        categoryId: bagCat?.id || '',
+        basePrice: 699,
+        isActive: true,
+        description: BAG_DESCRIPTION_TEMPLATE,
+        images: [
+          'https://res.cloudinary.com/e3sasmyr/image/upload/v1790085384/products/executive-corporate-backpack-black.jpg',
+          '/images/products/executive-laptop-backpack.jpg'
+        ]
+      });
+      setVariants([
+        { color: 'Charcoal Black', size: 'Free Size', sku: 'BAG-EXEC-BLK-FS', stock: 500 },
+        { color: 'Navy Blue', size: 'Free Size', sku: 'BAG-EXEC-NVY-FS', stock: 350 },
+        { color: 'Heather Grey', size: 'Free Size', sku: 'BAG-EXEC-GRY-FS', stock: 250 },
+      ]);
+      setPricing([
+        { minQuantity: 20, maxQuantity: 49, pricePerUnit: 699, printType: 'Front Logo Print / Embroidery' },
+        { minQuantity: 50, maxQuantity: 99, pricePerUnit: 649, printType: 'Front Logo Print / Embroidery' },
+        { minQuantity: 100, maxQuantity: 249, pricePerUnit: 599, printType: 'Front Logo Print / Embroidery' },
+        { minQuantity: 250, maxQuantity: 499, pricePerUnit: 549, printType: 'Front Logo Print / Embroidery' },
+        { minQuantity: 500, maxQuantity: 9999, pricePerUnit: 499, printType: 'Front Logo Print / Embroidery' },
+      ]);
+    }
+  };
+
   useEffect(() => {
     if (mode === 'EDIT' && productId) {
-       fetch(`${API_URL}/products?search=${productId}`) // Naive fetch via search, but ideally fetch by slug/id. Let's do a custom fetch.
-         .then(async () => {
-           // We only have getProductBySlug exposed without auth usually, but we need ID.
-           // Actually, /api/v1/products has the whole list. Let's fetch all and find it since we lack getProductById explicitly.
-           const token = localStorage.getItem('token');
-           const res = await fetch(`${API_URL}/products`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r=>r.json());
-           if (res.success) {
-              const p = res.data?.find((x:any) => x.id === productId);
-              if (p) {
-                 setBasic({ name: p.name, sku: p.slug, categoryId: p.categoryId, description: p.description, basePrice: p.basePrice, isActive: p.isActive, images: p.images });
-                 setVariants(p.variants || []);
-                 setPricing(p.bulkPricing || []);
-              }
-           }
-         });
+      fetch(`${API_URL}/products/${productId}`)
+        .then(r => r.json())
+        .then(res => {
+          const p = res.data || res.product;
+          if (p) {
+            setBasic({
+              name: p.name,
+              sku: p.slug,
+              categoryId: p.categoryId,
+              description: p.description,
+              basePrice: p.basePrice,
+              isActive: p.isActive,
+              images: p.images || [],
+            });
+            setVariants(p.variants || []);
+            setPricing(p.bulkPricing || []);
+          }
+        })
+        .catch(err => console.error('Failed to fetch product for edit:', err));
+    } else if (mode === 'ADD') {
+      setBasic({ name: '', sku: '', categoryId: '', description: '', basePrice: 0, isActive: true, images: [] });
+      setVariants([]);
+      setPricing([]);
     }
   }, [mode, productId]);
 
@@ -386,7 +546,9 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
          ...basic,
          slug: basic.sku,
          variants: variants.length > 0 ? variants : undefined,
-         bulkPricing: pricing.length > 0 ? pricing : undefined
+         bulkPricing: pricing.length > 0 ? pricing : undefined,
+         requiresSize: !isCapCategory && !isBagCategory && !isMugCategory,
+         requiresColor: true,
       };
 
       const url = mode === 'ADD' ? `${API_URL}/products` : `${API_URL}/products/${productId}`;
@@ -428,65 +590,159 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
     try {
       setUploadingImage(true);
       const secureUrl = await uploadToCloudinary(file);
-      setBasic(prev => ({ ...prev, images: [...prev.images, secureUrl] }));
+      setBasic(prev => ({
+        ...prev,
+        images: [...prev.images, secureUrl]
+      }));
     } catch (err: any) {
       alert(`Failed to upload image: ${err.message}`);
     } finally {
       setUploadingImage(false);
-      // Reset input
       e.target.value = '';
     }
   };
 
-  const handleImageDelete = async (index: number) => {
-    const imageUrl = basic.images[index];
-    if (confirm('Are you sure you want to delete this image?')) {
-      try {
-        // Attempt to delete from Cloudinary
-        await deleteFromCloudinary(imageUrl);
-      } catch (err) {
-        console.error('Failed to delete image from Cloudinary', err);
-      }
-      // Remove from UI regardless to prevent broken state
-      setBasic(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
-    }
+  const handleImageDelete = (index: number) => {
+    setBasic(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
   };
 
   return (
-    <div className="w-full lg:w-1/3 min-w-0 lg:min-w-[380px] max-w-[420px] bg-white border border-[#E5E7EB] rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 overflow-hidden">
-      {/* Header */}
-      <div className="px-5 pt-5 pb-0 border-b border-[#E5E7EB] bg-[#FDFDFD]">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-heading font-black text-[#111111]">{mode === 'ADD' ? 'Add New Product' : 'Edit Product'}</h2>
-          <button onClick={onClose} className="p-1.5 text-[#9CA3AF] hover:text-[#111111] hover:bg-[#F3F4F6] rounded-lg transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+    <div className="fixed inset-0 bg-black/40 z-50 flex justify-end backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
+      <div className="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col justify-between border-l border-[#E5E7EB] animate-in slide-in-from-right duration-300">
+        
+        {/* Header */}
+        <div className="p-5 border-b border-[#E5E7EB] flex items-center justify-between">
+           <div>
+              <h2 className="text-base font-heading font-black text-[#111111]">{mode === 'ADD' ? 'Add New Product' : 'Edit Product'}</h2>
+              <p className="text-xs text-[#6B7280]">Configure product catalog details and pricing</p>
+           </div>
+           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg text-[#6B7280]"><X className="w-5 h-5"/></button>
         </div>
-        <div className="flex gap-4 border-b border-[#E5E7EB]">
-          {['Basic Info', 'Variants', 'Pricing', 'Design Studio'].map((tab) => (
-             <button 
+
+        {/* Tabs */}
+        <div className="flex border-b border-[#E5E7EB] px-5 gap-6 text-xs font-bold text-[#6B7280]">
+           {(['Basic Info', 'Variants', 'Pricing'] as const).map(tab => (
+              <button 
                 key={tab} 
-                onClick={() => setActiveTab(tab as any)}
-                className={`text-[11px] font-bold uppercase tracking-wider pb-3 border-b-2 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-[#3B6FEB] text-[#3B6FEB]' : 'border-transparent text-[#9CA3AF] hover:text-[#4B5563]'}`}
-             >
-               {tab}
-             </button>
-          ))}
+                onClick={() => setActiveTab(tab)}
+                className={`py-3 border-b-2 -mb-px transition-colors ${activeTab === tab ? 'border-[#3B6FEB] text-[#3B6FEB]' : 'border-transparent hover:text-[#111111]'}`}
+              >
+                 {tab}
+              </button>
+           ))}
         </div>
-      </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-5 hide-scrollbar bg-white">
         
         {activeTab === 'Basic Info' && (
           <div className="space-y-4">
+            {/* Quick Template Selector */}
+            {mode === 'ADD' && (
+              <div className="bg-[#F8F9FC] border border-[#E5E7EB] rounded-xl p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-[#374151] uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#3B6FEB]" /> Quick Product Templates
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-medium">1-Click Setup</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => applyTemplate('MUG')}
+                    className={`px-2 py-2 rounded-lg text-left transition-all border flex flex-col items-center justify-center text-center gap-1 ${
+                      isMugCategory
+                        ? 'bg-blue-50/80 border-[#3B6FEB] text-[#3B6FEB] shadow-xs'
+                        : 'bg-white hover:bg-blue-50/40 border-gray-200 text-[#111111]'
+                    }`}
+                  >
+                    <span className="text-base">☕</span>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold truncate">Cup / Mug</p>
+                      <p className="text-[9px] text-gray-500 truncate">330ml Ceramic</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyTemplate('BAG')}
+                    className={`px-2 py-2 rounded-lg text-left transition-all border flex flex-col items-center justify-center text-center gap-1 ${
+                      isBagCategory
+                        ? 'bg-blue-50/80 border-[#3B6FEB] text-[#3B6FEB] shadow-xs'
+                        : 'bg-white hover:bg-blue-50/40 border-gray-200 text-[#111111]'
+                    }`}
+                  >
+                    <span className="text-base">🎒</span>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold truncate">Backpack</p>
+                      <p className="text-[9px] text-gray-500 truncate">28L Laptop</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyTemplate('CAP')}
+                    className={`px-2 py-2 rounded-lg text-left transition-all border flex flex-col items-center justify-center text-center gap-1 ${
+                      isCapCategory
+                        ? 'bg-blue-50/80 border-[#3B6FEB] text-[#3B6FEB] shadow-xs'
+                        : 'bg-white hover:bg-blue-50/40 border-gray-200 text-[#111111]'
+                    }`}
+                  >
+                    <span className="text-base">🧢</span>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold truncate">Cap</p>
+                      <p className="text-[9px] text-gray-500 truncate">6-Panel</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyTemplate('POLO')}
+                    className="px-2 py-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-left transition-all flex flex-col items-center justify-center text-center gap-1"
+                  >
+                    <span className="text-base">👕</span>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold text-[#111111] truncate">Polo</p>
+                      <p className="text-[9px] text-gray-500 truncate">Pique Knit</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Category Banner if Mug, Bag, or Cap selected */}
+            {isMugCategory && (
+              <div className="p-2.5 bg-blue-50/80 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-center gap-2">
+                <span className="text-base">☕</span>
+                <div>
+                  <span className="font-bold">Cup / Mug Mode:</span> 330ml (11oz) Standard Ceramic Stoneware. Food-grade, microwave-safe, with dual-side / wrap branding area.
+                </div>
+              </div>
+            )}
+            {isBagCategory && (
+              <div className="p-2.5 bg-blue-50/80 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-center gap-2">
+                <span className="text-base">🎒</span>
+                <div>
+                  <span className="font-bold">Bag / Backpack Mode:</span> 28L Standard Size with dedicated 15.6" padded laptop sleeve and front branding zone.
+                </div>
+              </div>
+            )}
+            {isCapCategory && (
+              <div className="p-2.5 bg-blue-50/80 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-center gap-2">
+                <span className="text-base">🧢</span>
+                <div>
+                  <span className="font-bold">Cap / Headwear Mode:</span> Free Size with adjustable strap. Engineered for 3D puff embroidery and front branding.
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-bold text-[#374151] mb-1">Product Name *</label>
-              <input type="text" value={basic.name} onChange={e => setBasic({...basic, name: e.target.value})} placeholder="Enter product name" className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#3B6FEB]" />
+              <input type="text" value={basic.name} onChange={e => setBasic({...basic, name: e.target.value})} placeholder="e.g. Classic Promotional Structured Cotton Cap" className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#3B6FEB]" />
             </div>
             <div>
               <label className="block text-xs font-bold text-[#374151] mb-1">SKU / Slug *</label>
-              <input type="text" value={basic.sku} onChange={e => setBasic({...basic, sku: e.target.value})} placeholder="e.g., PL-TSHIRT-BLK" className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#3B6FEB]" />
+              <input type="text" value={basic.sku} onChange={e => setBasic({...basic, sku: e.target.value})} placeholder="e.g., classic-cotton-cap" className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#3B6FEB]" />
             </div>
             <div>
               <label className="block text-xs font-bold text-[#374151] mb-1">Category *</label>
@@ -500,8 +756,20 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
               <input type="number" value={basic.basePrice} onChange={e => setBasic({...basic, basePrice: parseFloat(e.target.value)})} className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#3B6FEB]" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#374151] mb-1">Description</label>
-              <textarea value={basic.description} onChange={e => setBasic({...basic, description: e.target.value})} placeholder="Enter full description" className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm outline-none focus:border-[#3B6FEB] min-h-[100px]" />
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-[#374151]">Description</label>
+                <button
+                  type="button"
+                  onClick={() => setBasic(prev => ({ 
+                    ...prev, 
+                    description: isMugCategory ? MUG_DESCRIPTION_TEMPLATE : (isBagCategory ? BAG_DESCRIPTION_TEMPLATE : (isCapCategory ? CAP_DESCRIPTION_TEMPLATE : 'Premium quality corporate merchandise.')) 
+                  }))}
+                  className="text-[11px] font-bold text-[#3B6FEB] hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3" /> Insert {isMugCategory ? 'Mug' : (isBagCategory ? 'Bag' : (isCapCategory ? 'Cap' : 'Polo'))} Specs Template
+                </button>
+              </div>
+              <textarea value={basic.description} onChange={e => setBasic({...basic, description: e.target.value})} placeholder="Enter full description or use template above..." className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-xs font-mono outline-none focus:border-[#3B6FEB] min-h-[120px] leading-relaxed" />
             </div>
             
             <div>
@@ -562,9 +830,39 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
                    </div>
                  </div>
               ))}
-              <button onClick={() => setVariants([...variants, { color: '', size: '', sku: '', stock: 0 }])} className="w-full py-2 border-2 border-dashed border-[#E5E7EB] rounded-lg text-xs font-bold text-[#3B6FEB] hover:bg-blue-50 transition-colors">
-                + Add Variant
-              </button>
+              <div className="flex gap-2">
+                <button onClick={() => setVariants([...variants, { color: '', size: isMugCategory ? '330ml (Standard)' : (isCapCategory ? 'Free Size' : ''), sku: '', stock: 0 }])} className="flex-1 py-2 border-2 border-dashed border-[#E5E7EB] rounded-lg text-xs font-bold text-[#3B6FEB] hover:bg-blue-50 transition-colors">
+                  + Add Variant
+                </button>
+                {isMugCategory && (
+                  <button
+                    type="button"
+                    onClick={() => setVariants([
+                      { color: 'Matte Black', size: '330ml (Standard)', sku: 'MUG-CER-BLK', stock: 1000 },
+                      { color: 'Classic White', size: '330ml (Standard)', sku: 'MUG-CER-WHT', stock: 800 },
+                      { color: 'Navy Blue', size: '330ml (Standard)', sku: 'MUG-CER-NVY', stock: 500 },
+                    ])}
+                    className="px-3 py-2 bg-blue-50 border border-blue-200 text-[#3B6FEB] rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
+                  >
+                    + Mug Colors
+                  </button>
+                )}
+                {isCapCategory && (
+                  <button
+                    type="button"
+                    onClick={() => setVariants([
+                      { color: 'Charcoal Black', size: 'Free Size', sku: 'CAP-BLK-FS', stock: 500 },
+                      { color: 'Navy Blue', size: 'Free Size', sku: 'CAP-NVY-FS', stock: 350 },
+                      { color: 'Classic White', size: 'Free Size', sku: 'CAP-WHT-FS', stock: 250 },
+                      { color: 'Royal Blue', size: 'Free Size', sku: 'CAP-RBL-FS', stock: 200 },
+                      { color: 'Crimson Red', size: 'Free Size', sku: 'CAP-RED-FS', stock: 150 },
+                    ])}
+                    className="px-3 py-2 bg-blue-50 border border-blue-200 text-[#3B6FEB] rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
+                  >
+                    + Cap Colors
+                  </button>
+                )}
+              </div>
            </div>
         )}
 
@@ -629,6 +927,7 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
           {saving ? 'Saving...' : 'Save & Next'}
         </button>
       </div>
+    </div>
     </div>
   );
 }

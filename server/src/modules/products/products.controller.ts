@@ -19,8 +19,11 @@ export const getProducts = async (req: Request, res: Response) => {
     where.isActive = true;
   }
 
-  if (category && category !== 'All Categories') {
-    where.category = { slug: String(category) };
+  if (category && category !== 'All Categories' && category !== 'all') {
+    let catSlug = String(category);
+    if (catSlug === 'custom-t-shirts') catSlug = 't-shirts';
+    if (catSlug === 'headwear') catSlug = 'caps';
+    where.category = { slug: catSlug };
   }
 
   if (search) {
@@ -74,6 +77,7 @@ export const getProductBySlug = async (req: Request, res: Response) => {
     where: {
       AND: [
         { slug: { not: { contains: '-deleted-' } } },
+        { isActive: true },
         {
           OR: [
             { slug },
@@ -97,20 +101,37 @@ export const getProductBySlug = async (req: Request, res: Response) => {
 };
 
 export const createProduct = async (req: Request, res: Response) => {
-  const { name, slug, hsnCode, gstRate, description, basePrice, images, categoryId, bulkPricing, variants } = req.body;
+  const { name, slug, hsnCode, gstRate, description, basePrice, images, categoryId, bulkPricing, variants, isActive, requiresSize, requiresColor } = req.body;
+
+  const cleanedVariants = variants && variants.length > 0 ? variants.map((v: any) => ({
+    color: v.color,
+    size: v.size,
+    sku: v.sku,
+    stock: parseInt(v.stock, 10) || 0,
+  })) : undefined;
+
+  const cleanedPricing = bulkPricing && bulkPricing.length > 0 ? bulkPricing.map((p: any) => ({
+    minQuantity: parseInt(p.minQuantity, 10),
+    maxQuantity: parseInt(p.maxQuantity, 10),
+    pricePerUnit: parseFloat(p.pricePerUnit),
+    printType: p.printType || 'Front Only',
+  })) : undefined;
 
   const product = await prisma.product.create({
     data: {
       name,
       slug: slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       hsnCode: hsnCode || '6109',
-      gstRate: gstRate || 5.0,
+      gstRate: gstRate ? parseFloat(gstRate) : 5.0,
       description,
       basePrice: parseFloat(basePrice),
       images: images || [],
       categoryId,
-      bulkPricing: bulkPricing ? { createMany: { data: bulkPricing } } : undefined,
-      variants: variants ? { createMany: { data: variants } } : undefined,
+      isActive: isActive !== undefined ? Boolean(isActive) : true,
+      requiresSize: requiresSize !== undefined ? Boolean(requiresSize) : true,
+      requiresColor: requiresColor !== undefined ? Boolean(requiresColor) : true,
+      bulkPricing: cleanedPricing ? { createMany: { data: cleanedPricing } } : undefined,
+      variants: cleanedVariants ? { createMany: { data: cleanedVariants } } : undefined,
     },
     include: { category: true, bulkPricing: true, variants: true },
   });
@@ -120,7 +141,7 @@ export const createProduct = async (req: Request, res: Response) => {
 
 export const updateProduct = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, slug, hsnCode, gstRate, description, basePrice, images, categoryId, bulkPricing, variants, isActive } = req.body;
+  const { name, slug, hsnCode, gstRate, description, basePrice, images, categoryId, bulkPricing, variants, isActive, requiresSize, requiresColor } = req.body;
 
   // For nested updates: Delete all existing and recreate them
   if (variants || bulkPricing) {
@@ -129,6 +150,20 @@ export const updateProduct = async (req: Request, res: Response) => {
        ...(bulkPricing ? [prisma.bulkPricing.deleteMany({ where: { productId: id } })] : [])
     ]);
   }
+
+  const cleanedVariants = variants && variants.length > 0 ? variants.map((v: any) => ({
+    color: v.color,
+    size: v.size,
+    sku: v.sku,
+    stock: parseInt(v.stock, 10) || 0,
+  })) : undefined;
+
+  const cleanedPricing = bulkPricing && bulkPricing.length > 0 ? bulkPricing.map((p: any) => ({
+    minQuantity: parseInt(p.minQuantity, 10),
+    maxQuantity: parseInt(p.maxQuantity, 10),
+    pricePerUnit: parseFloat(p.pricePerUnit),
+    printType: p.printType || 'Front Only',
+  })) : undefined;
 
   const product = await prisma.product.update({
     where: { id },
@@ -141,9 +176,11 @@ export const updateProduct = async (req: Request, res: Response) => {
       gstRate: gstRate ? parseFloat(gstRate) : undefined,
       images,
       categoryId,
-      isActive: isActive !== undefined ? isActive : undefined,
-      bulkPricing: bulkPricing ? { createMany: { data: bulkPricing } } : undefined,
-      variants: variants ? { createMany: { data: variants } } : undefined,
+      isActive: isActive !== undefined ? Boolean(isActive) : undefined,
+      requiresSize: requiresSize !== undefined ? Boolean(requiresSize) : undefined,
+      requiresColor: requiresColor !== undefined ? Boolean(requiresColor) : undefined,
+      bulkPricing: cleanedPricing ? { createMany: { data: cleanedPricing } } : undefined,
+      variants: cleanedVariants ? { createMany: { data: cleanedVariants } } : undefined,
     },
     include: { category: true, bulkPricing: true, variants: true }
   });

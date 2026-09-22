@@ -148,7 +148,7 @@ export function Hero() {
                 href="/products"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-transparent hover:bg-white text-[#111111] text-[13px] font-bold tracking-wider uppercase rounded-full border border-[#B9B8B0] hover:border-[#111111] transition-all active:scale-[0.98] min-h-[44px] group"
               >
-                <span>EXPLORE PRODUCTS</span>
+                <span>DESIGN & ORDER ONLINE</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
               </Link>
             </motion.div>

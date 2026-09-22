@@ -56,7 +56,7 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
     });
     await prisma.user.upsert({
       where: { id: 'cust-101' },
-      update: { companyId: 'comp-101' },
+      update: { companyId: 'comp-101', phone: '+919876543210' },
       create: {
         id: 'cust-101',
         email: 'customerA@acme.com',
@@ -64,6 +64,7 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
         name: 'Customer A',
         role: 'CUSTOMER',
         companyId: 'comp-101',
+        phone: '+919876543210',
       },
     });
     await prisma.user.upsert({
@@ -184,7 +185,7 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
       const createRes = await request(app)
         .post('/api/v1/quotes')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ quantity: 50, color: 'Navy Blue' });
+        .send({ customerId: 'cust-101', quantity: 50, color: 'Navy Blue' });
 
       const quoteId = createRes.body.quote.id;
 
@@ -202,7 +203,7 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
       const createRes = await request(app)
         .post('/api/v1/quotes')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ quantity: 50 });
+        .send({ customerId: 'cust-101', quantity: 50 });
 
       const quoteId = createRes.body.quote.id;
 

@@ -284,10 +284,16 @@ model Quote {
   tasks       Task[]
   order       Order?
   inquiry     Inquiry?
-  
+
+  // Design image fields (set when created from the online customizer)
+  artworkUrl        String?   // Original customer-uploaded artwork (Cloudinary URL)
+  previewFrontUrl   String?   // Rendered garment + design, front side (Cloudinary URL)
+  previewBackUrl    String?   // Rendered garment + design, back side (Cloudinary URL)
+  canvasStateJson   String?   // Full Fabric.js JSON snapshot for both sides
+
   assignedToId String?
   assignedTo   User?          @relation("AssignedQuoteUser", fields: [assignedToId], references: [id])
-  
+
   couponId    String?
   coupon      Coupon?        @relation(fields: [couponId], references: [id], onDelete: SetNull)
 
@@ -368,13 +374,19 @@ model Order {
   invoices      Invoice[]
   payments      Payment[]
   tasks         Task[]
-  
+
   assignedToId  String?
   assignedTo    User?         @relation("AssignedOrderUser", fields: [assignedToId], references: [id])
-  
+
   couponId      String?
   coupon        Coupon?       @relation(fields: [couponId], references: [id], onDelete: SetNull)
   discountAmount Float        @default(0.0)
+
+  // Design image fields — preserved from originating Quote
+  artworkUrl        String?   // Original customer-uploaded artwork (Cloudinary URL)
+  previewFrontUrl   String?   // Rendered garment + design, front side
+  previewBackUrl    String?   // Rendered garment + design, back side
+  canvasStateJson   String?   // Full Fabric.js JSON snapshot
 
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt

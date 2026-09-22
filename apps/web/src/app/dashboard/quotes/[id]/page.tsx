@@ -19,6 +19,7 @@ import {
   Clock,
   ArrowLeft,
   Package,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -43,6 +44,10 @@ interface QuoteDetail {
   discount: number;
   totalAmount: number;
   notes?: string;
+  artworkUrl?: string;
+  previewFrontUrl?: string;
+  previewBackUrl?: string;
+  canvasStateJson?: string;
   createdAt: string;
   customer?: { id: string; name: string; email: string; phone?: string };
   company?: { id: string; name: string; gstin?: string; address?: string; city?: string; state?: string; pincode?: string };
@@ -388,30 +393,149 @@ export default function AdminQuoteDetailPage() {
               </div>
               <div>
                 <span className="text-[#6B7280] block text-[11px]">Company Name</span>
-                <span className="text-[#374151] font-bold text-sm" data-cy="quote-detail-company-name">{quote.company?.name || 'Acme Tech Pvt Ltd'}</span>
+                <span className="text-[#374151] font-bold text-sm" data-cy="quote-detail-company-name">{quote.company?.name || 'Individual Customer'}</span>
               </div>
               <div>
                 <span className="text-[#6B7280] block text-[11px]">Phone Number</span>
                 <span className="text-[#374151] font-mono font-bold flex items-center gap-1.5" data-cy="quote-detail-phone">
-                  <Phone className="w-3.5 h-3.5 text-green-600" /> {quote.customer?.phone || '+91 98765 43210'}
+                  <Phone className="w-3.5 h-3.5 text-green-600" /> {quote.customer?.phone || 'Not provided'}
                 </span>
               </div>
               <div>
                 <span className="text-[#6B7280] block text-[11px]">Email Address</span>
                 <span className="text-[#3B6FEB] font-mono flex items-center gap-1.5 truncate max-w-full" data-cy="quote-detail-email">
-                  <Mail className="w-3.5 h-3.5" /> {quote.customer?.email || 'rahul@acme.com'}
+                  <Mail className="w-3.5 h-3.5" /> {quote.customer?.email || '—'}
                 </span>
               </div>
               <div>
                 <span className="text-[#6B7280] block text-[11px]">GSTIN</span>
-                <span className="text-[#374151] font-mono">{quote.company?.gstin || '21AAACA1234A1Z5'}</span>
+                <span className="text-[#374151] font-mono">{quote.company?.gstin || 'Not provided'}</span>
               </div>
               <div>
                 <span className="text-[#6B7280] block text-[11px]">Location</span>
-                <span className="text-[#374151]">{quote.company?.city || quote.company?.address || 'Bhubaneswar, Odisha'}</span>
+                <span className="text-[#374151]">{quote.company?.city || quote.company?.address || 'Not specified'}</span>
               </div>
             </div>
           </div>
+
+          {/* Customizer Visual Design Previews & Original Artwork Card */}
+          {(() => {
+            const notes = quote.notes || '';
+            let rawArtwork = quote.artworkUrl || '';
+            let front = quote.previewFrontUrl || '';
+            let back = quote.previewBackUrl || '';
+
+            // Fallback parsing from notes if legacy quote
+            if (!rawArtwork || !front) {
+              const customMatch = notes.match(/Customization:\s*(\{.+?\})/);
+              if (customMatch && customMatch[1]) {
+                try {
+                  const parsed = JSON.parse(customMatch[1]);
+                  if (!rawArtwork && parsed.rawArtworkUrl) rawArtwork = parsed.rawArtworkUrl;
+                  if (!front && parsed.frontPreviewUrl) front = parsed.frontPreviewUrl;
+                  if (!back && parsed.backPreviewUrl) back = parsed.backPreviewUrl;
+                } catch {
+                  /* ignore parse error */
+                }
+              }
+              if (!rawArtwork) {
+                const artMatch = notes.match(/Artwork:\s*(https?:\/\/[^\s|]+|data:image\/[^\s|]+)/);
+                if (artMatch && artMatch[1]) {
+                  rawArtwork = artMatch[1];
+                }
+              }
+            }
+
+            if (!rawArtwork && !front && !back) return null;
+
+            return (
+              <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-sm p-6 space-y-5" data-cy="quote-design-assets-panel">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                  <div>
+                    <h3 className="text-xs font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#3B6FEB]" /> Design Assets & Visual Proof
+                    </h3>
+                    <p className="text-[11px] text-gray-500 mt-0.5">
+                      Customer-uploaded raw artwork and rendered apparel mockups
+                    </p>
+                  </div>
+                  {quote.canvasStateJson && (
+                    <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
+                      Canvas Data Saved
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {/* 1. Raw Customer Artwork / Logo Asset */}
+                  {rawArtwork && (
+                    <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-4 flex flex-col items-center text-center space-y-3">
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                          Raw Customer Asset
+                        </span>
+                      </div>
+                      <div className="aspect-square w-full max-w-[200px] bg-white rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden p-3 shadow-inner">
+                        <img src={rawArtwork} alt="Customer Artwork Asset" className="w-full h-full object-contain" />
+                      </div>
+                      <a
+                        href={rawArtwork}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-[#3B6FEB] hover:underline font-bold mt-auto"
+                      >
+                        Download Original Asset ↗
+                      </a>
+                    </div>
+                  )}
+
+                  {/* 2. Rendered Garment Front Preview */}
+                  {front && (
+                    <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-4 flex flex-col items-center text-center space-y-3">
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                          Garment Front Mockup
+                        </span>
+                      </div>
+                      <div className="aspect-[4/5] w-full max-w-[200px] bg-white rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden p-2 shadow-inner">
+                        <img src={front} alt="Front Garment Preview" className="w-full h-full object-contain" />
+                      </div>
+                      <a
+                        href={front}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-[#3B6FEB] hover:underline font-bold mt-auto"
+                      >
+                        View Full Front Preview ↗
+                      </a>
+                    </div>
+                  )}
+
+                  {/* 3. Rendered Garment Back Preview */}
+                  {back && (
+                    <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-4 flex flex-col items-center text-center space-y-3">
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                          Garment Back Mockup
+                        </span>
+                      </div>
+                      <div className="aspect-[4/5] w-full max-w-[200px] bg-white rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden p-2 shadow-inner">
+                        <img src={back} alt="Back Garment Preview" className="w-full h-full object-contain" />
+                      </div>
+                      <a
+                        href={back}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-[#3B6FEB] hover:underline font-bold mt-auto"
+                      >
+                        View Full Back Preview ↗
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Specifications & Customization Requirements Card */}
           {quote.notes && (

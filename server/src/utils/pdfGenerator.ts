@@ -112,7 +112,7 @@ export const generateQuotePDFBuffer = (data: QuotePDFData): Promise<Buffer> => {
       doc.fontSize(13).fillColor('#2563eb').text(`Grand Total: ₹${data.totalAmount.toFixed(2)}`, 350, yPos, { align: 'right' });
 
       // Footer
-      doc.fontSize(8).fillColor('#94a3b8').text('Thank you for choosing ZOBBRA! For questions, email hello@zobbra.com or call +91 91244 49666.', 40, 720, { align: 'center' });
+      doc.fontSize(8).fillColor('#94a3b8').text('Thank you for choosing ZOBBRA! For questions, email sales@zobbra.com or call +91 91244 49665.', 40, 720, { align: 'center' });
 
       doc.end();
     } catch (err) {

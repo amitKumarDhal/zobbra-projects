@@ -89,18 +89,26 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const uniqueColors = Array.from(new Set(product.variants?.map((v: any) => v.color).filter(Boolean)));
   const uniqueSizes = Array.from(new Set(product.variants?.map((v: any) => v.size).filter(Boolean)));
   
-  // Calculate pricing based on bulk discount
+  // Calculate pricing based on bulk discount or pricePerUnit
+  let unitPrice = product.basePrice || 0;
   let applicableDiscount = 0;
-  if (product.bulkPricing) {
+  if (product.bulkPricing && product.bulkPricing.length > 0) {
     // Sort descending by minQuantity to find the highest eligible tier
     const sortedTiers = [...product.bulkPricing].sort((a, b) => b.minQuantity - a.minQuantity);
     const eligibleTier = sortedTiers.find(t => qty >= t.minQuantity);
     if (eligibleTier) {
-      applicableDiscount = eligibleTier.discountPercentage;
+      if (typeof eligibleTier.pricePerUnit === 'number' && eligibleTier.pricePerUnit > 0) {
+        unitPrice = eligibleTier.pricePerUnit;
+        if (product.basePrice > unitPrice) {
+          applicableDiscount = Math.round(((product.basePrice - unitPrice) / product.basePrice) * 100);
+        }
+      } else if (typeof eligibleTier.discountPercentage === 'number') {
+        applicableDiscount = eligibleTier.discountPercentage;
+        unitPrice = product.basePrice * (1 - applicableDiscount / 100);
+      }
     }
   }
 
-  const unitPrice = product.basePrice * (1 - applicableDiscount / 100);
   const estimatedTotal = (unitPrice * qty).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
   return (
@@ -170,13 +178,25 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           {product.bulkPricing && product.bulkPricing.length > 0 && (
             <Card className="bg-white border-[#E5E7EB] p-8 space-y-4 shadow-sm">
               <h3 className="text-xl font-heading font-bold text-[#111111]">Tiered B2B Volume Pricing</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {product.bulkPricing.map((tier: any, idx: number) => (
-                  <div key={idx} className="p-3.5 rounded-xl bg-[#F8F9FC] border border-[#E5E7EB] text-center space-y-1">
-                    <span className="text-[10px] font-bold text-[#6B7280] uppercase">Min {tier.minQuantity} Pcs</span>
-                    <span className="text-sm font-heading font-black text-[#3B6FEB] block">{tier.discountPercentage}% OFF</span>
-                  </div>
-                ))}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {product.bulkPricing.map((tier: any, idx: number) => {
+                  const discount = tier.pricePerUnit && product.basePrice > tier.pricePerUnit
+                    ? Math.round(((product.basePrice - tier.pricePerUnit) / product.basePrice) * 100)
+                    : tier.discountPercentage;
+                  return (
+                    <div key={idx} className="p-3.5 rounded-xl bg-[#F8F9FC] border border-[#E5E7EB] text-center space-y-1">
+                      <span className="text-[10px] font-bold text-[#6B7280] uppercase block">
+                        {tier.minQuantity}{tier.maxQuantity && tier.maxQuantity < 9000 ? `–${tier.maxQuantity}` : '+'} Pcs
+                      </span>
+                      <span className="text-base font-heading font-black text-[#111111] block">
+                        ₹{tier.pricePerUnit || product.basePrice}
+                      </span>
+                      <span className="text-[10px] font-bold text-[#3B6FEB] block">
+                        {discount ? `${discount}% OFF` : (tier.printType || 'Standard')}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </Card>
           )}
@@ -278,16 +298,26 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               </p>
             </div>
 
-            {/* Actions */}
+            {/* Actions: Dual Choices */}
             <div className="space-y-3 pt-2">
-              <Link 
-                href={`/get-quote?product=${encodeURIComponent(product.name)}&qty=${qty}&color=${encodeURIComponent(selectedColor || '')}&size=${encodeURIComponent(selectedSize || '')}&id=${product.id}`} 
-                className="block"
-              >
-                <button className="w-full py-3.5 bg-[#111111] hover:bg-[#000000] text-white text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm">
-                  START QUOTE CONFIGURATOR <ArrowRight className="w-4 h-4" />
-                </button>
-              </Link>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Link 
+                  href={`/get-quote?product=${encodeURIComponent(product.name)}&qty=${qty}&color=${encodeURIComponent(selectedColor || '')}&size=${encodeURIComponent(selectedSize || '')}&id=${product.id}`} 
+                  className="block"
+                >
+                  <button className="w-full py-3.5 bg-white hover:bg-gray-50 text-[#111111] text-xs sm:text-sm font-bold border border-[#111111] rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm">
+                    GET A QUICK QUOTE
+                  </button>
+                </Link>
+                <Link 
+                  href={`/products/${product.id}/customize`} 
+                  className="block"
+                >
+                  <button className="w-full py-3.5 bg-[#3B6FEB] hover:bg-[#2563EB] text-white text-xs sm:text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md">
+                    DESIGN YOUR OWN <ArrowRight className="w-4 h-4" />
+                  </button>
+                </Link>
+              </div>
             </div>
           </Card>
         </div>

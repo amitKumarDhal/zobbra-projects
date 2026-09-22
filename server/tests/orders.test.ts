@@ -55,7 +55,7 @@ describe('Approved Quote to Order MVP API Integration', () => {
     });
     await prisma.user.upsert({
       where: { id: 'cust-101' },
-      update: { companyId: 'comp-101' },
+      update: { companyId: 'comp-101', phone: '+919876543210' },
       create: {
         id: 'cust-101',
         email: 'customerA@acme.com',
@@ -63,6 +63,7 @@ describe('Approved Quote to Order MVP API Integration', () => {
         name: 'Customer A',
         role: 'CUSTOMER',
         companyId: 'comp-101',
+        phone: '+919876543210',
       },
     });
     await prisma.user.upsert({
@@ -134,7 +135,7 @@ describe('Approved Quote to Order MVP API Integration', () => {
       const createQuoteRes = await request(app)
         .post('/api/v1/quotes')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ quantity: 100, color: 'Charcoal Black', printType: 'Front & Back Print' });
+        .send({ customerId: 'cust-101', quantity: 100, color: 'Charcoal Black', printType: 'Front & Back Print' });
 
       const quoteId = createQuoteRes.body.quote.id;
 
@@ -162,7 +163,7 @@ describe('Approved Quote to Order MVP API Integration', () => {
       const createQuoteRes = await request(app)
         .post('/api/v1/quotes')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ quantity: 50 });
+        .send({ customerId: 'cust-101', quantity: 50 });
 
       const quoteId = createQuoteRes.body.quote.id;
 

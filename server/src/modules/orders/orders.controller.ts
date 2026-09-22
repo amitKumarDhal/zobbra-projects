@@ -87,6 +87,10 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
           gstTotal: quote.gstTotal,
           discountAmount: quote.discount,
           totalAmount: quote.totalAmount,
+          artworkUrl: quote.artworkUrl || null,
+          previewFrontUrl: quote.previewFrontUrl || null,
+          previewBackUrl: quote.previewBackUrl || null,
+          canvasStateJson: quote.canvasStateJson || null,
           items: {
             create: quote.items.map((item) => ({
               productId: item.productId,
@@ -96,6 +100,7 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               totalPrice: item.totalPrice,
+              customizationDetails: quote.notes || null,
               variants: item.variants ? {
                 create: item.variants.map((v) => ({
                   color: v.color,
@@ -108,7 +113,7 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
           production: {
             create: {
               stage: 'PENDING',
-              notes: `Order created from approved quotation #${quote.quoteNumber}`,
+              notes: quote.notes ? `Approved quotation #${quote.quoteNumber} | ${quote.notes}` : `Order created from approved quotation #${quote.quoteNumber}`,
             },
           },
           invoices: {

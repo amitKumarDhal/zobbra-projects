@@ -16,8 +16,8 @@ export const config = {
   resendApiKey: process.env.RESEND_API_KEY || 're_mock_key',
   company: {
     name: 'Zobra Prints & Merchandise',
-    email: 'hello@zobbra.com',
-    phone: '+91 91244 96665',
+    email: 'sales@zobbra.com',
+    phone: '+91 91244 49665',
     gstin: '21ABCDE1234F1Z5',
     address: 'Plot 402, Fortune Tower, District Center, Bhubaneswar, Odisha - 751012',
   }

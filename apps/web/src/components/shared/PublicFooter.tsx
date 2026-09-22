@@ -184,14 +184,14 @@ export function PublicFooter() {
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                <a href="mailto:hello@zobbra.com" className="hover:text-white transition-colors">
-                  hello@zobbra.com
+                <a href="mailto:sales@zobbra.com" className="hover:text-white transition-colors">
+                  sales@zobbra.com
                 </a>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                <a href="tel:+919124449666" className="hover:text-white transition-colors">
-                  +91 91244 49666
+                <a href="tel:+919124449665" className="hover:text-white transition-colors">
+                  +91 91244 49665
                 </a>
               </li>
               <li className="flex items-start gap-2">

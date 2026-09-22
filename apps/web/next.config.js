@@ -30,6 +30,18 @@ const nextConfig = {
   deploymentId: process.env.RAILWAY_DEPLOYMENT_ID,
 
   reactStrictMode: true,
+
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        canvas: false,
+        jsdom: false,
+      };
+    }
+    config.externals = [...(config.externals || []), { canvas: 'canvas' }];
+    return config;
+  },
 };
 
 module.exports = nextConfig;

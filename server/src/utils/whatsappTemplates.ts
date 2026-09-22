@@ -1,7 +1,7 @@
 export function normalizePhoneForWhatsApp(phone: string | null | undefined): string {
-  if (!phone) return '919876543210';
+  if (!phone) return '';
   let cleaned = phone.replace(/[^\d]/g, '');
-  if (!cleaned) return '919876543210';
+  if (!cleaned) return '';
   if (cleaned.length === 10) {
     cleaned = `91${cleaned}`;
   } else if (cleaned.length === 11 && cleaned.startsWith('0')) {
@@ -73,6 +73,7 @@ export function generateWhatsAppMessage(
 
 export function buildWhatsAppClickUrl(phone: string, text: string): string {
   const normalized = normalizePhoneForWhatsApp(phone);
+  if (!normalized) return '';
   const encoded = encodeURIComponent(text);
   return `https://wa.me/${normalized}?text=${encoded}`;
 }

@@ -39,7 +39,7 @@ export default function CustomerSupportPage() {
         <Card className="bg-white border-[#E5E7EB] p-6 space-y-2 shadow-sm">
           <Phone className="w-6 h-6 text-[#3B6FEB]" />
           <h3 className="font-heading font-bold text-base text-[#111111]">Dedicated Account Manager</h3>
-          <p className="text-xs text-[#6B7280]">+91 91244 96665 • Mon - Sat (10 AM - 7 PM IST)</p>
+          <p className="text-xs text-[#6B7280]">+91 91244 49665 • Mon - Sat (10 AM - 7 PM IST)</p>
         </Card>
         <Card className="bg-white border-[#E5E7EB] p-6 space-y-2 shadow-sm">
           <Mail className="w-6 h-6 text-[#3B6FEB]" />

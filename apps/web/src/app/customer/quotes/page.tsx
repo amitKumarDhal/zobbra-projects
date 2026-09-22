@@ -209,10 +209,49 @@ export default function CustomerQuotesPage() {
                         )}
                       </td>
                       <td className="p-4">
-                        <span className="font-bold block text-[#111111]">{req.description}</span>
-                        <span className="text-[11px] text-[#6B7280]">
-                          {req.details}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          {(() => {
+                            const raw = req.raw;
+                            // Prioritize rendered garment front preview, fallback to raw artwork
+                            let preview = raw?.previewFrontUrl || raw?.artworkUrl;
+                            if (!preview && raw?.notes) {
+                              const custMatch = raw.notes.match(/Customization:\s*(\{.+?\})/);
+                              if (custMatch && custMatch[1]) {
+                                try {
+                                  const parsed = JSON.parse(custMatch[1]);
+                                  if (parsed.frontPreviewUrl) preview = parsed.frontPreviewUrl;
+                                } catch {
+                                  /* ignore parse error */
+                                }
+                              }
+                              if (!preview) {
+                                const match = raw.notes.match(/Artwork:\s*(https?:\/\/[^\s|]+|data:image\/[^\s|]+)/);
+                                if (match) preview = match[1];
+                              }
+                            }
+                            if (!preview && raw?.customizationRequirements) {
+                              try {
+                                const parsed = JSON.parse(raw.customizationRequirements);
+                                if (parsed.frontPreviewUrl) preview = parsed.frontPreviewUrl;
+                                else if (parsed.rawArtworkUrl) preview = parsed.rawArtworkUrl;
+                              } catch {
+                                /* ignore parse error */
+                              }
+                            }
+                            if (!preview) return null;
+                            return (
+                              <div className="w-12 h-12 rounded-xl bg-white border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center shadow-xs p-1" title="Custom Design Preview">
+                                <img src={preview} alt="Design Preview" className="w-full h-full object-contain" />
+                              </div>
+                            );
+                          })()}
+                          <div>
+                            <span className="font-bold block text-[#111111]">{req.description}</span>
+                            <span className="text-[11px] text-[#6B7280]">
+                              {req.details}
+                            </span>
+                          </div>
+                        </div>
                       </td>
                       <td className="p-4 text-[#6B7280]">{new Date(req.createdAt).toLocaleDateString('en-IN')}</td>
                       <td className="p-4 font-mono font-bold text-[#111111]" data-cy="request-total-cell">

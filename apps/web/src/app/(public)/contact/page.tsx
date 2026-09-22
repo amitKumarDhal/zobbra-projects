@@ -39,8 +39,8 @@ export default function ContactPage() {
           <h2 className="font-bold text-white text-lg">Office & Support</h2>
           <div className="space-y-4">
             <p className="flex items-center gap-3"><MapPin className="w-5 h-5 text-blue-400" /> Plot 402, Fortune Tower, District Center, Bhubaneswar, Odisha - 751012</p>
-            <p className="flex items-center gap-3"><Phone className="w-5 h-5 text-blue-400" /> +91 91244 96665</p>
-            <p className="flex items-center gap-3"><Mail className="w-5 h-5 text-blue-400" /> hello@zobbra.com</p>
+            <p className="flex items-center gap-3"><Phone className="w-5 h-5 text-blue-400" /> +91 91244 49665</p>
+            <p className="flex items-center gap-3"><Mail className="w-5 h-5 text-blue-400" /> sales@zobbra.com</p>
             <p className="flex items-center gap-3"><Clock className="w-5 h-5 text-blue-400" /> Mon - Sat (10:00 AM - 7:00 PM IST)</p>
           </div>
         </Card>

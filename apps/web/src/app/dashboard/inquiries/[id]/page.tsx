@@ -30,6 +30,7 @@ import {
   ChevronRight,
   AlertCircle,
   Tag,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -626,6 +627,57 @@ export default function AdminInquiryDetailPage() {
                 {inquiry.customizationRequirements || inquiry.message || 'No specific customization notes provided by customer.'}
               </div>
             </div>
+
+            {/* Customizer Previews if available */}
+            {(() => {
+              let front = '';
+              let back = '';
+              if (inquiry.customizationRequirements) {
+                try {
+                  const parsed = JSON.parse(inquiry.customizationRequirements);
+                  if (parsed.frontPreviewUrl) front = parsed.frontPreviewUrl;
+                  if (parsed.backPreviewUrl) back = parsed.backPreviewUrl;
+                } catch {
+                  /* ignore parse error */
+                }
+              }
+              if (!front && inquiry.artworkUrl) {
+                front = inquiry.artworkUrl;
+              }
+              if (!front && !back) return null;
+
+              return (
+                <div className="p-4 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] space-y-3">
+                  <span className="text-[11px] font-bold uppercase text-[#3B6FEB] tracking-wider block flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" /> Visual Customizer Artwork Previews
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {front && (
+                      <div className="bg-white p-3 rounded-lg border border-gray-200 text-center space-y-2">
+                        <span className="text-[11px] font-bold text-gray-500 uppercase block">Front Artwork</span>
+                        <div className="aspect-[4/5] w-full max-w-[180px] mx-auto bg-gray-50 rounded border flex items-center justify-center overflow-hidden">
+                          <img src={front} alt="Front Design" className="w-full h-full object-contain" />
+                        </div>
+                        <a href={front} target="_blank" rel="noopener noreferrer" className="text-xs text-[#3B6FEB] hover:underline font-bold block">
+                          Full Resolution ↗
+                        </a>
+                      </div>
+                    )}
+                    {back && (
+                      <div className="bg-white p-3 rounded-lg border border-gray-200 text-center space-y-2">
+                        <span className="text-[11px] font-bold text-gray-500 uppercase block">Back Artwork</span>
+                        <div className="aspect-[4/5] w-full max-w-[180px] mx-auto bg-gray-50 rounded border flex items-center justify-center overflow-hidden">
+                          <img src={back} alt="Back Design" className="w-full h-full object-contain" />
+                        </div>
+                        <a href={back} target="_blank" rel="noopener noreferrer" className="text-xs text-[#3B6FEB] hover:underline font-bold block">
+                          Full Resolution ↗
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Budget, Delivery & Artwork row */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">

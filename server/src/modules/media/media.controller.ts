@@ -33,6 +33,36 @@ export const getSignature = (req: Request, res: Response) => {
   }
 };
 
+export const getGuestSignature = (req: Request, res: Response) => {
+  try {
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    // Guest uploads are strictly isolated to zobbra/designs
+    const folder = 'zobbra/designs';
+
+    const signature = cloudinary.utils.api_sign_request(
+      {
+        timestamp,
+        folder,
+      },
+      config.cloudinary.apiSecret
+    );
+
+    res.json({
+      success: true,
+      data: {
+        signature,
+        timestamp,
+        cloudName: config.cloudinary.cloudName,
+        apiKey: config.cloudinary.apiKey,
+        folder,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error generating guest Cloudinary signature:', error);
+    res.status(500).json({ success: false, message: 'Failed to generate guest signature' });
+  }
+};
+
 export const deleteMedia = async (req: Request, res: Response) => {
   try {
     const { url } = req.body;

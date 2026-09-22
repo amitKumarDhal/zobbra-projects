@@ -217,6 +217,9 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
     printPosition,
     printType,
     artworkUrl,
+    previewFrontUrl,
+    previewBackUrl,
+    canvasStateJson,
     customizationRequirements,
     budget,
     deliveryDate,
@@ -273,13 +276,20 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
         if (companyName || gstin || address) {
           const companyUpdateData: any = {};
           if (companyName) companyUpdateData.name = companyName;
-          if (gstin) companyUpdateData.gstin = gstin;
           if (address) companyUpdateData.address = address;
+          if (gstin) {
+            const existingWithGstin = await prisma.company.findUnique({ where: { gstin } });
+            if (!existingWithGstin || existingWithGstin.id === existingUser.companyId) {
+              companyUpdateData.gstin = gstin;
+            }
+          }
 
-          await prisma.company.update({
-            where: { id: existingUser.companyId },
-            data: companyUpdateData,
-          });
+          if (Object.keys(companyUpdateData).length > 0) {
+            await prisma.company.update({
+              where: { id: existingUser.companyId },
+              data: companyUpdateData,
+            });
+          }
         }
       }
     } catch (_err) {
@@ -303,27 +313,25 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
         ],
       },
     });
-  }
 
-  if (!product) product = await prisma.product.findFirst();
-
-  if (!product) {
-    let category = await prisma.category.findFirst();
-    if (!category) {
-      category = await prisma.category.create({
-        data: { name: 'Apparel', slug: 'apparel', description: 'Garments & Custom Apparel' },
+    if (!product) {
+      return res.status(400).json({
+        success: false,
+        message: `Product '${targetProductId}' could not be resolved in the catalog. Please select or configure a valid product.`,
       });
     }
-    product = await prisma.product.create({
-      data: {
-        name: 'Customized Polo T-Shirt (200 GSM Cotton)',
-        slug: 'polo-200gsm',
-        description: 'Heavyweight bio-washed polo t-shirt',
-        basePrice: 249,
-        gstRate: 5.0,
-        categoryId: category.id,
-      },
+  } else {
+    product = await prisma.product.findFirst({
+      where: { isActive: true },
+      orderBy: { createdAt: 'asc' },
     });
+
+    if (!product) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active products found in the catalog. Please configure products before generating quotes.',
+      });
+    }
   }
 
   const resolvedPrintType = printType || [printingType, printPosition].filter(Boolean).join(' - ') || 'Not provided';
@@ -422,6 +430,10 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
       totalAmount: grandTotal,
       notes: combinedNotes,
       validUntil,
+      artworkUrl: artworkUrl || null,
+      previewFrontUrl: previewFrontUrl || null,
+      previewBackUrl: previewBackUrl || null,
+      canvasStateJson: canvasStateJson || null,
       items: { create: quoteItemsData },
       activities: {
         create: {
@@ -576,8 +588,14 @@ export const editQuote = async (req: AuthRequest, res: Response) => {
   const newSize = size !== undefined ? size : (firstItem?.size || '');
   const newPrintType = printType || firstItem?.printType || 'Not provided';
 
-  const product = firstItem?.product || (await prisma.product.findFirst());
-  const basePrice = product?.basePrice || 249;
+  const product = firstItem?.product;
+  if (!product) {
+    return res.status(400).json({
+      success: false,
+      message: 'Quote item does not have an associated product configured.',
+    });
+  }
+  const basePrice = product.basePrice;
   
   // Resolve GST logic
   const finalIsGstApplied = isGstApplied !== undefined ? Boolean(isGstApplied) : quote.isGstApplied;
@@ -695,7 +713,13 @@ export const triggerWhatsAppAction = async (req: AuthRequest, res: Response) => 
   }
 
   const firstItem = quote.items[0];
-  const customerPhone = quote.customer.phone || '919876543210';
+  if (!quote.customer?.phone) {
+    return res.status(400).json({
+      success: false,
+      message: 'Customer phone number is not available for WhatsApp dispatch.',
+    });
+  }
+  const customerPhone = quote.customer.phone;
   const customerName = quote.customer.name;
   const productName = firstItem?.product.name || 'Polo T-Shirts';
   const quantity = firstItem?.quantity || 50;

@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Modal } from '@/components/ui/modal';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { API_URL } from '@/lib/api';
+import { useCustomerUser } from '@/hooks/useCustomerUser';
 
 interface ProductItem {
   id: string;
@@ -22,6 +23,7 @@ interface ProductItem {
 
 export default function CustomerProductsPage() {
   const router = useRouter();
+  const { user } = useCustomerUser();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('ALL');
   const [productsList, setProductsList] = useState<ProductItem[]>([]);
@@ -45,10 +47,11 @@ export default function CustomerProductsPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/products`);
+      const res = await fetch(`${API_URL}/products?status=Active&pageSize=100`);
       const data = await res.json();
       if (data.data && Array.isArray(data.data)) {
-        const mapped: ProductItem[] = data.data.map((p: any) => ({
+        const activeOnly = data.data.filter((p: any) => p.isActive !== false && !p.slug?.includes('-deleted-'));
+        const mapped: ProductItem[] = activeOnly.map((p: any) => ({
           id: p.id || p.slug,
           name: p.name,
           category: p.category?.name || 'Apparel',
@@ -86,8 +89,8 @@ export default function CustomerProductsPage() {
           color,
           size,
           printType: printPosition,
-          gstin: '21AAACA1234A1Z5',
-          address: 'Bhubaneswar, Odisha',
+          gstin: user?.company?.gstin || undefined,
+          address: user?.company?.address || undefined,
         }),
       });
 

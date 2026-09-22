@@ -35,6 +35,28 @@ beforeAll(async () => {
   });
   customerId = cust.id;
 
+  // Setup a test category & product matching inquiry productInterest
+  const cat = await prisma.category.upsert({
+    where: { slug: 'test-category' },
+    update: {},
+    create: {
+      name: 'Test Category',
+      slug: 'test-category',
+    },
+  });
+
+  await prisma.product.upsert({
+    where: { slug: 'test-product' },
+    update: {},
+    create: {
+      name: 'Test Product',
+      slug: 'test-product',
+      categoryId: cat.id,
+      basePrice: 249,
+      description: 'Test product for inquiry conversion',
+    },
+  });
+
   token = jwt.sign(
     { id: adminUser.id, email: adminUser.email, role: adminUser.role },
     config.jwtSecret,
