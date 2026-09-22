@@ -9,9 +9,15 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET || 'zobra_b2b_secret_key_2026_super_secure',
   jwtExpiresIn: (process.env.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'],
   cloudinary: {
-    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
-    apiKey: process.env.CLOUDINARY_API_KEY || '',
-    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+    cloudName: (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_CLOUD_NAME !== 'zobbra_demo')
+      ? process.env.CLOUDINARY_CLOUD_NAME
+      : 'e3sasmyr',
+    apiKey: (process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_KEY !== '123456789')
+      ? process.env.CLOUDINARY_API_KEY
+      : '985661943518836',
+    apiSecret: (process.env.CLOUDINARY_API_SECRET && process.env.CLOUDINARY_API_SECRET !== 'mock_secret' && !process.env.CLOUDINARY_API_SECRET.includes('mock') && !process.env.CLOUDINARY_API_SECRET.includes('demo'))
+      ? process.env.CLOUDINARY_API_SECRET
+      : 'yp5_Amms5qVY4UR4dAVNFOiQ_4M',
   },
   resendApiKey: process.env.RESEND_API_KEY || 're_mock_key',
   company: {

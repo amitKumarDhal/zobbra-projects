@@ -287,23 +287,25 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       return;
     }
 
-    // 1. Upload to Cloudinary using guest signature
-    console.log('[CustomizerCanvas] starting uploadToCloudinary with file:', file.name, file.size);
-    const secureUrl = await uploadToCloudinary(file);
-    console.log('[CustomizerCanvas] uploadToCloudinary completed, secureUrl:', secureUrl);
+    // 1. Read file as local Data URL for immediate, lag-free canvas placement
+    const localDataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed reading selected image file.'));
+      reader.readAsDataURL(file);
+    });
 
-    // Track the first artwork URL (original customer asset)
     if (!originalArtworkUrlRef.current) {
-      originalArtworkUrlRef.current = secureUrl;
+      originalArtworkUrlRef.current = localDataUrl;
     }
 
-    return new Promise((resolve, reject) => {
+    // 2. Render image on canvas immediately
+    await new Promise<void>((resolve, reject) => {
       activeFabric.Image.fromURL(
-        secureUrl,
+        localDataUrl,
         (img: any, isError: boolean) => {
-          console.log('[CustomizerCanvas] fabric.Image.fromURL callback:', { hasImg: !!img, isError });
           if (!img || isError) {
-            reject(new Error('Failed decoding image from Cloudinary'));
+            reject(new Error('Failed decoding image from file. Please ensure it is a valid PNG, JPG, or SVG.'));
             return;
           }
 
@@ -334,10 +336,19 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
           saveCurrentState(activeCanvas);
           setHasCurrentObjects(true);
           resolve();
-        },
-        { crossOrigin: 'anonymous' }
+        }
       );
     });
+
+    // 3. Upload to Cloudinary in background for permanent CDN storage
+    uploadToCloudinary(file)
+      .then((secureUrl) => {
+        console.log('[CustomizerCanvas] Background Cloudinary upload succeeded:', secureUrl);
+        originalArtworkUrlRef.current = secureUrl;
+      })
+      .catch((err) => {
+        console.warn('[CustomizerCanvas] Background Cloudinary upload deferred (using local artwork):', err);
+      });
   };
 
   // Expose methods via ref for parent to control

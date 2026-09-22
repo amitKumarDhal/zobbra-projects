@@ -373,7 +373,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
       console.log('[Customizer] addImage completed successfully');
     } catch (err: any) {
       console.error('[Customizer] Failed placing logo on canvas:', err);
-      setSubmitError('Failed to load image. Please choose a valid PNG, JPG, or SVG file.');
+      setSubmitError(err?.message || 'Failed to load image. Please choose a valid PNG, JPG, or SVG file.');
     } finally {
       setIsUploadingLogo(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
