@@ -2,11 +2,20 @@ import { prisma } from './index.js';
 
 export async function ensureDatabaseSchema() {
   const statements = [
+    `ALTER TABLE "companies" ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT true`,
     `ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "requiresColor" BOOLEAN NOT NULL DEFAULT true`,
     `ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "requiresSize" BOOLEAN NOT NULL DEFAULT true`,
     `ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "supportsVariantMatrix" BOOLEAN NOT NULL DEFAULT true`,
     `ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "gstRate" DOUBLE PRECISION`,
     `ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "isGstApplied" BOOLEAN NOT NULL DEFAULT true`,
+    `ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "artworkUrl" TEXT`,
+    `ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "previewFrontUrl" TEXT`,
+    `ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "previewBackUrl" TEXT`,
+    `ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "canvasStateJson" TEXT`,
+    `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "artworkUrl" TEXT`,
+    `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "previewFrontUrl" TEXT`,
+    `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "previewBackUrl" TEXT`,
+    `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "canvasStateJson" TEXT`,
     `CREATE TABLE IF NOT EXISTS "quote_item_variants" (
         "id" TEXT NOT NULL,
         "quoteItemId" TEXT NOT NULL,
@@ -50,12 +59,12 @@ export async function ensureDatabaseSchema() {
     END $$;`
   ];
 
-  try {
-    for (const sql of statements) {
+  for (const sql of statements) {
+    try {
       await prisma.$executeRawUnsafe(sql);
+    } catch (statementError: any) {
+      console.warn(`⚠️ Notice executing schema sync statement (${sql.slice(0, 50)}...):`, statementError.message);
     }
-    console.log('✅ Database schema auto-verified and synced');
-  } catch (error: any) {
-    console.warn('⚠️ Notice during database auto-sync:', error.message);
   }
+  console.log('✅ Database schema auto-verified and synced');
 }

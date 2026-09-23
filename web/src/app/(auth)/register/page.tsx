@@ -23,12 +23,12 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const res = await apiClient.post('/auth/register', {
-        email,
+        email: email.trim(),
         password,
-        name,
-        phone: phone || undefined,
-        companyName: companyName || undefined,
-        gstin: gstin || undefined,
+        name: name.trim(),
+        phone: phone.trim() || undefined,
+        companyName: companyName.trim() || undefined,
+        gstin: gstin.trim() || undefined,
       });
 
       if (res.data.success && res.data.token) {

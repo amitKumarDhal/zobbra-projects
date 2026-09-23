@@ -62,19 +62,19 @@ function RegisterForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: formData.name,
-          companyName: formData.companyName,
-          email: formData.email,
-          phone: formData.phone,
+          name: formData.name.trim(),
+          companyName: formData.companyName.trim() || undefined,
+          email: formData.email.trim(),
+          phone: formData.phone.trim() || undefined,
           password: formData.password,
-          gstin: formData.gstin,
-          city: formData.city,
-          state: formData.state
+          gstin: formData.gstin.trim() || undefined,
+          city: formData.city.trim() || undefined,
+          state: formData.state.trim() || undefined
         }),
         signal: AbortSignal.timeout(15000), // 15 second timeout
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (res.ok && data.success && data.token) {
         localStorage.setItem('token', data.token);
@@ -94,7 +94,7 @@ function RegisterForm() {
         } else if (res.status === 429) {
           setError('Too many registration attempts. Please wait a moment and try again.');
         } else if (res.status >= 500) {
-          setError('ZOBBRA is temporarily unavailable. Please try again in a moment.');
+          setError(data.message || 'ZOBBRA is temporarily unavailable. Please try again in a moment.');
         } else {
           setError(data.message || 'Registration failed. Please check your inputs.');
         }
@@ -103,7 +103,7 @@ function RegisterForm() {
       console.error('Registration API error:', err);
 
       // Classify the error and provide appropriate user message
-      if (err.name === 'AbortError' || err.message.includes('timeout')) {
+      if (err.name === 'AbortError' || err.name === 'TimeoutError' || (err.message && err.message.toLowerCase().includes('timeout'))) {
         setError('Connection is taking too long. Please check your internet connection and try again.');
       } else if (err instanceof TypeError) {
         if (!navigator.onLine) {
@@ -112,7 +112,7 @@ function RegisterForm() {
           setError('Connection error. Please try again.');
         }
       } else {
-        setError('Unable to complete registration. Please try again.');
+        setError(err.message || 'Unable to complete registration. Please try again.');
       }
     } finally {
       setLoading(false);
