@@ -90,6 +90,39 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
         role: 'ADMIN',
       },
     });
+
+    const cat = await prisma.category.upsert({
+      where: { slug: 'apparel' },
+      update: {},
+      create: {
+        id: 'cat-apparel-101',
+        name: 'Apparel',
+        slug: 'apparel',
+      },
+    });
+
+    const testProduct = await prisma.product.upsert({
+      where: { slug: 'polo-200gsm' },
+      update: { basePrice: 249, gstRate: 5.0, isActive: true },
+      create: {
+        id: 'prod-polo-200gsm',
+        name: 'Classic Corporate Polo Shirt',
+        slug: 'polo-200gsm',
+        description: 'Classic Corporate Polo Shirt 200 GSM',
+        basePrice: 249,
+        gstRate: 5.0,
+        categoryId: cat.id,
+        isActive: true,
+      },
+    });
+
+    await prisma.bulkPricing.deleteMany({ where: { productId: testProduct.id } });
+    await prisma.bulkPricing.createMany({
+      data: [
+        { productId: testProduct.id, minQuantity: 50, maxQuantity: 99, pricePerUnit: 229, printType: 'Front & Back Print' },
+        { productId: testProduct.id, minQuantity: 100, maxQuantity: 249, pricePerUnit: 219, printType: 'Front & Back Print' },
+      ],
+    });
   });
 
   afterAll(async () => {

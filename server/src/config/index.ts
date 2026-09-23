@@ -4,20 +4,57 @@ import jwt from 'jsonwebtoken';
 
 dotenv.config();
 
+function getCloudinarySecret(): string {
+  const secret = process.env.CLOUDINARY_API_SECRET?.trim();
+  const isInvalid =
+    !secret ||
+    secret === 'secret' ||
+    secret === '<secret>' ||
+    secret === '[SECRET]' ||
+    secret === 'mock_secret' ||
+    secret.toLowerCase().includes('mock') ||
+    secret.toLowerCase().includes('demo') ||
+    secret.toLowerCase().includes('placeholder') ||
+    secret.toLowerCase().includes('example') ||
+    secret.startsWith('<') ||
+    secret.startsWith('[') ||
+    secret.length < 15;
+
+  if (isInvalid) {
+    throw new Error('CLOUDINARY_API_SECRET is missing or invalid.');
+  }
+
+  return secret;
+}
+
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET?.trim();
+  const isInvalid =
+    !secret ||
+    secret.toLowerCase() === 'secret' ||
+    secret.toLowerCase().includes('mock') ||
+    secret.toLowerCase().includes('demo') ||
+    secret.toLowerCase().includes('placeholder') ||
+    secret.toLowerCase().includes('example') ||
+    secret.startsWith('<') ||
+    secret.startsWith('[') ||
+    secret.length < 16;
+
+  if (isInvalid) {
+    throw new Error('JWT_SECRET is missing or invalid.');
+  }
+
+  return secret;
+}
+
 export const config = {
   port: parseInt(process.env.PORT || '5000', 10),
-  jwtSecret: process.env.JWT_SECRET || 'zobra_b2b_secret_key_2026_super_secure',
+  jwtSecret: getJwtSecret(),
   jwtExpiresIn: (process.env.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'],
   cloudinary: {
-    cloudName: (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_CLOUD_NAME !== 'zobbra_demo')
-      ? process.env.CLOUDINARY_CLOUD_NAME
-      : 'e3sasmyr',
-    apiKey: (process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_KEY !== '123456789')
-      ? process.env.CLOUDINARY_API_KEY
-      : '985661943518836',
-    apiSecret: (process.env.CLOUDINARY_API_SECRET && process.env.CLOUDINARY_API_SECRET !== 'mock_secret' && !process.env.CLOUDINARY_API_SECRET.includes('mock') && !process.env.CLOUDINARY_API_SECRET.includes('demo'))
-      ? process.env.CLOUDINARY_API_SECRET
-      : 'yp5_Amms5qVY4UR4dAVNFOiQ_4M',
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME?.trim() || '',
+    apiKey: process.env.CLOUDINARY_API_KEY?.trim() || '',
+    apiSecret: getCloudinarySecret(),
   },
   resendApiKey: process.env.RESEND_API_KEY || 're_mock_key',
   company: {

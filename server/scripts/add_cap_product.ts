@@ -1,12 +1,15 @@
 import fs from 'fs';
 import path from 'path';
+import dotenv from 'dotenv';
 import { v2 as cloudinary } from 'cloudinary';
 import { prisma } from '../src/config/index.js';
 
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'e3sasmyr',
-  api_key: process.env.CLOUDINARY_API_KEY || '985661943518836',
-  api_secret: process.env.CLOUDINARY_API_SECRET || 'yp5_Amms5qVY4UR4dAVNFOiQ_4M',
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 const USER_IMAGE_PATH = 'C:/Users/mohan/.gemini/antigravity-ide/brain/86c1ca6a-7200-4e6c-bf81-c71e4daf2a84/.user_uploaded/media_1790083272380.jpg';
@@ -23,7 +26,10 @@ async function main() {
   }
 
   console.log('--- Step 2: Upload to Cloudinary ---');
-  let cloudinaryUrl = 'https://res.cloudinary.com/e3sasmyr/image/upload/v1790083272/products/classic-cotton-cap.jpg';
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  let cloudinaryUrl = cloudName
+    ? `https://res.cloudinary.com/${cloudName}/image/upload/v1790083272/products/classic-cotton-cap.jpg`
+    : '/images/products/classic-cotton-cap.jpg';
   try {
     const uploadRes = await cloudinary.uploader.upload(USER_IMAGE_PATH, {
       folder: 'products',

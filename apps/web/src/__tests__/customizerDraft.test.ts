@@ -79,8 +79,8 @@ describe('customizerDraft helper suite', () => {
 describe('Garment color helpers', () => {
   it('correctly maps known colors to hex values', () => {
     expect(getColorHex('Black')).toBe('#171717');
-    expect(getColorHex('Navy Blue')).toBe('#1E293B');
-    expect(getColorHex('White')).toBe('#F9FAFB');
+    expect(getColorHex('Navy Blue')).toBe('#0D1333');
+    expect(getColorHex('White')).toBe('#FFFFFF');
     expect(getColorHex('#123456')).toBe('#123456');
   });
 

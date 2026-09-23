@@ -4,10 +4,29 @@ import Razorpay from 'razorpay';
 import { prisma } from '../../config/index.js';
 import { AuthRequest } from '../../middleware/auth.js';
 
+// Helper to resolve Razorpay secrets strictly from environment in production
+function getRazorpayKeySecret(): string | null {
+  const secret = process.env.RAZORPAY_KEY_SECRET?.trim();
+  if (secret) return secret;
+  if (process.env.NODE_ENV === 'test') {
+    return 'zobraTestSecret998877665544332211';
+  }
+  return null;
+}
+
+function getRazorpayWebhookSecret(): string | null {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET?.trim() || process.env.RAZORPAY_KEY_SECRET?.trim();
+  if (secret) return secret;
+  if (process.env.NODE_ENV === 'test') {
+    return 'zobraTestSecret998877665544332211';
+  }
+  return null;
+}
+
 // Lazy initialize Razorpay instance
 const getRazorpayInstance = () => {
-  const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_51ZobraDemoKey';
-  const keySecret = process.env.RAZORPAY_KEY_SECRET || 'zobraTestSecret998877665544332211';
+  const keyId = process.env.RAZORPAY_KEY_ID || (process.env.NODE_ENV === 'test' ? 'rzp_test_51ZobraDemoKey' : '');
+  const keySecret = getRazorpayKeySecret() || '';
   return new Razorpay({ key_id: keyId, key_secret: keySecret });
 };
 
@@ -128,7 +147,11 @@ export const verifyPayment = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ success: false, message: 'Missing required payment verification details' });
     }
 
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || '6ps9ceNE2fSUfee39DLUTUIG';
+    const keySecret = getRazorpayKeySecret();
+    if (!keySecret) {
+      console.error('Payment verification failed: RAZORPAY_KEY_SECRET is not configured');
+      return res.status(500).json({ success: false, message: 'Payment gateway configuration error' });
+    }
     const body = razorpay_order_id + '|' + razorpay_payment_id;
 
     const expectedSignature = crypto
@@ -210,9 +233,13 @@ export const verifyPayment = async (req: AuthRequest, res: Response) => {
 export const handleWebhook = async (req: AuthRequest, res: Response) => {
   try {
     const signature = req.headers['x-razorpay-signature'] as string;
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET || 'zobraTestSecret998877665544332211';
+    const webhookSecret = getRazorpayWebhookSecret();
 
     if (signature) {
+      if (!webhookSecret) {
+        console.error('Webhook signature verification failed: RAZORPAY_WEBHOOK_SECRET is not configured');
+        return res.status(500).json({ success: false, message: 'Payment gateway configuration error' });
+      }
       const expectedSig = crypto
         .createHmac('sha256', webhookSecret)
         .update(JSON.stringify(req.body))
