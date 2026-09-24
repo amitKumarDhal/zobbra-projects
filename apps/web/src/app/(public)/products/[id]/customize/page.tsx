@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -30,7 +30,6 @@ import {
 import { API_URL } from '@/lib/api';
 import { useCustomerUser } from '@/hooks/useCustomerUser';
 import VariantBreakdownEntry, { VariantData } from '@/components/shared/VariantBreakdownEntry';
-import { getColorHex } from '@/components/customizer/GarmentBackdrop';
 import { 
   saveCustomizerDraft, 
   getCustomizerDraft, 
@@ -54,6 +53,31 @@ const DynamicCanvas = dynamic(
     ),
   }
 );
+
+interface PricingData {
+  productId: string;
+  productName: string;
+  unitPrice: number;
+  subtotal: number;
+  discount: number;
+  gstRate: number;
+  gstTotal: number;
+  totalAmount: number;
+}
+
+type PricingState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: PricingData }
+  | { status: 'error'; message: string };
+
+function debounce<T extends (...args: any[]) => any>(fn: T, delay = 300) {
+  let timer: NodeJS.Timeout | null = null;
+  return (...args: Parameters<T>) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
 
 const CustomizerCanvas = React.forwardRef<CustomizerCanvasRef, CustomizerCanvasProps>((props, ref) => {
   const DynamicComp = DynamicCanvas as any;
@@ -140,7 +164,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   // Text tool form inputs
   const [textInput, setTextInput] = useState<string>('');
   const [textFont, setTextFont] = useState<string>('Outfit');
-  const [textFontSize, setTextFontSize] = useState<number>(24);
+  const [textFontSize] = useState<number>(24);
   const [textColor, setTextColor] = useState<string>('#FFFFFF');
   const [textBold, setTextBold] = useState<boolean>(true);
   const [textItalic, setTextItalic] = useState<boolean>(false);
@@ -151,23 +175,21 @@ function CustomizeProductContent({ productId }: { productId: string }) {
 
   // Logo upload state
   const [isUploadingLogo, setIsUploadingLogo] = useState<boolean>(false);
+  const [isUploadingArtwork, setIsUploadingArtwork] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Submission state
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [isPreparingPreview, setIsPreparingPreview] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [draftRestoredNotice, setDraftRestoredNotice] = useState<boolean>(false);
   const [restoredDraft, setRestoredDraft] = useState<CustomizerDraft | null>(null);
 
   // Guest → Login/Register modal (replaces direct redirect)
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
-  // Legacy guest inquiry modal kept for reference but hidden
-  const [showGuestModal, setShowGuestModal] = useState<boolean>(false);
-  const [guestName, setGuestName] = useState<string>('');
-  const [guestEmail, setGuestEmail] = useState<string>('');
-  const [guestPhone, setGuestPhone] = useState<string>('');
-  const [guestCompany, setGuestCompany] = useState<string>('');
-  const [guestCity, setGuestCity] = useState<string>('');
+
+  // Live Server Pricing State
+  const [pricingState, setPricingState] = useState<PricingState>({ status: 'idle' });
 
   const canvasRef = useRef<CustomizerCanvasRef>(null);
 
@@ -305,26 +327,80 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     ? 'Back Only' 
     : 'Front Only';
 
-  // Live Authoritative Pricing Calculation (Matching backend algorithm)
-  const basePrice = product?.basePrice || 250;
-  let volumePrice = basePrice;
-  if (quantity >= 500) {
-    volumePrice = Math.max(100, basePrice - 60);
-  } else if (quantity >= 100) {
-    volumePrice = Math.max(120, basePrice - 30);
-  } else if (quantity >= 50) {
-    volumePrice = Math.max(140, basePrice - 10);
-  }
+  // Variant quantity sum validation
+  const variantSum = variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0);
+  const hasVariantMismatch = variants.length > 0 && variantSum !== quantity;
 
-  let positionAddon = 20;
-  if (resolvedPrintType === 'Front & Back') positionAddon = 40;
-  else if (resolvedPrintType === 'Back Only') positionAddon = 30;
+  // Live Server Pricing via POST /api/v1/quotes/pricing-preview
+  const fetchPricing = useCallback(
+    debounce(async (pid: string, qty: number, pt: string, vars: VariantData[]) => {
+      if (!pid || qty <= 0) {
+        setPricingState({ status: 'idle' });
+        return;
+      }
 
-  const unitPrice = volumePrice + positionAddon;
-  const subtotal = unitPrice * quantity;
-  const gstRate = product?.gstRate || 5.0;
-  const gstTotal = Math.round(subtotal * (gstRate / 100));
-  const totalAmount = subtotal + gstTotal;
+      // Variant quantity sum must equal total quantity
+      if (vars.length > 0) {
+        const sum = vars.reduce((s, v) => s + (Number(v.quantity) || 0), 0);
+        if (sum !== qty) {
+          // Invalid: no pricing request!
+          setPricingState({ status: 'idle' });
+          return;
+        }
+      }
+
+      setPricingState({ status: 'loading' });
+
+      try {
+        const token =
+          typeof window !== 'undefined'
+            ? localStorage.getItem('token') || localStorage.getItem('zobra_token')
+            : null;
+
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const body: { productId: string; quantity: number; printType: string; variants?: VariantData[] } = {
+          productId: pid,
+          quantity: qty,
+          printType: pt || 'Front Only',
+        };
+        if (vars.length > 0) body.variants = vars;
+
+        const res = await fetch(`${API_URL}/quotes/pricing-preview`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          setPricingState({ status: 'success', data: data.data });
+        } else {
+          setPricingState({
+            status: 'error',
+            message: data.message || 'Unable to calculate estimate. Please try again.',
+          });
+        }
+      } catch {
+        setPricingState({
+          status: 'error',
+          message: 'Network error calculating pricing preview.',
+        });
+      }
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    if (product?.id && quantity > 0) {
+      const varsToSend = variants.length > 0
+        ? variants
+        : [{ color: selectedColor, size: isCap ? 'Free Size' : 'L', quantity }];
+      fetchPricing(product.id, quantity, resolvedPrintType, varsToSend);
+    }
+  }, [product?.id, quantity, resolvedPrintType, variants, selectedColor, isCap, fetchPricing]);
 
   const handleQuantityChange = (newQty: number) => {
     const val = Math.max(1, newQty);
@@ -366,16 +442,18 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     if (!file || !canvasRef.current) return;
 
     setIsUploadingLogo(true);
+    setIsUploadingArtwork(true);
     setSubmitError(null);
     try {
       console.log('[Customizer] calling addImage with file:', file.name, file.size);
       await canvasRef.current.addImage(file);
-      console.log('[Customizer] addImage completed successfully');
+      console.log('[Customizer] addImage and Cloudinary upload completed successfully');
     } catch (err: any) {
-      console.error('[Customizer] Failed placing logo on canvas:', err);
-      setSubmitError(err?.message || 'Failed to load image. Please choose a valid PNG, JPG, or SVG file.');
+      console.error('[Customizer] Failed placing/uploading logo:', err);
+      setSubmitError(err?.message || 'Failed to upload artwork. Please choose a valid PNG, JPG, or SVG file.');
     } finally {
       setIsUploadingLogo(false);
+      setIsUploadingArtwork(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -385,29 +463,55 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     setSubmitError(null);
 
     // Validate variant breakdown sum
-    const variantSum = variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
-    let finalVariants = variants;
-    if (variantSum !== quantity) {
-      finalVariants = [{ color: selectedColor, size: isCap ? 'Free Size' : 'L', quantity }];
-      setVariants(finalVariants);
+    const vSum = variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0);
+    if (variants.length > 0 && vSum !== quantity) {
+      setSubmitError(`Total variant quantity (${vSum}) must equal total order quantity (${quantity}).`);
+      return;
     }
+
+    const finalVariants = variants.length > 0
+      ? variants
+      : [{ color: selectedColor, size: isCap ? 'Free Size' : 'L', quantity }];
 
     if (!canvasRef.current) return;
 
+    // Check if artwork upload is still in progress
+    if (isUploadingArtwork || isUploadingLogo || canvasRef.current.isUploadingArtwork?.()) {
+      setSubmitError('Uploading artwork… Please wait for upload to complete.');
+      return;
+    }
+
     setSubmitting(true);
+    setIsPreparingPreview(true);
 
     try {
-      // 1. Export rendered canvas previews (garment + placed design)
+      // 1. If an artwork upload was in-flight, ensure it finishes
+      if (canvasRef.current.waitForArtworkUpload) {
+        await canvasRef.current.waitForArtworkUpload();
+      }
+
+      // 2. Export rendered canvas previews (garment + placed design uploaded to Cloudinary CDN)
       const previews = await canvasRef.current.exportPreviews();
-      // 2. Capture raw customer-uploaded artwork (prioritize ref / objects / restored draft)
+      setIsPreparingPreview(false);
+
+      // 3. Capture raw customer-uploaded artwork (Cloudinary URL only, never base64)
       const originalArtwork = canvasRef.current.getOriginalArtworkUrl() || restoredDraft?.originalArtworkUrl;
+      if (originalArtwork && originalArtwork.startsWith('data:image/')) {
+        setSubmitError('Artwork upload is still processing. Please try again.');
+        setSubmitting(false);
+        return;
+      }
 
       const token = typeof window !== 'undefined' 
         ? localStorage.getItem('token') || localStorage.getItem('zobra_token') 
         : null;
 
-      // Guest: Save draft to localStorage then show Login/Register modal
       const isCustomer = user && user.role === 'CUSTOMER';
+      const effectiveArtworkUrl = (originalArtwork && !originalArtwork.startsWith('data:image/'))
+        ? originalArtwork
+        : (previews.frontCloudinaryUrl || previews.backCloudinaryUrl || undefined);
+
+      // Guest: Save draft to localStorage then show Login/Register modal
       if (!token || !isCustomer) {
         const draftId = `draft_${Date.now()}`;
         const draftData: CustomizerDraft = {
@@ -418,11 +522,9 @@ function CustomizeProductContent({ productId }: { productId: string }) {
           collarColor,
           frontCanvasJson: previews.frontCanvasJson,
           backCanvasJson: previews.backCanvasJson,
-          // Store rendered canvas previews
-          previewFrontUrl: previews.frontCloudinaryUrl || previews.frontDataUrl,
-          previewBackUrl: previews.backCloudinaryUrl || previews.backDataUrl,
-          // Store raw uploaded artwork separately so it survives login/register
-          originalArtworkUrl: originalArtwork || undefined,
+          previewFrontUrl: previews.frontCloudinaryUrl,
+          previewBackUrl: previews.backCloudinaryUrl,
+          originalArtworkUrl: effectiveArtworkUrl,
           quantity,
           printPosition: resolvedPrintType,
           variants: finalVariants,
@@ -436,11 +538,6 @@ function CustomizeProductContent({ productId }: { productId: string }) {
       }
 
       // Logged-in Customer: Submit official Quote
-      // Separate raw customer asset from rendered garments
-      const frontPreview = previews.frontCloudinaryUrl || previews.frontDataUrl;
-      const backPreview = previews.backCloudinaryUrl || previews.backDataUrl;
-      const effectiveArtworkUrl = originalArtwork || frontPreview || backPreview;
-
       const quotePayload = {
         productId: product.id,
         quantity,
@@ -448,20 +545,17 @@ function CustomizeProductContent({ productId }: { productId: string }) {
         printingType: 'Custom Online Design',
         printPosition: resolvedPrintType,
         printType: resolvedPrintType,
-        // Raw customer-uploaded artwork (or garment preview fallback if text-only)
+        // Cloudinary CDN URLs only, never base64 data URLs
         artworkUrl: effectiveArtworkUrl,
-        // Rendered garments front & back
-        previewFrontUrl: frontPreview || undefined,
-        previewBackUrl: backPreview || undefined,
-        // Fabric canvas state snapshot
+        previewFrontUrl: previews.frontCloudinaryUrl || undefined,
+        previewBackUrl: previews.backCloudinaryUrl || undefined,
+        // Fabric canvas state snapshot (sanitized, zero base64)
         canvasStateJson: JSON.stringify({
           front: previews.frontCanvasJson,
           back: previews.backCanvasJson,
         }),
+        // Compact metadata only — NO duplicate base64 or preview strings!
         customizationRequirements: JSON.stringify({
-          rawArtworkUrl: originalArtwork,
-          frontPreviewUrl: frontPreview,
-          backPreviewUrl: backPreview,
           selectedColor,
           collarColor,
           printPosition: resolvedPrintType,
@@ -485,13 +579,25 @@ function CustomizeProductContent({ productId }: { productId: string }) {
           : `Custom Online Design - ${resolvedPrintType} on ${selectedColor} (Collar & Rib: ${collarColor})`,
       };
 
+      const payloadString = JSON.stringify(quotePayload);
+      const payloadSize = new Blob([payloadString]).size;
+      console.log(`[Customizer] Quote payload size: ${payloadSize} bytes. Contains data:image: ${payloadString.includes('data:image/')}`);
+
+      // Final client-side guard: Reject any base64 data URLs in payload
+      if (payloadString.includes('data:image/')) {
+        console.error('[Customizer] Aborting submission: payload contains data:image/');
+        setSubmitError('Artwork upload is still processing. Please try again.');
+        setSubmitting(false);
+        return;
+      }
+
       const res = await fetch(`${API_URL}/quotes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(quotePayload),
+        body: payloadString,
       });
 
       const data = await res.json();
@@ -507,75 +613,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
       console.error('Submission error:', err);
       setSubmitError(err.message || 'An error occurred while preparing your custom design.');
       setSubmitting(false);
-    }
-  };
-
-  // Submit as Guest Inquiry without logging in
-  const handleGuestInquirySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!guestName || !guestPhone) {
-      setSubmitError('Please provide your name and phone number for the inquiry.');
-      return;
-    }
-
-    setSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      const originalArtwork = canvasRef.current ? canvasRef.current.getOriginalArtworkUrl() : null;
-      const previews = canvasRef.current 
-        ? await canvasRef.current.exportPreviews()
-        : { frontCloudinaryUrl: '', backCloudinaryUrl: '', frontDataUrl: '', backDataUrl: '', frontCanvasJson: '', backCanvasJson: '', hasFront: false, hasBack: false };
-
-      const frontPreview = previews.frontCloudinaryUrl || previews.frontDataUrl;
-      const backPreview = previews.backCloudinaryUrl || previews.backDataUrl;
-
-      const inquiryPayload = {
-        name: guestName,
-        email: guestEmail || undefined,
-        phone: guestPhone,
-        company: guestCompany || 'Individual',
-        location: guestCity || undefined,
-        productId: product.id,
-        productInterest: product.name,
-        quantity,
-        color: selectedColor,
-        collarColor,
-        printingType: 'Custom Online Design',
-        printPosition: resolvedPrintType,
-        artworkUrl: originalArtwork || frontPreview || backPreview,
-        customizationRequirements: JSON.stringify({
-          rawArtworkUrl: originalArtwork,
-          frontPreviewUrl: frontPreview,
-          backPreviewUrl: backPreview,
-          selectedColor,
-          collarColor,
-          printPosition: resolvedPrintType,
-          variants,
-        }),
-        message: `Online Customizer Design Request - ${resolvedPrintType} on ${selectedColor} / Collar: ${collarColor} (${quantity} units)`,
-        source: 'WEBSITE',
-      };
-
-      const res = await fetch(`${API_URL}/inquiries`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(inquiryPayload),
-      });
-
-      if (res.ok) {
-        clearCustomizerDraft(product.id);
-        setShowGuestModal(false);
-        router.push('/thank-you?type=inquiry');
-      } else {
-        const errData = await res.json();
-        setSubmitError(errData.message || 'Failed to submit inquiry. Please try again.');
-        setSubmitting(false);
-      }
-    } catch (err: any) {
-      console.error('Inquiry error:', err);
-      setSubmitError('Network error submitting inquiry.');
-      setSubmitting(false);
+      setIsPreparingPreview(false);
     }
   };
 
@@ -636,6 +674,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
         {/* Center: Front / Back View Switcher Pills */}
         <div className="flex items-center gap-1 p-1 bg-[#F3F4F6] rounded-xl border border-[#E5E7EB]">
           <button
+            id="btn-switch-front"
             type="button"
             onClick={() => handleSwitchSide('front')}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -648,6 +687,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
             {hasFront && <span className="w-1.5 h-1.5 rounded-full bg-[#3B6FEB]"></span>}
           </button>
           <button
+            id="btn-switch-back"
             type="button"
             onClick={() => handleSwitchSide('back')}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -722,6 +762,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
             {/* Tool Mode Tabs */}
             <div className="grid grid-cols-3 gap-2 p-1.5 bg-[#F9FAFB] rounded-2xl border border-[#F3F4F6]">
               <button
+                id="tab-tool-colors"
                 type="button"
                 onClick={() => setActiveToolTab('colors')}
                 className={`py-2 px-2 text-xs font-bold rounded-2xl flex flex-col items-center gap-1.5 transition-all ${
@@ -735,6 +776,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
               </button>
 
               <button
+                id="tab-tool-logo"
                 type="button"
                 onClick={() => setActiveToolTab('logo')}
                 className={`py-2 px-2 text-xs font-bold rounded-2xl flex flex-col items-center gap-1.5 transition-all ${
@@ -847,7 +889,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                     <UploadCloud className="w-5 h-5" />
                   </div>
                   <span className="text-xs font-bold text-[#050505]">
-                    {isUploadingLogo ? 'Processing image...' : 'Click or Drag Logo File'}
+                    {(isUploadingLogo || isUploadingArtwork) ? 'Uploading artwork…' : 'Click or Drag Logo File'}
                   </span>
                   <span className="text-[11px] text-gray-400">
                     PNG, JPG, SVG or WebP (Transparent recommended)
@@ -858,7 +900,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                     accept="image/png,image/jpeg,image/svg+xml,image/webp"
                     onChange={handleFileUpload}
                     className="sr-only"
-                    disabled={isUploadingLogo}
+                    disabled={isUploadingLogo || isUploadingArtwork}
                   />
                 </label>
               </div>
@@ -1047,6 +1089,10 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                 setHasFront(hf);
                 setHasBack(hb);
               }}
+              onUploadStatusChange={({ isUploading, error }) => {
+                setIsUploadingArtwork(isUploading);
+                if (error) setSubmitError(error);
+              }}
               initialFrontJson={restoredDraft?.frontCanvasJson}
               initialBackJson={restoredDraft?.backCanvasJson}
               initialArtworkUrl={restoredDraft?.originalArtworkUrl}
@@ -1087,6 +1133,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
               </div>
               <div className="flex items-center gap-2">
                 <input
+                  id="customizer-quantity-input"
                   type="number"
                   min={product.bulkPricing?.[0]?.minQuantity || 50}
                   value={quantity}
@@ -1137,47 +1184,91 @@ function CustomizeProductContent({ productId }: { productId: string }) {
             </div>
 
             {/* Pricing Summary */}
-            <div className="bg-[#F8F9FC] rounded-2xl p-4 border border-[#E5E7EB] space-y-2 text-xs">
-              <div className="flex justify-between text-gray-600 font-medium">
-                <span>Unit Rate ({quantity} pcs)</span>
-                <span className="font-bold text-[#050505]">₹{unitPrice} / pc</span>
-              </div>
-              <div className="flex justify-between text-gray-600 font-medium">
-                <span>Body / Collar</span>
-                <span className="font-bold text-[#050505]">{selectedColor} / {collarColor}</span>
-              </div>
-              <div className="flex justify-between text-gray-600 font-medium">
-                <span>Print Location</span>
-                <span className="font-bold text-[#3B6FEB]">{resolvedPrintType}</span>
-              </div>
-              <div className="flex justify-between text-gray-600 font-medium">
-                <span>Subtotal</span>
-                <span className="font-bold text-[#050505]">₹{subtotal.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-gray-600 font-medium">
-                <span>GST ({gstRate}%)</span>
-                <span className="font-bold text-[#050505]">₹{gstTotal.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="pt-2 border-t border-[#E5E7EB] flex justify-between items-baseline">
-                <span className="text-sm font-black text-[#050505] uppercase">Total Estimate</span>
-                <span className="text-xl font-black text-[#050505] font-heading">
-                  ₹{totalAmount.toLocaleString('en-IN')}
-                </span>
-              </div>
+            <div id="customizer-pricing-card" className="bg-[#F8F9FC] rounded-2xl p-4 border border-[#E5E7EB] space-y-2 text-xs">
+              {pricingState.status === 'loading' ? (
+                <div className="py-6 flex flex-col items-center justify-center space-y-2 text-gray-500">
+                  <div className="w-5 h-5 border-2 border-[#3B6FEB] border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-xs font-semibold">Calculating estimated pricing…</span>
+                </div>
+              ) : pricingState.status === 'success' ? (
+                <>
+                  <div className="flex justify-between text-gray-600 font-medium">
+                    <span>Unit Rate ({quantity} pcs)</span>
+                    <span className="font-bold text-[#050505]">₹{pricingState.data.unitPrice} / pc</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600 font-medium">
+                    <span>Body / Collar</span>
+                    <span className="font-bold text-[#050505]">{selectedColor} / {collarColor}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600 font-medium">
+                    <span>Print Location</span>
+                    <span className="font-bold text-[#3B6FEB]">{resolvedPrintType}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600 font-medium">
+                    <span>Subtotal</span>
+                    <span className="font-bold text-[#050505]">₹{pricingState.data.subtotal.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600 font-medium">
+                    <span>GST ({pricingState.data.gstRate}%)</span>
+                    <span className="font-bold text-[#050505]">₹{pricingState.data.gstTotal.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="pt-2 border-t border-[#E5E7EB] flex justify-between items-baseline">
+                    <span className="text-sm font-black text-[#050505] uppercase">Total Estimate</span>
+                    <span className="text-xl font-black text-[#050505] font-heading">
+                      ₹{pricingState.data.totalAmount.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 italic text-center pt-1 border-t border-gray-200/60">
+                    Estimated price. Final quotation may be adjusted after sales review.
+                  </p>
+                </>
+              ) : hasVariantMismatch ? (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs">
+                  <p className="font-bold">Variant Mismatch</p>
+                  <p className="text-[11px] mt-0.5">
+                    Variant quantities sum ({variantSum}) must equal total quantity ({quantity}) to calculate price.
+                  </p>
+                </div>
+              ) : pricingState.status === 'error' ? (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs">
+                  <p className="font-bold">Pricing Estimate</p>
+                  <p className="text-[11px] mt-0.5">{pricingState.message}</p>
+                </div>
+              ) : (
+                <div className="py-4 text-center text-gray-500 text-xs">
+                  Select quantity and options to calculate estimated price.
+                </div>
+              )}
             </div>
+
+            {hasVariantMismatch && (
+              <p className="text-xs font-semibold text-amber-600">
+                Total variant quantity ({variantSum}) must equal order quantity ({quantity}).
+              </p>
+            )}
+
+            {submitError && (
+              <p className="text-xs font-semibold text-red-600">{submitError}</p>
+            )}
 
             {/* Proceed CTA Button */}
             <div className="space-y-2 pt-1">
               <button
+                id="customizer-proceed-btn"
                 type="button"
                 onClick={handleProceed}
-                disabled={submitting}
+                disabled={submitting || isPreparingPreview || isUploadingArtwork || isUploadingLogo || hasVariantMismatch || pricingState.status === 'loading'}
                 className="w-full py-4 bg-[#3B6FEB] hover:bg-[#2563EB] disabled:bg-gray-400 text-white rounded-xl text-sm font-black shadow-md transition-all active:scale-[0.98] uppercase tracking-wider flex items-center justify-center gap-2"
               >
-                {submitting ? (
+                {(isUploadingArtwork || isUploadingLogo) ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Processing Design...</span>
+                    <span>Uploading artwork…</span>
+                  </>
+                ) : (isPreparingPreview || submitting) ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Preparing design preview…</span>
                   </>
                 ) : isCustomer ? (
                   <>

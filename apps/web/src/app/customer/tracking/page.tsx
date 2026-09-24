@@ -11,7 +11,6 @@ import {
   Sparkles,
   ShieldCheck,
   Building2,
-  CheckCircle2,
   ChevronRight,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -48,7 +47,7 @@ export default function CustomerTrackingPage() {
           const u = JSON.parse(uStr);
           if (u.name) setUserName(u.name);
           if (u.phone) setUserPhone(u.phone);
-        } catch (_err) {
+        } catch {
           // ignore
         }
       }

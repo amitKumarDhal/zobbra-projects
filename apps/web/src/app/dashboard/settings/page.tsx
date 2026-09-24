@@ -38,7 +38,7 @@ export default function SettingsPage() {
           settingsJson.settings.forEach((s: any) => {
             try {
               map[s.key] = JSON.parse(s.value);
-            } catch (e) {
+            } catch {
               map[s.key] = s.value;
             }
           });

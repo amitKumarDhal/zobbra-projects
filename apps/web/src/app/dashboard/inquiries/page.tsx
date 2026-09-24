@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Filter, MessageSquare, Phone, Globe, Camera, Eye, MoreVertical, Plus, UserCircle, FileText, ArrowRight, X, Clock, AlertCircle, Users, FileCheck, CheckCircle, Calendar, Building2, MapPin, Package, User, Mail, Link as LinkIcon, Image as ImageIcon, ExternalLink, ShoppingBag } from 'lucide-react';
+import { Search, MessageSquare, Phone, Globe, Camera, Eye, Plus, X, FileText, ArrowRight, CheckCircle, Link as LinkIcon, ExternalLink, ShoppingBag, Users, UserCircle } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
@@ -104,7 +104,7 @@ export default function InquiriesPage() {
       try {
         const res = await fetch(`${API_URL}/inquiries/${id}`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } }).then(r => r.json());
         setSelectedInquiryDetails(res);
-      } catch (err: any) {
+      } catch {
         console.error('Failed to load inquiry details');
       }
     }
@@ -119,7 +119,7 @@ export default function InquiriesPage() {
       if(res.quote || res.inquiry) {
          window.location.href = `/dashboard/inquiries/${inq.id}`;
       }
-    } catch (err: any) {
+    } catch {
       console.error('Conversion failed');
     }
   };
@@ -137,7 +137,7 @@ export default function InquiriesPage() {
       const res = await fetch(`${API_URL}/inquiries/${inq.id}`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } }).then(r => r.json());
       setSelectedInquiryDetails(res);
       fetchData(); // Refresh list to update any aggregated status
-    } catch(err) {
+    } catch {
       console.error('Failed to add note');
     }
   };
@@ -605,7 +605,7 @@ function NewInquiryModal({ onClose, onSuccess }: { onClose: () => void, onSucces
         })
       });
       onSuccess();
-    } catch (err: any) {
+    } catch {
       console.error('Failed to create inquiry');
     } finally {
       setLoading(false);

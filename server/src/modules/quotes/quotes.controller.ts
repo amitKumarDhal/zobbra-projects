@@ -4,40 +4,15 @@ import { AuthRequest } from '../../middleware/auth.js';
 import { generateQuotePDFBuffer } from '../../utils/pdfGenerator.js';
 import { sendQuoteEmail } from '../../utils/email.js';
 import { buildWhatsAppClickUrl, generateWhatsAppMessage, WhatsAppTemplateKey } from '../../utils/whatsappTemplates.js';
+import { calculateServerPricing } from './quote-pricing.js';
 
-// Server-side Authoritative Pricing Calculation Service
-export function calculateServerPricing(
-  basePrice: number,
-  quantity: number,
-  printType: string = 'Front Only',
-  gstRate: number = 5.0,
-  isGstApplied: boolean = true
-) {
-  let positionAddon = 20;
-  const printLower = printType.toLowerCase();
-  if (printLower.includes('front') && printLower.includes('back')) {
-    positionAddon = 40;
-  } else if (printLower.includes('embroidery') || printLower.includes('back')) {
-    positionAddon = 30;
-  }
+// Re-export so existing imports from this module (including tests) still work
+export { calculateServerPricing } from './quote-pricing.js';
 
-  // Volume discount tier
-  let volumePrice = basePrice;
-  if (quantity >= 500) {
-    volumePrice = Math.max(100, basePrice - 60);
-  } else if (quantity >= 100) {
-    volumePrice = Math.max(120, basePrice - 30);
-  } else if (quantity >= 50) {
-    volumePrice = Math.max(140, basePrice - 10);
-  }
-
-  const unitPrice = volumePrice + positionAddon;
-  const subtotal = unitPrice * quantity;
-  const gstTotal = isGstApplied ? Math.round(subtotal * (gstRate / 100)) : 0;
-  const totalAmount = subtotal + gstTotal;
-
-  return { unitPrice, subtotal, gstTotal, totalAmount };
-}
+// -----------------------------------------------------------------------
+// NOTE: calculateServerPricing is now imported from ./quote-pricing.ts
+//       and re-exported above. Do not duplicate the formula here.
+// -----------------------------------------------------------------------
 
 // Allowed status transitions state machine
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
@@ -243,6 +218,28 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
   
   if (!targetCustomerId) {
     return res.status(400).json({ success: false, message: 'Customer ID is required' });
+  }
+
+  // Defensive validation: reject embedded base64 data URLs in quotes
+  if (
+    (typeof artworkUrl === 'string' && artworkUrl.includes('data:image/')) ||
+    (typeof previewFrontUrl === 'string' && previewFrontUrl.includes('data:image/')) ||
+    (typeof previewBackUrl === 'string' && previewBackUrl.includes('data:image/')) ||
+    (typeof canvasStateJson === 'string' && canvasStateJson.includes('data:image/')) ||
+    (typeof customizationRequirements === 'string' && customizationRequirements.includes('data:image/'))
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: 'Base64 data URLs are not permitted in quotes. Artwork and previews must be uploaded to Cloudinary.',
+    });
+  }
+
+  // Reject oversized customizationRequirements (> 50 KB)
+  if (typeof customizationRequirements === 'string' && customizationRequirements.length > 50000) {
+    return res.status(400).json({
+      success: false,
+      message: 'customizationRequirements payload exceeds the permitted size limit.',
+    });
   }
 
   let resolvedCompanyId = companyId;
@@ -1010,4 +1007,85 @@ export const removeCoupon = async (req: AuthRequest, res: Response) => {
     } catch (error: any) {
        return res.status(500).json({ success: false, message: error.message });
     }
+};
+
+/**
+ * POST /api/v1/quotes/pricing-preview
+ *
+ * Live server-side pricing estimate for the customer Create Quote form.
+ * Accessible to CUSTOMER, ADMIN, and SALES roles (authenticateJWT, no role restriction).
+ *
+ * The client must NOT use these numbers as final authoritative prices.
+ * The actual quote creation recalculates everything from the database.
+ */
+export const pricingPreview = async (req: AuthRequest, res: Response) => {
+  try {
+    const { productId, quantity, variants, printType } = req.body;
+
+    if (!productId || typeof productId !== 'string' || !productId.trim()) {
+      return res.status(400).json({ success: false, message: 'productId is required' });
+    }
+
+    const parsedQty = Number(quantity);
+    if (!parsedQty || parsedQty <= 0 || !Number.isInteger(parsedQty)) {
+      return res.status(400).json({ success: false, message: 'quantity must be a positive integer greater than zero' });
+    }
+
+    if (variants !== undefined && variants !== null) {
+      if (!Array.isArray(variants)) {
+        return res.status(400).json({ success: false, message: 'variants must be an array' });
+      }
+      if (variants.length > 0) {
+        const variantSum = variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0);
+        if (variantSum !== parsedQty) {
+          return res.status(400).json({
+            success: false,
+            message: `Variant quantities sum (${variantSum}) must equal total quantity (${parsedQty})`,
+          });
+        }
+      }
+    }
+
+    const product = await prisma.product.findFirst({
+      where: {
+        OR: [
+          { id: productId.trim() },
+          { slug: productId.trim() },
+        ],
+        isActive: true,
+      },
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: `Product not found or is not active: ${productId}`,
+      });
+    }
+
+    const pricing = calculateServerPricing(
+      product.basePrice,
+      parsedQty,
+      printType || 'Front Only',
+      product.gstRate,
+      true
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        productId: product.id,
+        productName: product.name,
+        unitPrice: pricing.unitPrice,
+        subtotal: pricing.subtotal,
+        discount: pricing.discount,
+        gstRate: pricing.gstRate,
+        gstTotal: pricing.gstTotal,
+        totalAmount: pricing.totalAmount,
+      },
+    });
+  } catch (error) {
+    console.error('[pricingPreview] Error:', error instanceof Error ? error.message : String(error));
+    return res.status(500).json({ success: false, message: 'Failed to calculate pricing estimate' });
+  }
 };

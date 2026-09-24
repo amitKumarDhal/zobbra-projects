@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { UploadCloud, Search, Filter, Image as ImageIcon, FileText as FileIcon, MoreVertical, Folder, Link as LinkIcon, Trash2 } from 'lucide-react';
+import { UploadCloud, Search, Filter, FileText as FileIcon, MoreVertical, Folder, Link as LinkIcon, Trash2 } from 'lucide-react';
 
 export default function MediaPage() {
   const [search, setSearch] = useState('');
 
-  const [mediaFiles, setMediaFiles] = useState<any[]>([]); // To be wired to a real API
+  const [mediaFiles] = useState<any[]>([]); // To be wired to a real API
 
   return (
     <div className="space-y-6 pb-12 font-sans bg-[#F8F9FC] min-h-screen">

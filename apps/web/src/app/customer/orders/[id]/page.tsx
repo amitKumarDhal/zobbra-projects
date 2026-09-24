@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -51,7 +51,6 @@ interface OrderDetail {
 }
 
 export default function CustomerOrderDetailPage() {
-  const router = useRouter();
   const params = useParams();
   const id = params?.id as string;
 
@@ -85,7 +84,7 @@ export default function CustomerOrderDetailPage() {
         try {
           const u = JSON.parse(uStr);
           if (u.phone) setStoredPhone(u.phone);
-        } catch (_err) {
+        } catch {
           // ignore
         }
       }

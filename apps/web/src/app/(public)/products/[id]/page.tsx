@@ -5,11 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  Check,
   Star,
   Truck,
   Sparkles,
-  Download,
   ArrowRight,
   Heart,
   Share2,

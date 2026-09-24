@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   MessageSquare,
-  FileText,
   ShoppingBag,
   BarChart3,
   Users,

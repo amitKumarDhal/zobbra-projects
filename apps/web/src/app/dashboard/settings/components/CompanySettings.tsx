@@ -33,7 +33,7 @@ export default function CompanySettings({ settings, onSave }: { settings: any, o
         }
       }
       alert('Company Profile saved successfully');
-    } catch (err) {
+    } catch {
       alert('Failed to save Company Profile');
     } finally {
       setSaving(false);

@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, CheckCircle2, Loader2, Sparkles, SlidersHorizontal } from 'lucide-react';
+import { Search, CheckCircle2, Loader2, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Modal } from '@/components/ui/modal';
-import { StatusBadge } from '@/components/ui/status-badge';
+// StatusBadge import removed (unused)
 import { API_URL } from '@/lib/api';
 import { useCustomerUser } from '@/hooks/useCustomerUser';
 

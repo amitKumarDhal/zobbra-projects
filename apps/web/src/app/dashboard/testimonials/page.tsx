@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Filter, Star, Edit2, Trash2, CheckCircle, XCircle, MessageSquare, ThumbsUp, Clock, AlertCircle } from 'lucide-react';
+import { Search, Plus, Star, Edit2, Trash2, MessageSquare, ThumbsUp, Clock, AlertCircle } from 'lucide-react';
 import TestimonialDrawer from './TestimonialDrawer';
 import { StatusBadge } from '@/components/ui/status-badge';
 
@@ -50,8 +50,8 @@ export default function TestimonialsPage() {
         setTestimonials(listJson.data);
         setTotalPages(listJson.pagination.totalPages || 1);
       }
-    } catch (err) {
-      console.error('Failed to fetch testimonials', err);
+    } catch (_err) {
+      console.error('Failed to fetch testimonials', _err);
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,7 @@ export default function TestimonialsPage() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) fetchData();
-    } catch (err) {
+    } catch {
       alert('Delete failed');
     }
   };

@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Plus, FileText, CheckCircle2, Tags, Package, UploadCloud, X, Edit2, Copy, Trash2, IndianRupee, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Search, Filter, Download, Plus, FileText, CheckCircle2, Tags, Package, UploadCloud, X, Edit2, Copy, Trash2, Image as ImageIcon, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 import { API_URL } from '@/lib/api';
-import { uploadToCloudinary, deleteFromCloudinary } from '@/lib/upload';
+import { uploadToCloudinary } from '@/lib/upload';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);

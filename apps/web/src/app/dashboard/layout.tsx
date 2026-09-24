@@ -25,7 +25,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         return;
       }
       setAuthorized(true);
-    } catch (e) {
+    } catch {
       router.push('/login');
     }
   }, [router]);

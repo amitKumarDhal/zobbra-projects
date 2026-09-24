@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Plus, CreditCard, CheckCircle2, Clock, AlertTriangle, RefreshCw, MoreVertical, Eye, Settings, FileText, ChevronRight, X } from 'lucide-react';
+import { Search, Filter, Download, Plus, CreditCard, CheckCircle2, Clock, AlertTriangle, RefreshCw, MoreVertical, Eye, Settings, FileText, X } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
-import Link from 'next/link';
+// Link import removed (unused)
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 

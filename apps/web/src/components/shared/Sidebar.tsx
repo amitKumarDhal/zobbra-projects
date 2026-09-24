@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Package,
   Users,
-  FileText,
   ShoppingBag,
   Kanban,
   Truck,

@@ -27,6 +27,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { API_URL } from '@/lib/api';
 import { buildWhatsAppUrl, getOrderWhatsAppMessage } from '@/lib/whatsapp';
 import { triggerSidebarCountsRefresh } from '@/hooks/useAdminSidebarCounts';
+import { OrderDesignAssets, AssetPreviewModal, DesignAsset } from '@/components/orders/OrderDesignAssets';
 
 // Types
 type OrderStatus = 'PENDING' | 'CONFIRMED' | 'IN_PRODUCTION' | 'READY_FOR_DISPATCH' | 'DISPATCHED' | 'DELIVERED' | 'CANCELLED';
@@ -116,6 +117,9 @@ export default function OrdersPage() {
   const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [paymentReference, setPaymentReference] = useState('');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+
+  // Customer Artwork & Design Preview Lightbox State
+  const [selectedAsset, setSelectedAsset] = useState<DesignAsset | null>(null);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -453,29 +457,43 @@ export default function OrdersPage() {
                           <p className="text-[10px] text-[#6B7280] mt-0.5">{o.company?.name || 'Individual'}</p>
                         </td>
 
-                        {/* Product Summary */}
+                        {/* Product Summary with Customer Artwork & Design Previews */}
                         <td className="px-4 py-4">
-                          <div className="flex items-center gap-2">
-                            {o.previewFrontUrl || o.artworkUrl || o.quote?.inquiry?.artworkUrl ? (
-                              <img
-                                src={o.previewFrontUrl || o.artworkUrl || o.quote?.inquiry?.artworkUrl}
-                                alt="Order artwork"
-                                className="w-8 h-8 rounded border border-[#E5E7EB] object-cover shrink-0 bg-[#F3F4F6]"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                              />
-                            ) : (
-                              <div className="w-8 h-8 bg-[#F3F4F6] rounded border border-[#E5E7EB] flex items-center justify-center text-xs shrink-0">👕</div>
-                            )}
-                            {o.items && o.items.length > 1 ? (
-                              <div className="flex flex-col">
-                                <span className="text-[10px] font-bold text-[#111111]">+{o.items.length - 1}</span>
-                                <span className="text-[9px] text-[#6B7280] leading-none">{o.items.length} Items</span>
+                          <div className="flex flex-col gap-1.5 min-w-[200px] max-w-[280px]">
+                            <div className="flex items-center gap-2.5">
+                              {o.items?.[0]?.product?.images?.[0] ? (
+                                <img
+                                  src={o.items[0].product.images[0]}
+                                  alt={o.items?.[0]?.product?.name || 'Product'}
+                                  className="w-9 h-9 rounded-lg border border-[#E5E7EB] object-cover shrink-0 bg-[#F3F4F6]"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                              ) : (
+                                <div className="w-9 h-9 bg-[#F3F4F6] rounded-lg border border-[#E5E7EB] flex items-center justify-center text-sm shrink-0">
+                                  👕
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold text-[#111111] truncate" title={o.quote?.inquiry?.productInterest || o.items?.[0]?.product?.name || 'Custom Product'}>
+                                  {o.quote?.inquiry?.productInterest || o.items?.[0]?.product?.name || 'Custom Product'}
+                                </p>
+                                <p className="text-[10px] text-[#6B7280]">
+                                  {(o.items || []).reduce((acc, item) => acc + (item.quantity || 0), 0)} pcs
+                                  {o.items && o.items.length > 1 && (
+                                    <span className="font-semibold text-[#3B6FEB] ml-1">
+                                      (+{o.items.length - 1} more)
+                                    </span>
+                                  )}
+                                </p>
                               </div>
-                            ) : (
-                              <span className="text-[10px] font-medium text-[#374151] line-clamp-1 max-w-[120px]">
-                                {o.quote?.inquiry?.productInterest || o.items?.[0]?.product?.name || 'Custom Item'}
-                              </span>
-                            )}
+                            </div>
+
+                            {/* Customer Artwork & Previews (Artwork, Front, Back) */}
+                            <OrderDesignAssets
+                              order={o}
+                              item={o.items?.[0]}
+                              onViewAsset={(asset) => setSelectedAsset(asset)}
+                            />
                           </div>
                         </td>
 
@@ -675,6 +693,15 @@ export default function OrdersPage() {
                                                 <div className="font-bold text-xs text-[#111111] shrink-0">
                                                   {formatCurrency(item.totalPrice)}
                                                 </div>
+                                              </div>
+
+                                              {/* Item Design Assets */}
+                                              <div className="ml-12.5">
+                                                <OrderDesignAssets
+                                                  order={o}
+                                                  item={item}
+                                                  onViewAsset={(asset) => setSelectedAsset(asset)}
+                                                />
                                               </div>
                                               {item.variants && item.variants.length > 0 && (
                                                 <div className="ml-12 flex flex-wrap gap-1.5 mt-1">
@@ -1098,6 +1125,12 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
+
+      {/* Customer Artwork & Design Preview Lightbox */}
+      <AssetPreviewModal
+        asset={selectedAsset}
+        onClose={() => setSelectedAsset(null)}
+      />
     </div>
   );
 }

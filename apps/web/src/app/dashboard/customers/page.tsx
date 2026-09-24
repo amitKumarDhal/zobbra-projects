@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Filter, Download, ExternalLink, MoreVertical, MessageSquare, Phone, MapPin, X, Users, UserPlus, Star, Clock, CheckCircle2, UserCircle, Edit2, ChevronRight, Briefcase, FileText, ShoppingBag, CreditCard, ChevronDown, Trash2 } from 'lucide-react';
+import { Search, Filter, Download, ExternalLink, MessageSquare, Phone, MapPin, X, Users, UserPlus, Star, Clock, CheckCircle2, UserCircle, Edit2, Briefcase, FileText, ShoppingBag, CreditCard, Trash2 } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Plus, CheckCircle2, Clock, Calendar as CalendarIcon, User, RefreshCw, MoreVertical, Edit2, Trash2, ArrowRight, X, Phone } from 'lucide-react';
-import Link from 'next/link';
+import { Search, Filter, Download, Plus, CheckCircle2, Clock, Calendar as CalendarIcon, User, RefreshCw, MoreVertical, Edit2, X, Phone } from 'lucide-react';
+// Link import removed (unused)
 import { StatCard } from '@/components/ui/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 
@@ -12,7 +12,6 @@ import { triggerSidebarCountsRefresh } from '@/hooks/useAdminSidebarCounts';
 export default function TodoPage() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [stats, setStats] = useState<any>({ total: 0, pending: 0, dueToday: 0, overdue: 0, completed: 0 });
-  const [users, setUsers] = useState<any[]>([]);
   
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -30,7 +29,7 @@ export default function TodoPage() {
   const [selectedTask, setSelectedTask] = useState<any>(null);
 
   // Calendar State
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate] = useState(new Date());
 
   useEffect(() => {
     // Fetch users for assignees

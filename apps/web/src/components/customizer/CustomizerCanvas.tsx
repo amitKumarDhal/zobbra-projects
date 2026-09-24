@@ -7,7 +7,7 @@ import { uploadDataUrlToCloudinary, uploadToCloudinary } from '@/lib/upload';
 
 export interface CustomizerCanvasRef {
   addText: (text: string, options?: { fontFamily?: string; fontSize?: number; fill?: string; fontWeight?: string; fontStyle?: string; textAlign?: string }) => void;
-  addImage: (file: File) => Promise<void>;
+  addImage: (file: File) => Promise<string>;
   updateActiveObject: (updates: any) => void;
   deleteActiveObject: () => void;
   centerActiveH: () => void;
@@ -18,9 +18,11 @@ export interface CustomizerCanvasRef {
   switchSide: (side: 'front' | 'back') => void;
   getOriginalArtworkUrl: () => string | null;
   setOriginalArtworkUrl: (url: string | null) => void;
+  isUploadingArtwork: () => boolean;
+  waitForArtworkUpload: () => Promise<string | null>;
   exportPreviews: () => Promise<{
-    frontDataUrl: string;
-    backDataUrl: string;
+    frontDataUrl?: string;
+    backDataUrl?: string;
     frontCanvasJson: string;
     backCanvasJson: string;
     hasFront: boolean;
@@ -45,6 +47,7 @@ export interface CustomizerCanvasProps {
   onSideChange?: (side: 'front' | 'back') => void;
   onDesignChange?: (info: { hasFront: boolean; hasBack: boolean; activeSide: 'front' | 'back' }) => void;
   onSelectionChange?: (selectedObj: any) => void;
+  onUploadStatusChange?: (status: { isUploading: boolean; error: string | null }) => void;
   initialFrontJson?: string;
   initialBackJson?: string;
   initialArtworkUrl?: string;
@@ -52,6 +55,90 @@ export interface CustomizerCanvasProps {
 }
 
 const EMPTY_CANVAS_JSON = JSON.stringify({ version: '5.3.0', objects: [] });
+
+/**
+ * Safely exports canvas to data URL, catching any browser SecurityError (e.g. tainted canvas)
+ * and throwing a controlled user-friendly error instead of crashing React.
+ */
+export function safeExportCanvas(
+  canvas: any,
+  options: { format?: string; multiplier?: number } = { format: 'png', multiplier: 2 }
+): string {
+  if (!canvas) return '';
+  try {
+    canvas.renderAll();
+    return canvas.toDataURL(options);
+  } catch (err: any) {
+    console.error('[CustomizerCanvas] Canvas export error:', err);
+    if (err?.name === 'SecurityError' || (err?.message && err.message.toLowerCase().includes('tainted'))) {
+      throw new Error('Unable to export the design preview. Please retry the artwork upload.');
+    }
+    throw err;
+  }
+}
+
+/**
+ * Normalizes canvas JSON to ensure all remote image objects have crossOrigin = 'anonymous'.
+ * Also scrubs any residual data:image/ URIs if a valid CDN artwork URL is provided.
+ */
+export function normalizeCanvasJsonForCORS(jsonInput: string | any, cdnArtworkUrl?: string | null): any {
+  if (!jsonInput) return jsonInput;
+  try {
+    const data = typeof jsonInput === 'string' ? JSON.parse(jsonInput) : JSON.parse(JSON.stringify(jsonInput));
+    const validCdn = (cdnArtworkUrl && !cdnArtworkUrl.startsWith('data:image/')) ? cdnArtworkUrl : '';
+
+    const walk = (objs: any[]) => {
+      for (const obj of objs) {
+        if (!obj || typeof obj !== 'object') continue;
+        if (obj.type === 'image' || obj.src !== undefined) {
+          if (!obj.src || typeof obj.src !== 'string' || obj.src.startsWith('data:image/')) {
+            if (validCdn) obj.src = validCdn;
+          }
+          // Enforce CORS crossOrigin on all image objects
+          obj.crossOrigin = 'anonymous';
+        }
+        if (Array.isArray(obj.objects)) {
+          walk(obj.objects);
+        }
+      }
+    };
+
+    if (Array.isArray(data.objects)) {
+      walk(data.objects);
+    }
+    return data;
+  } catch {
+    return jsonInput;
+  }
+}
+
+/**
+ * Sanitizes canvas JSON to ensure NO image object contains a data:image/... base64 src.
+ * Enforces crossOrigin = 'anonymous' on every image object for CORS-safe canvas rehydration.
+ * If cdnArtworkUrl is provided, it replaces the base64 src with the CDN URL.
+ */
+export function sanitizeCanvasJson(jsonStr: string, cdnArtworkUrl?: string | null): string {
+  if (!jsonStr) return jsonStr;
+  try {
+    const normalized = normalizeCanvasJsonForCORS(jsonStr, cdnArtworkUrl);
+    const validCdn = (cdnArtworkUrl && !cdnArtworkUrl.startsWith('data:image/')) ? cdnArtworkUrl : '';
+
+    let stringified = JSON.stringify(normalized);
+    // Extra safety guard: replace any remaining data:image strings in the serialized output
+    if (stringified.includes('data:image/')) {
+      stringified = stringified.replace(/"data:image\/[^"]+"/g, JSON.stringify(validCdn));
+    }
+    return stringified;
+  } catch (err) {
+    console.warn('[CustomizerCanvas] sanitizeCanvasJson error:', err);
+  }
+  let fallback = typeof jsonStr === 'string' ? jsonStr : JSON.stringify(jsonStr);
+  if (fallback.includes('data:image/')) {
+    const validCdn = (cdnArtworkUrl && !cdnArtworkUrl.startsWith('data:image/')) ? cdnArtworkUrl : '';
+    fallback = fallback.replace(/"data:image\/[^"]+"/g, JSON.stringify(validCdn));
+  }
+  return fallback;
+}
 
 export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvasProps>(({
   selectedColor,
@@ -61,6 +148,7 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   onSideChange,
   onDesignChange,
   onSelectionChange,
+  onUploadStatusChange,
   initialFrontJson,
   initialBackJson,
   initialArtworkUrl,
@@ -70,6 +158,8 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   const [fabricInstance, setFabricInstance] = useState<any>(null);
   const [canvas, setCanvas] = useState<any>(null);
   const [hasCurrentObjects, setHasCurrentObjects] = useState<boolean>(false);
+  const isUploadingArtworkRef = useRef<boolean>(false);
+  const artworkUploadPromiseRef = useRef<Promise<string> | null>(null);
 
   const fabricCanvasRef = useRef<any>(null);
   const fabricInstanceRef = useRef<any>(null);
@@ -79,6 +169,12 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   const backJsonRef = useRef<string>(initialBackJson || EMPTY_CANVAS_JSON);
   // Track the original uploaded artwork Cloudinary URL (first user image upload)
   const originalArtworkUrlRef = useRef<string | null>(initialArtworkUrl || null);
+
+  const activeSideRef = useRef<'front' | 'back'>(activeSide);
+  useEffect(() => {
+    activeSideRef.current = activeSide;
+  }, [activeSide]);
+  const isSwitchingSideRef = useRef<boolean>(false);
 
   // Initialize Fabric.js dynamically on client only
   useEffect(() => {
@@ -90,6 +186,36 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         const fabricMod = await import('fabric');
         const fabric = (fabricMod as any).fabric || fabricMod;
         if (!isMounted) return;
+
+        // Configure CORS-safe image loading on Fabric.js 5.3.0
+        if (fabric.Image && fabric.Image.prototype) {
+          fabric.Image.prototype.crossOrigin = 'anonymous';
+        }
+
+        // Defensive patch: Guarantee fabric.Image.fromObject enforces crossOrigin = 'anonymous' for remote URLs
+        if (fabric.Image && !(fabric.Image as any)._corsPatched) {
+          (fabric.Image as any)._corsPatched = true;
+          const originalFromObject = fabric.Image.fromObject;
+          fabric.Image.fromObject = function(object: any, callback: any) {
+            if (object && object.src && typeof object.src === 'string' && !object.src.startsWith('data:')) {
+              object.crossOrigin = 'anonymous';
+            }
+            return originalFromObject.call(fabric.Image, object, callback);
+          };
+        }
+
+        // Defensive patch: Default fabric.Image.fromURL to crossOrigin = 'anonymous' for remote URLs
+        if (fabric.Image && !(fabric.Image as any)._fromUrlPatched) {
+          (fabric.Image as any)._fromUrlPatched = true;
+          const originalFromURL = fabric.Image.fromURL;
+          fabric.Image.fromURL = function(url: string, callback: any, imgOptions: any) {
+            const opts = { ...imgOptions };
+            if (url && typeof url === 'string' && !url.startsWith('data:')) {
+              opts.crossOrigin = 'anonymous';
+            }
+            return originalFromURL.call(fabric.Image, url, callback, opts);
+          };
+        }
 
         fabricInstanceRef.current = fabric;
         setFabricInstance(fabric);
@@ -119,6 +245,7 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         });
 
         const notifyState = () => {
+          if (isSwitchingSideRef.current) return;
           saveCurrentState(newCanvas);
           const objs = newCanvas.getObjects();
           setHasCurrentObjects(objs.length > 0);
@@ -133,7 +260,8 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         // Load initial front design ONLY if explicit JSON with objects was provided (e.g. from ?resume=1)
         if (initialFrontJson && checkHasObjects(initialFrontJson)) {
           try {
-            newCanvas.loadFromJSON(JSON.parse(initialFrontJson), () => {
+            const parsed = normalizeCanvasJsonForCORS(initialFrontJson, initialArtworkUrl);
+            newCanvas.loadFromJSON(parsed, () => {
               newCanvas.renderAll();
               saveCurrentState(newCanvas);
               setHasCurrentObjects(newCanvas.getObjects().length > 0);
@@ -183,9 +311,11 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   };
 
   const saveCurrentState = (cvs = canvas) => {
-    if (!cvs) return;
-    const jsonStr = JSON.stringify(cvs.toJSON());
-    if (activeSide === 'front') {
+    if (!cvs || isSwitchingSideRef.current) return;
+    const cdnUrl = originalArtworkUrlRef.current;
+    const jsonStr = sanitizeCanvasJson(JSON.stringify(cvs.toJSON()), cdnUrl);
+    const currentSide = activeSideRef.current;
+    if (currentSide === 'front') {
       frontJsonRef.current = jsonStr;
     } else {
       backJsonRef.current = jsonStr;
@@ -195,31 +325,38 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     const hasBack = checkHasObjects(backJsonRef.current);
 
     if (onDesignChange) {
-      onDesignChange({ hasFront, hasBack, activeSide });
+      onDesignChange({ hasFront, hasBack, activeSide: currentSide });
     }
   };
 
   // Switch between Front and Back sides
   const switchSide = (newSide: 'front' | 'back') => {
-    if (!canvas || newSide === activeSide) return;
+    if (!canvas || newSide === activeSideRef.current) return;
 
-    // Save current active side JSON
-    const currentJson = JSON.stringify(canvas.toJSON());
-    if (activeSide === 'front') {
+    isSwitchingSideRef.current = true;
+
+    // Save current active side JSON (sanitized) before clearing canvas
+    const currentSide = activeSideRef.current;
+    const cdnUrl = originalArtworkUrlRef.current;
+    const currentJson = sanitizeCanvasJson(JSON.stringify(canvas.toJSON()), cdnUrl);
+    if (currentSide === 'front') {
       frontJsonRef.current = currentJson;
     } else {
       backJsonRef.current = currentJson;
     }
 
+    activeSideRef.current = newSide;
     if (onSideChange) onSideChange(newSide);
 
-    // Load target side JSON
+    // Load target side JSON with CORS normalization
     canvas.clear();
     const targetJson = newSide === 'front' ? frontJsonRef.current : backJsonRef.current;
     if (targetJson && checkHasObjects(targetJson)) {
       try {
-        canvas.loadFromJSON(JSON.parse(targetJson), () => {
+        const parsed = normalizeCanvasJsonForCORS(targetJson, cdnUrl);
+        canvas.loadFromJSON(parsed, () => {
           canvas.renderAll();
+          isSwitchingSideRef.current = false;
           setHasCurrentObjects(canvas.getObjects().length > 0);
           if (onSelectionChange) onSelectionChange(null);
           const hasFront = checkHasObjects(frontJsonRef.current);
@@ -229,10 +366,12 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       } catch (err) {
         console.error('Failed loading side json', err);
         canvas.renderAll();
+        isSwitchingSideRef.current = false;
         setHasCurrentObjects(false);
       }
     } else {
       canvas.renderAll();
+      isSwitchingSideRef.current = false;
       setHasCurrentObjects(false);
       if (onSelectionChange) onSelectionChange(null);
       const hasFront = checkHasObjects(frontJsonRef.current);
@@ -277,14 +416,24 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     setHasCurrentObjects(true);
   };
 
-  // Add uploaded image to canvas
-  const handleAddImage = async (file: File): Promise<void> => {
-    const activeCanvas = fabricCanvasRef.current || canvas;
-    const activeFabric = fabricInstanceRef.current || fabricInstance;
+  // Add uploaded image to canvas, wait for Cloudinary upload, and update object src with CDN URL
+  const handleAddImage = async (file: File): Promise<string> => {
+    let activeCanvas = fabricCanvasRef.current || canvas;
+    let activeFabric = fabricInstanceRef.current || fabricInstance;
+
+    if (!activeCanvas || !activeFabric) {
+      // Wait up to 3 seconds for dynamic import/mount to complete
+      for (let i = 0; i < 30; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        activeCanvas = fabricCanvasRef.current || canvas;
+        activeFabric = fabricInstanceRef.current || fabricInstance;
+        if (activeCanvas && activeFabric) break;
+      }
+    }
 
     if (!activeCanvas || !activeFabric) {
       console.error('[CustomizerCanvas] canvas or fabricInstance is null!', { activeCanvas: !!activeCanvas, activeFabric: !!activeFabric });
-      return;
+      throw new Error('Canvas studio is not ready yet. Please try again.');
     }
 
     // 1. Read file as local Data URL for immediate, lag-free canvas placement
@@ -295,11 +444,9 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       reader.readAsDataURL(file);
     });
 
-    if (!originalArtworkUrlRef.current) {
-      originalArtworkUrlRef.current = localDataUrl;
-    }
+    let placedImg: any = null;
 
-    // 2. Render image on canvas immediately
+    // 2. Render image on canvas immediately with transient localDataUrl
     await new Promise<void>((resolve, reject) => {
       activeFabric.Image.fromURL(
         localDataUrl,
@@ -308,6 +455,8 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
             reject(new Error('Failed decoding image from file. Please ensure it is a valid PNG, JPG, or SVG.'));
             return;
           }
+
+          placedImg = img;
 
           // Constrain image nicely within printable area
           const isCap = category?.toLowerCase().includes('cap');
@@ -340,15 +489,110 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       );
     });
 
-    // 3. Upload to Cloudinary in background for permanent CDN storage
-    uploadToCloudinary(file)
-      .then((secureUrl) => {
-        console.log('[CustomizerCanvas] Background Cloudinary upload succeeded:', secureUrl);
-        originalArtworkUrlRef.current = secureUrl;
-      })
-      .catch((err) => {
-        console.warn('[CustomizerCanvas] Background Cloudinary upload deferred (using local artwork):', err);
-      });
+    // 3. Upload to Cloudinary and WAIT for upload completion before finalizing
+    isUploadingArtworkRef.current = true;
+    if (onUploadStatusChange) {
+      onUploadStatusChange({ isUploading: true, error: null });
+    }
+
+    const uploadPromise = (async () => {
+      const secureUrl = await uploadToCloudinary(file);
+      originalArtworkUrlRef.current = secureUrl;
+
+      // 4. Replace Fabric image object src with Cloudinary secure_url using crossOrigin='anonymous'
+      if (placedImg) {
+        const prevProps = {
+          left: placedImg.left,
+          top: placedImg.top,
+          scaleX: placedImg.scaleX,
+          scaleY: placedImg.scaleY,
+          angle: placedImg.angle,
+          originX: placedImg.originX,
+          originY: placedImg.originY,
+        };
+
+        // Load image via setSrc with crossOrigin='anonymous'
+        await new Promise<void>((resolve) => {
+          let resolved = false;
+          const timer = setTimeout(() => {
+            if (!resolved) {
+              resolved = true;
+              resolve();
+            }
+          }, 8000); // 8s safety timeout
+
+          try {
+            placedImg.setSrc(
+              secureUrl,
+              (updatedImg: any, isError: boolean) => {
+                clearTimeout(timer);
+                if (!resolved) {
+                  resolved = true;
+                  if (!isError && updatedImg) {
+                    updatedImg.set(prevProps);
+                    updatedImg.setCoords();
+                  }
+                  if (placedImg._element) {
+                    placedImg._element.crossOrigin = 'anonymous';
+                  }
+                  if (placedImg._originalElement) {
+                    placedImg._originalElement.crossOrigin = 'anonymous';
+                  }
+                  placedImg.crossOrigin = 'anonymous';
+                  placedImg.src = secureUrl;
+                  activeCanvas.renderAll();
+                  resolve();
+                }
+              },
+              { crossOrigin: 'anonymous' }
+            );
+          } catch {
+            clearTimeout(timer);
+            if (!resolved) {
+              resolved = true;
+              resolve();
+            }
+          }
+        });
+
+        // Ensure toObject serializes CDN URL and crossOrigin='anonymous'
+        const origToObject = placedImg.toObject.bind(placedImg);
+        placedImg.toObject = function(propertiesToInclude: any) {
+          const obj = origToObject(propertiesToInclude);
+          obj.src = secureUrl;
+          obj.crossOrigin = 'anonymous';
+          return obj;
+        };
+
+        activeCanvas.renderAll();
+      }
+
+      // Re-save and sanitize canvas state with CDN URL
+      saveCurrentState(activeCanvas);
+      frontJsonRef.current = sanitizeCanvasJson(frontJsonRef.current, secureUrl);
+      backJsonRef.current = sanitizeCanvasJson(backJsonRef.current, secureUrl);
+
+      return secureUrl;
+    })();
+
+    artworkUploadPromiseRef.current = uploadPromise;
+
+    try {
+      const resultUrl = await uploadPromise;
+      isUploadingArtworkRef.current = false;
+      if (onUploadStatusChange) {
+        onUploadStatusChange({ isUploading: false, error: null });
+      }
+      return resultUrl;
+    } catch (err: any) {
+      console.error('[CustomizerCanvas] Cloudinary upload failed:', err);
+      isUploadingArtworkRef.current = false;
+      originalArtworkUrlRef.current = null;
+      if (onUploadStatusChange) {
+        onUploadStatusChange({ isUploading: false, error: err?.message || 'Failed to upload artwork to cloud storage' });
+      }
+      throw new Error(err?.message || 'Failed to upload artwork to cloud storage. Please try again.');
+    }
   };
 
   // Expose methods via ref for parent to control
@@ -356,15 +600,28 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     addText: handleAddText,
     addImage: handleAddImage,
     switchSide,
+    isUploadingArtwork: () => isUploadingArtworkRef.current,
+    waitForArtworkUpload: async () => {
+      if (artworkUploadPromiseRef.current) {
+        try {
+          return await artworkUploadPromiseRef.current;
+        } catch {
+          return null;
+        }
+      }
+      return originalArtworkUrlRef.current;
+    },
     getOriginalArtworkUrl: () => {
-      if (originalArtworkUrlRef.current) return originalArtworkUrlRef.current;
-      // Fallback: search for image object in canvas
+      if (originalArtworkUrlRef.current && !originalArtworkUrlRef.current.startsWith('data:image/')) {
+        return originalArtworkUrlRef.current;
+      }
+      // Fallback: search for non-base64 image object in canvas
       if (canvas) {
         const objs = canvas.getObjects();
         const imgObj = objs.find((o: any) => o.type === 'image' && (o.getSrc?.() || o._element?.src || o.src));
         if (imgObj) {
           const src = imgObj.getSrc ? imgObj.getSrc() : (imgObj._element?.src || imgObj.src);
-          if (src && typeof src === 'string' && !src.startsWith('data:')) return src;
+          if (src && typeof src === 'string' && !src.startsWith('data:image/')) return src;
         }
       }
       // Fallback: search in saved JSON states
@@ -373,9 +630,9 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
           if (jsonStr) {
             const parsed = JSON.parse(jsonStr);
             const img = parsed.objects?.find((o: any) => o.type === 'image' && o.src);
-            if (img?.src && typeof img.src === 'string' && !img.src.startsWith('data:')) return img.src;
+            if (img?.src && typeof img.src === 'string' && !img.src.startsWith('data:image/')) return img.src;
           }
-        } catch (_err) {
+        } catch {
           // Ignore invalid JSON state
         }
       }
@@ -438,25 +695,29 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     },
     getCanvasState: () => {
       if (canvas) {
-        const curJson = JSON.stringify(canvas.toJSON());
+        const cdnUrl = originalArtworkUrlRef.current;
+        const curJson = sanitizeCanvasJson(JSON.stringify(canvas.toJSON()), cdnUrl);
         if (activeSide === 'front') frontJsonRef.current = curJson;
         else backJsonRef.current = curJson;
       }
+      const cdnUrl = originalArtworkUrlRef.current;
       return {
-        frontJson: frontJsonRef.current,
-        backJson: backJsonRef.current,
+        frontJson: sanitizeCanvasJson(frontJsonRef.current, cdnUrl),
+        backJson: sanitizeCanvasJson(backJsonRef.current, cdnUrl),
         hasFront: checkHasObjects(frontJsonRef.current),
         hasBack: checkHasObjects(backJsonRef.current),
       };
     },
     loadDraftState: (frontJson?: string, backJson?: string, artworkUrl?: string) => {
       if (artworkUrl) originalArtworkUrlRef.current = artworkUrl;
-      if (frontJson) frontJsonRef.current = frontJson;
-      if (backJson) backJsonRef.current = backJson;
+      const cdnUrl = originalArtworkUrlRef.current;
+      if (frontJson) frontJsonRef.current = sanitizeCanvasJson(frontJson, cdnUrl);
+      if (backJson) backJsonRef.current = sanitizeCanvasJson(backJson, cdnUrl);
       if (canvas) {
         const target = activeSide === 'front' ? frontJsonRef.current : backJsonRef.current;
         if (target && checkHasObjects(target)) {
-          canvas.loadFromJSON(JSON.parse(target), () => {
+          const parsed = normalizeCanvasJsonForCORS(target, cdnUrl);
+          canvas.loadFromJSON(parsed, () => {
             canvas.renderAll();
             setHasCurrentObjects(canvas.getObjects().length > 0);
           });
@@ -468,26 +729,76 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       }
     },
     exportPreviews: async () => {
-      if (!canvas) {
+      const activeCanvas = fabricCanvasRef.current || canvas;
+      if (!activeCanvas) {
         throw new Error('Canvas not ready');
       }
 
-      // Save active side
-      const currentJson = JSON.stringify(canvas.toJSON());
-      if (activeSide === 'front') frontJsonRef.current = currentJson;
-      else backJsonRef.current = currentJson;
+      // If an artwork upload is still in progress, wait for it
+      if (isUploadingArtworkRef.current && artworkUploadPromiseRef.current) {
+        try {
+          await artworkUploadPromiseRef.current;
+        } catch (e) {
+          console.warn('[CustomizerCanvas] Artwork upload failed prior to preview export', e);
+        }
+      }
+
+      // Save active side ONLY if activeCanvas has objects
+      const currentSide = activeSideRef.current;
+      const currentJson = JSON.stringify(activeCanvas.toJSON());
+      const cdnUrl = originalArtworkUrlRef.current;
+      if (checkHasObjects(currentJson)) {
+        const sanitized = sanitizeCanvasJson(currentJson, cdnUrl);
+        if (currentSide === 'front') frontJsonRef.current = sanitized;
+        else backJsonRef.current = sanitized;
+      }
+
+      frontJsonRef.current = sanitizeCanvasJson(frontJsonRef.current, cdnUrl);
+      backJsonRef.current = sanitizeCanvasJson(backJsonRef.current, cdnUrl);
 
       const renderSideToDataUrl = async (side: 'front' | 'back'): Promise<string> => {
+        // If requesting the currently active side, render directly from activeCanvas
+        if (side === currentSide) {
+          return safeExportCanvas(activeCanvas);
+        }
+
         const targetJson = side === 'front' ? frontJsonRef.current : backJsonRef.current;
-        return new Promise((resolve) => {
-          if (!targetJson || !checkHasObjects(targetJson)) {
-            resolve('');
-            return;
-          }
-          canvas.loadFromJSON(JSON.parse(targetJson), () => {
-            canvas.renderAll();
-            const data = canvas.toDataURL({ format: 'png', multiplier: 2 });
-            resolve(data);
+        if (!targetJson || !checkHasObjects(targetJson)) {
+          return '';
+        }
+
+        const parsed = normalizeCanvasJsonForCORS(targetJson, cdnUrl);
+
+        return new Promise((resolve, reject) => {
+          isSwitchingSideRef.current = true;
+          activeCanvas.loadFromJSON(parsed, () => {
+            let data = '';
+            try {
+              data = safeExportCanvas(activeCanvas);
+            } catch (exportErr) {
+              console.error('[CustomizerCanvas] Error exporting target side:', exportErr);
+              isSwitchingSideRef.current = false;
+              reject(exportErr);
+              return;
+            }
+
+            // Restore active side immediately
+            const restoreJson = currentSide === 'front' ? frontJsonRef.current : backJsonRef.current;
+            if (restoreJson && checkHasObjects(restoreJson)) {
+              const restoreParsed = normalizeCanvasJsonForCORS(restoreJson, cdnUrl);
+              activeCanvas.loadFromJSON(restoreParsed, () => {
+                activeCanvas.renderAll();
+                isSwitchingSideRef.current = false;
+                setHasCurrentObjects(activeCanvas.getObjects().length > 0);
+                resolve(data);
+              });
+            } else {
+              activeCanvas.clear();
+              activeCanvas.renderAll();
+              isSwitchingSideRef.current = false;
+              setHasCurrentObjects(false);
+              resolve(data);
+            }
           });
         });
       };
@@ -495,50 +806,51 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       const frontDataUrl = await renderSideToDataUrl('front');
       const backDataUrl = await renderSideToDataUrl('back');
 
-      // Restore active side
-      const restoreJson = activeSide === 'front' ? frontJsonRef.current : backJsonRef.current;
-      if (restoreJson && checkHasObjects(restoreJson)) {
-        canvas.loadFromJSON(JSON.parse(restoreJson), () => {
-          canvas.renderAll();
-          setHasCurrentObjects(canvas.getObjects().length > 0);
-        });
-      } else {
-        canvas.clear();
-        canvas.renderAll();
-        setHasCurrentObjects(false);
-      }
-
       const hasFront = checkHasObjects(frontJsonRef.current);
       const hasBack = checkHasObjects(backJsonRef.current);
 
-      let frontCloudinaryUrl = '';
-      let backCloudinaryUrl = '';
+      let frontCloudinaryUrl: string | undefined;
+      let backCloudinaryUrl: string | undefined;
 
-      try {
-        if (frontDataUrl) {
-          frontCloudinaryUrl = await uploadDataUrlToCloudinary(frontDataUrl);
+      if (hasFront && frontDataUrl) {
+        try {
+          const url = await uploadDataUrlToCloudinary(frontDataUrl);
+          if (url && !url.startsWith('data:image/')) {
+            frontCloudinaryUrl = url;
+          } else {
+            throw new Error('Cloudinary returned invalid preview URL');
+          }
+        } catch (e) {
+          console.error('[CustomizerCanvas] Failed Cloudinary upload for front preview:', e);
+          throw new Error('Failed to upload front preview to cloud storage. Please try again.');
         }
-      } catch (e) {
-        console.warn('Failed Cloudinary upload for front preview, using dataUrl', e);
       }
 
-      try {
-        if (backDataUrl) {
-          backCloudinaryUrl = await uploadDataUrlToCloudinary(backDataUrl);
+      if (hasBack && backDataUrl) {
+        try {
+          const url = await uploadDataUrlToCloudinary(backDataUrl);
+          if (url && !url.startsWith('data:image/')) {
+            backCloudinaryUrl = url;
+          } else {
+            throw new Error('Cloudinary returned invalid preview URL');
+          }
+        } catch (e) {
+          console.error('[CustomizerCanvas] Failed Cloudinary upload for back preview:', e);
+          throw new Error('Failed to upload back preview to cloud storage. Please try again.');
         }
-      } catch (e) {
-        console.warn('Failed Cloudinary upload for back preview, using dataUrl', e);
       }
+
+      // Re-sanitize both states to guarantee no base64
+      const sanitizedFront = sanitizeCanvasJson(frontJsonRef.current, cdnUrl);
+      const sanitizedBack = sanitizeCanvasJson(backJsonRef.current, cdnUrl);
 
       return {
-        frontDataUrl,
-        backDataUrl,
-        frontCanvasJson: frontJsonRef.current,
-        backCanvasJson: backJsonRef.current,
+        frontCanvasJson: sanitizedFront,
+        backCanvasJson: sanitizedBack,
         hasFront,
         hasBack,
-        frontCloudinaryUrl: frontCloudinaryUrl || frontDataUrl,
-        backCloudinaryUrl: backCloudinaryUrl || backDataUrl,
+        frontCloudinaryUrl,
+        backCloudinaryUrl,
       };
     }
   }));
@@ -552,6 +864,8 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
 
       {/* Interactive Fabric Canvas overlay exactly over printable area */}
       <div 
+        id="customizer-canvas-wrapper"
+        data-canvas-ready={Boolean(canvas && fabricInstance)}
         className="absolute z-10 flex items-center justify-center"
         style={
           isCap

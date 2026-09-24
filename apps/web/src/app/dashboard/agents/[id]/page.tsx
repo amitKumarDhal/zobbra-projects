@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, Phone, Mail, Building, MapPin, CheckCircle2, TrendingUp, Users, FileText, ShoppingBag, MessageSquare, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, MapPin, CheckCircle2, TrendingUp, Users, FileText, ShoppingBag, MessageSquare, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
 import { API_URL } from '@/lib/api';

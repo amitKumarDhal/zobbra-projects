@@ -11,11 +11,9 @@ import {
   Trash2, 
   Check, 
   AlertCircle,
-  HelpCircle,
   Package,
   Layers,
-  IndianRupee,
-  Sliders
+  IndianRupee
 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 import { uploadToCloudinary } from '@/lib/upload';

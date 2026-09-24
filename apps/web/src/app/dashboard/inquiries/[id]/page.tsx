@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { API_URL } from '@/lib/api';
-import { buildWhatsAppUrl } from '@/lib/whatsapp';
 import { triggerSidebarCountsRefresh } from '@/hooks/useAdminSidebarCounts';
 import {
   MessageSquare,
@@ -13,8 +12,6 @@ import {
   ShoppingBag,
   Edit3,
   User,
-  Phone,
-  Mail,
   MapPin,
   Building,
   FileText,
@@ -27,7 +24,6 @@ import {
   X,
   Plus,
   ExternalLink,
-  ChevronRight,
   AlertCircle,
   Tag,
   Sparkles,
@@ -127,7 +123,6 @@ export default function AdminInquiryDetailPage() {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editProductName, setEditProductName] = useState<string>('');
   const [editQty, setEditQty] = useState<number>(50);
-  const [editPrintType, setEditPrintType] = useState<string>('');
   const [editPrintPosition, setEditPrintPosition] = useState<string>('');
   const [editUnitPrice, setEditUnitPrice] = useState<number>(249);
   const [editIsGstApplied, setEditIsGstApplied] = useState<boolean>(true);
@@ -170,7 +165,6 @@ export default function AdminInquiryDetailPage() {
         const initialQty = data.quantity || data.quote?.items?.[0]?.quantity || 50;
         setEditQty(initialQty);
         setEditProductName(data.product?.name || data.productInterest || '');
-        setEditPrintType(data.printingType || '');
 
         // Normalize print position to Front, Back, or Both
         const rawPos = (data.printPosition || data.printingType || '').toLowerCase().trim();
@@ -329,10 +323,10 @@ export default function AdminInquiryDetailPage() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
-      const data = await res.json();
+      await res.json();
       triggerSidebarCountsRefresh();
       router.push('/dashboard/orders');
-    } catch (err) {
+    } catch {
       triggerSidebarCountsRefresh();
       router.push('/dashboard/orders');
     } finally {
@@ -1187,7 +1181,6 @@ export default function AdminInquiryDetailPage() {
                         type="button"
                         onClick={() => {
                           setEditPrintPosition(val);
-                          setEditPrintType(val);
                         }}
                         className={`py-2.5 rounded-lg text-xs font-bold transition-all text-center flex items-center justify-center cursor-pointer ${
                           isSelected

@@ -3,34 +3,24 @@
 import React, { useState } from 'react';
 import {
   Sparkles,
-  Search,
-  AlertTriangle,
   CheckCircle2,
   Copy,
-  ArrowRight,
   RefreshCw,
   Users,
   Send,
   Clock,
-  CheckSquare,
   Package,
-  Layers,
-  ChevronRight,
   TrendingUp,
   FileText,
   CreditCard,
-  Tag,
   ShoppingBag,
   Truck,
-  MapPin,
   SlidersHorizontal,
-  Bell,
-  User,
   PlusCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+// Badge import removed (unused)
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
@@ -330,7 +320,11 @@ export default function DesignSystemPage() {
                     <span className="text-xs font-bold text-[#111111] block">{c.name}</span>
                     <span className="text-[10px] text-[#6B7280] font-mono">{c.category}</span>
                   </div>
-                  <Copy className="w-3.5 h-3.5 text-[#9CA3AF] group-hover:text-[#3B6FEB] transition-colors" />
+                  {copiedToken === c.hex ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-[#9CA3AF] group-hover:text-[#3B6FEB] transition-colors" />
+                  )}
                 </div>
               </div>
             ))}

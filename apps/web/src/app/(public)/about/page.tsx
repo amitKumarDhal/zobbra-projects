@@ -133,7 +133,7 @@ export default function AboutPage() {
                 { title: 'Speed & Reliability', desc: '5–7 day turnaround, guaranteed' },
                 { title: 'Transparency', desc: 'Clear pricing, no hidden charges' },
                 { title: 'Partnership', desc: 'Dedicated support from start to finish' },
-              ].map((value, idx) => (
+              ].map((value, _idx) => (
                 <motion.div
                   key={value.title}
                   whileHover={prefersReducedMotion ? {} : { y: -4 }}

@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
-import { 
-  ArrowLeft, Search, Plus, Trash2, Save, Send, AlertCircle, 
-  CheckCircle2, Loader2, IndianRupee, Users, Package, FileText 
+import {
+  ArrowLeft, Plus, Trash2, Save, Send, AlertCircle,
+  Loader2, IndianRupee, Users, Package, FileText
 } from 'lucide-react';
 
 interface Customer {
@@ -207,7 +207,7 @@ export default function CreateQuotePage() {
       } else {
         setError(json.message || 'Failed to create quote');
       }
-    } catch (e) {
+    } catch {
       setError('An unexpected error occurred.');
     } finally {
       setIsSubmitting(false);

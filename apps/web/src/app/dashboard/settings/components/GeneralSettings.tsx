@@ -33,7 +33,7 @@ export default function GeneralSettings({ settings, onSave }: { settings: any, o
         }
       }
       alert('Settings saved successfully');
-    } catch (err) {
+    } catch {
       alert('Failed to save settings');
     } finally {
       setSaving(false);

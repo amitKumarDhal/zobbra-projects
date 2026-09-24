@@ -13,9 +13,6 @@ import {
   ShieldCheck,
   Package,
   X,
-  SlidersHorizontal,
-  ChevronRight,
-  ArrowUpDown,
   Tag
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';

@@ -221,6 +221,9 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
           quote: {
             select: {
               quoteNumber: true,
+              artworkUrl: true,
+              previewFrontUrl: true,
+              previewBackUrl: true,
               inquiry: {
                 select: {
                   customerName: true,
@@ -308,6 +311,23 @@ export const getOrderById = async (req: AuthRequest, res: Response) => {
       include: {
         customer: { select: { id: true, name: true, email: true, phone: true } },
         company: true,
+        quote: {
+          select: {
+            quoteNumber: true,
+            artworkUrl: true,
+            previewFrontUrl: true,
+            previewBackUrl: true,
+            inquiry: {
+              select: {
+                customerName: true,
+                artworkUrl: true,
+                phone: true,
+                email: true,
+                productInterest: true,
+              },
+            },
+          },
+        },
         items: { include: { product: true, variants: true } },
         production: true,
         dispatch: true,

@@ -273,7 +273,7 @@ export default function AdminQuoteDetailPage() {
       } else {
         router.push('/dashboard/orders');
       }
-    } catch (err) {
+    } catch {
       triggerSidebarCountsRefresh();
       router.push('/dashboard/orders');
     } finally {

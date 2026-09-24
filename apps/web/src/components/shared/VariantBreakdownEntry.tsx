@@ -22,7 +22,7 @@ export default function VariantBreakdownEntry({
   totalQuantity,
   requiresColor = true,
   requiresSize = true,
-  supportsMatrix = true,
+  supportsMatrix: _supportsMatrix = true,
   variants,
   onChange
 }: VariantBreakdownEntryProps) {
@@ -61,8 +61,8 @@ export default function VariantBreakdownEntry({
     }
     
     setQuantity('');
-    if (!requiresSize) setColor('');
-    if (!requiresColor) setSize('');
+    setColor('');
+    setSize('');
   };
 
   const handleRemove = (idx: number) => {
@@ -104,7 +104,13 @@ export default function VariantBreakdownEntry({
               </div>
               <div className="flex items-center gap-4">
                 <span className="font-bold text-[#111111]">Qty: {v.quantity}</span>
-                <button type="button" onClick={() => handleRemove(i)} className="text-red-500 hover:text-red-700 p-1">
+                <button
+                  type="button"
+                  title="Remove"
+                  aria-label="Remove variant"
+                  onClick={() => handleRemove(i)}
+                  className="text-red-500 hover:text-red-700 p-1"
+                >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -119,6 +125,7 @@ export default function VariantBreakdownEntry({
             <div className="flex-1 min-w-[120px]">
               <label className="block text-xs font-bold text-[#4B5563] mb-1">Color <span className="text-red-500">*</span></label>
               <input 
+                id="variant-color-input"
                 type="text" 
                 value={color} 
                 onChange={e => setColor(e.target.value)} 
@@ -132,6 +139,7 @@ export default function VariantBreakdownEntry({
             <div className="w-[100px]">
               <label className="block text-xs font-bold text-[#4B5563] mb-1">Size <span className="text-red-500">*</span></label>
               <input 
+                id="variant-size-input"
                 type="text" 
                 value={size} 
                 onChange={e => setSize(e.target.value)} 
@@ -144,6 +152,7 @@ export default function VariantBreakdownEntry({
           <div className="w-[100px]">
             <label className="block text-xs font-bold text-[#4B5563] mb-1">Qty <span className="text-red-500">*</span></label>
             <input 
+              id="variant-quantity-input"
               type="number" 
               min="1"
               max={remaining}
@@ -154,6 +163,7 @@ export default function VariantBreakdownEntry({
           </div>
 
           <button 
+            id="variant-add-btn"
             type="button" 
             onClick={handleAdd}
             disabled={!quantity || (requiresColor && !color.trim()) || (requiresSize && !size.trim()) || isOver}

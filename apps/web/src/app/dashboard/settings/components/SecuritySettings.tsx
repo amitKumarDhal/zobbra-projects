@@ -51,7 +51,7 @@ export default function SecuritySettings() {
       } else {
         setError(data.message || 'Failed to change password');
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred. Please try again.');
     } finally {
       setSaving(false);

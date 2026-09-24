@@ -196,5 +196,28 @@ describe('Approved Quote to Order MVP API Integration', () => {
       expect(res.body.success).toBe(true);
       expect(Array.isArray(res.body.orders)).toBe(true);
     });
+
+    it('GET /api/v1/orders - I. Unauthorized user cannot access orders API', async () => {
+      const res = await request(app).get('/api/v1/orders');
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+    });
+
+    it('GET /api/v1/orders - Admin receives customer artwork and preview fields on orders', async () => {
+      const res = await request(app)
+        .get('/api/v1/orders')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(Array.isArray(res.body.orders)).toBe(true);
+      if (res.body.orders.length > 0) {
+        const order = res.body.orders[0];
+        // Ensure artwork and preview fields are returned in order payload
+        expect(order).toHaveProperty('artworkUrl');
+        expect(order).toHaveProperty('previewFrontUrl');
+        expect(order).toHaveProperty('previewBackUrl');
+      }
+    });
   });
 });

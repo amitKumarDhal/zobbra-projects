@@ -12,7 +12,8 @@ import {
   getQuoteStats,
   applyCoupon,
   removeCoupon,
-  calculateQuotePricing
+  calculateQuotePricing,
+  pricingPreview
 } from './quotes.controller.js';
 import { authenticateJWT, authorizeRoles } from '../../middleware/auth.js';
 
@@ -23,6 +24,8 @@ router.use(authenticateJWT);
 router.get('/stats', getQuoteStats);
 router.get('/', getQuotes);
 router.post('/calculate', authorizeRoles('ADMIN', 'SALES'), calculateQuotePricing);
+// Pricing preview: any authenticated user can call this (CUSTOMER, ADMIN, SALES)
+router.post('/pricing-preview', pricingPreview);
 router.get('/:id', getQuoteById);
 router.post('/', createQuote);
 router.put('/:id', authorizeRoles('ADMIN', 'SALES'), editQuote);
