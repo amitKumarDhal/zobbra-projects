@@ -219,5 +219,108 @@ describe('Approved Quote to Order MVP API Integration', () => {
         expect(order).toHaveProperty('previewBackUrl');
       }
     });
+
+    describe('Customer Order Artwork & Privacy Authorization Tests', () => {
+      let custAOrderId: string;
+      let custBOrderId: string;
+
+      beforeAll(async () => {
+        // Create approved quote with artwork for Customer A
+        const quoteARes = await request(app)
+          .post('/api/v1/quotes')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({
+            customerId: 'cust-101',
+            quantity: 50,
+            artworkUrl: 'https://res.cloudinary.com/zobbra/custA-artwork.jpg',
+            previewFrontUrl: 'https://res.cloudinary.com/zobbra/custA-front.png',
+            previewBackUrl: 'https://res.cloudinary.com/zobbra/custA-back.png',
+          });
+        const quoteAId = quoteARes.body.quote.id;
+        await request(app)
+          .put(`/api/v1/quotes/${quoteAId}/status`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ status: 'APPROVED' });
+        const orderARes = await request(app)
+          .post(`/api/v1/orders/from-quote/${quoteAId}`)
+          .set('Authorization', `Bearer ${adminToken}`);
+        custAOrderId = orderARes.body.order.id;
+
+        // Create approved quote with artwork for Customer B
+        const quoteBRes = await request(app)
+          .post('/api/v1/quotes')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({
+            customerId: 'cust-202',
+            quantity: 50,
+            artworkUrl: 'https://res.cloudinary.com/zobbra/custB-private-artwork.png',
+            previewFrontUrl: 'https://res.cloudinary.com/zobbra/custB-front.png',
+            previewBackUrl: 'https://res.cloudinary.com/zobbra/custB-back.png',
+          });
+        const quoteBId = quoteBRes.body.quote.id;
+        await request(app)
+          .put(`/api/v1/quotes/${quoteBId}/status`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ status: 'APPROVED' });
+        const orderBRes = await request(app)
+          .post(`/api/v1/orders/from-quote/${quoteBId}`)
+          .set('Authorization', `Bearer ${adminToken}`);
+        custBOrderId = orderBRes.body.order.id;
+      });
+
+      it('Customer A: GET own order -> 200 and artwork is visible', async () => {
+        const res = await request(app)
+          .get(`/api/v1/orders/${custAOrderId}`)
+          .set('Authorization', `Bearer ${customerAToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.order).toBeDefined();
+        expect(res.body.order.id).toBe(custAOrderId);
+        expect(res.body.order.artworkUrl).toBe('https://res.cloudinary.com/zobbra/custA-artwork.jpg');
+        expect(res.body.order.previewFrontUrl).toBe('https://res.cloudinary.com/zobbra/custA-front.png');
+        expect(res.body.order.previewBackUrl).toBe('https://res.cloudinary.com/zobbra/custA-back.png');
+      });
+
+      it('Customer A: GET Customer B order -> 403 Forbidden', async () => {
+        const res = await request(app)
+          .get(`/api/v1/orders/${custBOrderId}`)
+          .set('Authorization', `Bearer ${customerAToken}`);
+
+        expect(res.status).toBe(403);
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toMatch(/Unauthorized/i);
+      });
+
+      it('Customer A: cannot access Customer B artwork', async () => {
+        const res = await request(app)
+          .get(`/api/v1/orders/${custBOrderId}`)
+          .set('Authorization', `Bearer ${customerAToken}`);
+
+        expect(res.status).toBe(403);
+        // Verify response body does NOT leak Customer B's order details or artwork
+        expect(res.body.order).toBeUndefined();
+        expect(JSON.stringify(res.body)).not.toContain('custB-private-artwork.png');
+      });
+
+      it('Guest: cannot access customer order artwork (401)', async () => {
+        const res = await request(app).get(`/api/v1/orders/${custAOrderId}`);
+
+        expect(res.status).toBe(401);
+        expect(res.body.success).toBe(false);
+        expect(res.body.order).toBeUndefined();
+      });
+
+      it('Admin: can view order artwork through existing Admin order authorization', async () => {
+        const res = await request(app)
+          .get(`/api/v1/orders/${custBOrderId}`)
+          .set('Authorization', `Bearer ${adminToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.order).toBeDefined();
+        expect(res.body.order.artworkUrl).toBe('https://res.cloudinary.com/zobbra/custB-private-artwork.png');
+      });
+    });
   });
 });

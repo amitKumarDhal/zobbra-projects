@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Download, Eye, ExternalLink, X, FileText, Check, Loader2 } from 'lucide-react';
+import { Download, Eye, ExternalLink, X, FileText, Check, Loader2, Palette } from 'lucide-react';
 
 export interface DesignAsset {
   type: 'artwork' | 'front' | 'back';
@@ -286,11 +286,11 @@ export function AssetPreviewModal({ asset, onClose }: AssetPreviewModalProps) {
   const getBadgeTitle = () => {
     switch (asset.type) {
       case 'artwork':
-        return 'CUSTOMER ARTWORK';
+        return 'ORIGINAL ARTWORK';
       case 'front':
-        return 'FRONT DESIGN PREVIEW';
+        return 'FRONT PREVIEW';
       case 'back':
-        return 'BACK DESIGN PREVIEW';
+        return 'BACK PREVIEW';
     }
   };
 
@@ -410,5 +410,177 @@ export function AssetPreviewModal({ asset, onClose }: AssetPreviewModalProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+export interface OrderDesignAssetsSectionProps {
+  order: any;
+  item?: any;
+  onViewAsset?: (asset: DesignAsset) => void;
+  className?: string;
+}
+
+/**
+ * Detailed DESIGN & ARTWORK section for customer and admin order details.
+ * Renders Original Artwork, Front Preview, and Back Preview cards with thumbnails,
+ * View modal launcher, and direct file download.
+ * Does not render empty placeholders when assets are absent.
+ */
+export function OrderDesignAssetsSection({
+  order,
+  item,
+  onViewAsset,
+  className = '',
+}: OrderDesignAssetsSectionProps) {
+  const assets = getOrderDesignAssets(order, item);
+  const [downloadingType, setDownloadingType] = useState<string | null>(null);
+  const [downloadedType, setDownloadedType] = useState<string | null>(null);
+  const [localModalAsset, setLocalModalAsset] = useState<DesignAsset | null>(null);
+
+  if (assets.length === 0) {
+    return null;
+  }
+
+  const handleView = (asset: DesignAsset) => {
+    if (onViewAsset) {
+      onViewAsset(asset);
+    } else {
+      setLocalModalAsset(asset);
+    }
+  };
+
+  const handleDownload = async (asset: DesignAsset) => {
+    setDownloadingType(asset.type);
+    try {
+      await downloadDesignAsset(asset.url, asset.orderNumber || order?.orderNumber || 'ORDER', asset.type);
+      setDownloadedType(asset.type);
+      setTimeout(() => setDownloadedType(null), 2500);
+    } finally {
+      setDownloadingType(null);
+    }
+  };
+
+  const getAssetDisplayName = (type: 'artwork' | 'front' | 'back') => {
+    switch (type) {
+      case 'artwork':
+        return 'Original Artwork';
+      case 'front':
+        return 'Front Preview';
+      case 'back':
+        return 'Back Preview';
+    }
+  };
+
+  return (
+    <>
+      <div
+        className={`mt-4 p-4 rounded-xl bg-[#F9FAFB] border border-[#E5E7EB] ${className}`}
+        data-cy="order-design-assets-section"
+      >
+        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[#E5E7EB]">
+          <Palette className="w-4 h-4 text-[#3B6FEB]" />
+          <h4 className="text-xs font-bold uppercase tracking-wider text-[#374151]">
+            DESIGN &amp; ARTWORK
+          </h4>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {assets.map((asset) => {
+            const isPdf = getAssetExtension(asset.url) === 'pdf';
+            const displayName = getAssetDisplayName(asset.type);
+            const isDownloading = downloadingType === asset.type;
+            const isDownloaded = downloadedType === asset.type;
+
+            return (
+              <div
+                key={asset.type}
+                className="bg-white border border-[#E5E7EB] rounded-lg p-3 flex flex-col justify-between gap-2 shadow-2xs hover:border-[#CBD5E1] transition-colors"
+                data-cy={`asset-card-${asset.type}`}
+              >
+                <div className="flex items-start gap-3">
+                  {/* Thumbnail */}
+                  <div
+                    onClick={() => handleView(asset)}
+                    className="cursor-pointer group relative shrink-0"
+                    title={`Click to view ${displayName}`}
+                  >
+                    {isPdf ? (
+                      <div className="w-12 h-12 rounded-lg bg-rose-50 border border-rose-200 flex flex-col items-center justify-center group-hover:border-rose-400 transition-colors">
+                        <FileText className="w-5 h-5 text-rose-600" />
+                        <span className="text-[9px] font-bold text-rose-700 uppercase">PDF</span>
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg border border-[#E5E7EB] bg-gray-50 overflow-hidden group-hover:border-[#3B6FEB] transition-colors flex items-center justify-center">
+                        <img
+                          src={getOptimizedThumbnailUrl(asset.url, 96)}
+                          alt={displayName}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-[#111111] truncate">{displayName}</p>
+                    <p className="text-[11px] text-[#6B7280] uppercase tracking-wide">
+                      {isPdf ? 'PDF Vector' : getAssetExtension(asset.url).toUpperCase()}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1.5 pt-2 border-t border-[#F3F4F6]">
+                  <button
+                    type="button"
+                    data-cy={`view-asset-${asset.type}`}
+                    onClick={() => handleView(asset)}
+                    className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-bold text-[#3B6FEB] bg-[#EEF2FF] hover:bg-[#E0E7FF] border border-[#C7D2FE] rounded-md transition-colors cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> View
+                  </button>
+
+                  <button
+                    type="button"
+                    data-cy={`download-asset-${asset.type}`}
+                    onClick={() => handleDownload(asset)}
+                    disabled={isDownloading}
+                    className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-bold text-[#374151] bg-[#F9FAFB] hover:bg-[#F3F4F6] border border-[#D1D5DB] rounded-md transition-colors cursor-pointer disabled:opacity-60"
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#3B6FEB]" />
+                        <span>...</span>
+                      </>
+                    ) : isDownloaded ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Done</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-3.5 h-3.5" /> Download
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Render local modal if not handled externally */}
+      {!onViewAsset && (
+        <AssetPreviewModal
+          asset={localModalAsset}
+          onClose={() => setLocalModalAsset(null)}
+        />
+      )}
+    </>
   );
 }

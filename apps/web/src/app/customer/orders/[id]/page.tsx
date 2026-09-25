@@ -17,6 +17,12 @@ import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { API_URL } from '@/lib/api';
 import { buildWhatsAppUrl, getOrderWhatsAppMessage } from '@/lib/whatsapp';
+import {
+  OrderDesignAssetsSection,
+  AssetPreviewModal,
+  DesignAsset,
+  getOrderDesignAssets,
+} from '@/components/orders/OrderDesignAssets';
 
 interface OrderDetail {
   id: string;
@@ -28,17 +34,40 @@ interface OrderDetail {
   gstTotal: number;
   totalAmount: number;
   createdAt: string;
+  artworkUrl?: string;
+  previewFrontUrl?: string;
+  previewBackUrl?: string;
+  canvasStateJson?: string;
   customer?: { id: string; name: string; email: string; phone?: string };
   company?: { name: string; gstin?: string; address?: string };
+  quote?: {
+    id?: string;
+    quoteNumber?: string;
+    artworkUrl?: string;
+    previewFrontUrl?: string;
+    previewBackUrl?: string;
+    inquiry?: {
+      customerName?: string;
+      artworkUrl?: string;
+      phone?: string;
+      email?: string;
+      productInterest?: string;
+    };
+  };
   items?: Array<{
     id: string;
-    product?: { name: string };
+    productId?: string;
+    product?: { name: string; images?: string[] };
     printType: string;
     color: string;
     size: string;
     quantity: number;
     unitPrice: number;
     totalPrice: number;
+    artworkUrl?: string;
+    previewFrontUrl?: string;
+    previewBackUrl?: string;
+    customizationDetails?: string;
   }>;
   payments?: Array<{
     id: string;
@@ -57,6 +86,7 @@ export default function CustomerOrderDetailPage() {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [storedPhone, setStoredPhone] = useState<string | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<DesignAsset | null>(null);
 
   const fetchOrderDetail = async () => {
     try {
@@ -190,20 +220,37 @@ export default function CustomerOrderDetailPage() {
             </h2>
             <div className="divide-y divide-[#E5E7EB]">
               {order.items?.map((item) => (
-                <div key={item.id} className="py-4 flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-[#111111] text-sm">{item.product?.name || 'Custom Merchandise'}</h3>
-                    <p className="text-xs text-[#6B7280] mt-1">
-                      Color: <span className="font-semibold text-[#111111]">{item.color}</span> | Size: <span className="font-semibold text-[#111111]">{item.size}</span> | Print: <span className="font-semibold text-[#111111]">{item.printType}</span>
-                    </p>
+                <div key={item.id} className="py-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-bold text-[#111111] text-sm">{item.product?.name || 'Custom Merchandise'}</h3>
+                      <p className="text-xs text-[#6B7280] mt-1">
+                        Color: <span className="font-semibold text-[#111111]">{item.color}</span> | Size: <span className="font-semibold text-[#111111]">{item.size}</span> | Print: <span className="font-semibold text-[#111111]">{item.printType}</span>
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono font-bold text-[#111111] text-sm">₹{item.totalPrice.toLocaleString('en-IN')}</p>
+                      <p className="text-xs text-[#6B7280]">{item.quantity} Pcs @ ₹{item.unitPrice}/pc</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-mono font-bold text-[#111111] text-sm">₹{item.totalPrice.toLocaleString('en-IN')}</p>
-                    <p className="text-xs text-[#6B7280]">{item.quantity} Pcs @ ₹{item.unitPrice}/pc</p>
-                  </div>
+
+                  {/* Item-specific Design & Artwork */}
+                  <OrderDesignAssetsSection
+                    order={order}
+                    item={item}
+                    onViewAsset={(asset) => setSelectedAsset(asset)}
+                  />
                 </div>
               ))}
             </div>
+
+            {/* If order-level design assets exist and weren't already resolved by items */}
+            {(!order.items || order.items.length === 0 || !order.items.some((item) => getOrderDesignAssets(order, item).length > 0)) && (
+              <OrderDesignAssetsSection
+                order={order}
+                onViewAsset={(asset) => setSelectedAsset(asset)}
+              />
+            )}
           </Card>
 
           {/* Payment Activity */}
@@ -285,6 +332,12 @@ export default function CustomerOrderDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Asset Preview / Lightbox Modal */}
+      <AssetPreviewModal
+        asset={selectedAsset}
+        onClose={() => setSelectedAsset(null)}
+      />
     </div>
   );
 }
