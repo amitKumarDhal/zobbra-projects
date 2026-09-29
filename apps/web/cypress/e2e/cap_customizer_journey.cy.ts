@@ -1,4 +1,8 @@
 describe('ZOBBRA Cap Customizer — Dedicated Headwear Silhouette & Free-Size Verification', () => {
+  beforeEach(() => {
+    cy.viewport(1280, 800);
+  });
+
   it('should load cap customizer with 6-panel cap silhouette, Crown/Visor color controls, and Free Size handling', () => {
     // 1. Visit the cap product customizer directly
     cy.visit('/products/classic-promotional-cotton-cap/customize');
@@ -6,16 +10,16 @@ describe('ZOBBRA Cap Customizer — Dedicated Headwear Silhouette & Free-Size Ve
 
     // Verify Product Header and Headwear Category
     cy.contains('Classic Promotional Structured Cotton Cap').should('be.visible');
-    cy.contains('Embroidery Area: 10cm × 5.5cm (Front Crown)').should('be.visible');
+    cy.contains(/EMBROIDERY AREA|PRINTABLE AREA/i).should('not.exist');
 
     // 2. Verify Cap Specific Color Controls
+    cy.get('#tab-tool-colors').click();
     cy.contains('CROWN COLOR').should('be.visible');
     cy.contains('VISOR / BRIM COLOR').should('be.visible');
     cy.contains('BODY COLOR').should('not.exist');
 
     // 3. Verify Free Size One-Size-Fits-All Badge
-    cy.contains('Standard Free Size (One Size Fits All)').should('be.visible');
-    cy.contains('Structured 6-panel fit with adjustable rear fabric strap').should('be.visible');
+    cy.contains('One size').should('be.visible');
 
     // 4. Verify Cap Vector Silhouette is rendered
     cy.get('svg[viewBox="0 0 500 580"]').within(() => {
@@ -34,7 +38,7 @@ describe('ZOBBRA Cap Customizer — Dedicated Headwear Silhouette & Free-Size Ve
     cy.wait(500);
 
     // 6. Test Text Tool for Cap
-    cy.contains('button', 'Text').click();
+    cy.get('#tab-tool-text').click();
     cy.contains('button', '+ Add Text to Cap').should('be.visible');
     cy.get('input[placeholder="Enter brand or text..."]').type('ACME CAP');
     cy.contains('button', '+ Add Text to Cap').click();

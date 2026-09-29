@@ -14,6 +14,8 @@ interface VariantBreakdownEntryProps {
   requiresColor?: boolean;
   requiresSize?: boolean;
   supportsMatrix?: boolean;
+  /** Tighter spacing for embedded panels (customizer). Default layout is unchanged. */
+  compact?: boolean;
   variants: VariantData[];
   onChange: (variants: VariantData[]) => void;
 }
@@ -23,6 +25,7 @@ export default function VariantBreakdownEntry({
   requiresColor = true,
   requiresSize = true,
   supportsMatrix: _supportsMatrix = true,
+  compact = false,
   variants,
   onChange
 }: VariantBreakdownEntryProps) {
@@ -76,7 +79,8 @@ export default function VariantBreakdownEntry({
   }
 
   return (
-    <div className="bg-[#F8F9FC] border border-[#E5E7EB] rounded-xl p-4 space-y-4">
+    <div className={compact ? "space-y-2 pt-1" : "bg-[#F8F9FC] border border-[#E5E7EB] rounded-xl p-4 space-y-4"}>
+      {!compact && (
       <div>
         <h4 className="text-sm font-bold text-[#374151] flex items-center justify-between">
           Quantity Breakdown
@@ -88,11 +92,12 @@ export default function VariantBreakdownEntry({
           Specify the color and size distribution for your {totalQuantity} items.
         </p>
       </div>
+      )}
 
       {variants.length > 0 && (
-        <div className="space-y-2">
+        <div className={compact ? "space-y-1" : "space-y-2"}>
           {variants.map((v, i) => (
-            <div key={i} className="flex items-center justify-between bg-white px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm shadow-sm">
+            <div key={i} className={`flex items-center justify-between bg-white border border-[#E5E7EB] rounded-lg ${compact ? "px-2 py-1 text-xs" : "px-3 py-2 text-sm shadow-sm"}`}>
               <div className="flex gap-3 text-[#374151] font-medium items-center">
                 {requiresColor && (
                   <span className="flex items-center gap-1.5">
@@ -120,7 +125,7 @@ export default function VariantBreakdownEntry({
       )}
 
       {!isComplete && (
-        <div className="flex flex-wrap items-end gap-3 pt-2">
+        <div className={`flex flex-wrap items-end ${compact ? "gap-2 pt-1" : "gap-3 pt-2"}`}>
           {requiresColor && (
             <div className="flex-1 min-w-[120px]">
               <label className="block text-xs font-bold text-[#4B5563] mb-1">Color <span className="text-red-500">*</span></label>

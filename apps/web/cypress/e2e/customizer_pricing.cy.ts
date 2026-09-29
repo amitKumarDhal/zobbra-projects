@@ -40,6 +40,9 @@ describe('Customizer — Live Estimated Pricing & Variant Validation', () => {
     // Initial state: single variant matches total quantity (20)
     cy.get('#customizer-proceed-btn').should('not.be.disabled');
 
+    // Variant breakdown is collapsed by default: expand it
+    cy.get('#variant-section-toggle').click();
+
     // Remove the default full-quantity variant so remaining > 0
     cy.get('button[title="Remove"]').click();
 

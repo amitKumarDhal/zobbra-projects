@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { Sparkles, Trash2 } from 'lucide-react';
 import { GarmentBackdrop } from './GarmentBackdrop';
-import { getCustomizerTemplate, CustomizerTemplate } from '../../lib/customizerTemplates';
+import { getCustomizerTemplate, CustomizerTemplate, PrintableAreaConfig } from '../../lib/customizerTemplates';
 import { uploadDataUrlToCloudinary, uploadToCloudinary } from '@/lib/upload';
 
 export interface CustomizerCanvasRef {
@@ -60,12 +60,66 @@ export interface CustomizerCanvasProps {
 const EMPTY_CANVAS_JSON = JSON.stringify({ version: '5.3.0', objects: [] });
 
 /**
+ * Free placement: the Fabric canvas covers the whole product stage (the padding box of the 540px stage),
+ * not just the legacy printable box. Stored object coordinates are unchanged - they stay relative to the
+ * legacy box origin - and a viewport translation places that origin exactly where the box used to render.
+ * Existing drafts/quotes therefore load and render as before with no migration.
+ */
+const STAGE_CANVAS_WIDTH = 538;
+const STAGE_CANVAS_HEIGHT = 624;
+
+/** Where the legacy box's top-left sits inside the stage canvas (matches the old centered overlay). */
+function legacyBoxOrigin(area: PrintableAreaConfig): { x: number; y: number } {
+  const pct = (v: string) => parseFloat(v) / 100;
+  return {
+    x: (pct(area.left) + pct(area.styleWidth) / 2) * STAGE_CANVAS_WIDTH - area.width / 2,
+    y: (pct(area.top) + pct(area.styleHeight) / 2) * STAGE_CANVAS_HEIGHT - area.height / 2,
+  };
+}
+
+function applyStageGeometry(cvs: any, area: PrintableAreaConfig) {
+  const origin = legacyBoxOrigin(area);
+  cvs.setDimensions({ width: STAGE_CANVAS_WIDTH, height: STAGE_CANVAS_HEIGHT });
+  cvs.setViewportTransform([1, 0, 0, 1, origin.x, origin.y]);
+}
+
+/**
+ * Export crop in canvas pixels. Equals the legacy box exactly (identical output to before) unless an
+ * object was moved outside it, in which case the crop grows to include it so nothing is silently cut.
+ */
+function previewCrop(cvs: any, area: PrintableAreaConfig) {
+  const origin = legacyBoxOrigin(area);
+  let minX = 0;
+  let minY = 0;
+  let maxX = area.width;
+  let maxY = area.height;
+  for (const obj of cvs.getObjects()) {
+    const r = obj.getBoundingRect(true, true);
+    minX = Math.min(minX, r.left);
+    minY = Math.min(minY, r.top);
+    maxX = Math.max(maxX, r.left + r.width);
+    maxY = Math.max(maxY, r.top + r.height);
+  }
+  const TOLERANCE = 0.5;
+  const insideBox =
+    minX >= -TOLERANCE && minY >= -TOLERANCE && maxX <= area.width + TOLERANCE && maxY <= area.height + TOLERANCE;
+  if (insideBox) {
+    return { left: origin.x, top: origin.y, width: area.width, height: area.height };
+  }
+  const left = Math.max(0, Math.floor(origin.x + minX));
+  const top = Math.max(0, Math.floor(origin.y + minY));
+  const right = Math.min(STAGE_CANVAS_WIDTH, Math.ceil(origin.x + maxX));
+  const bottom = Math.min(STAGE_CANVAS_HEIGHT, Math.ceil(origin.y + maxY));
+  return { left, top, width: right - left, height: bottom - top };
+}
+
+/**
  * Safely exports canvas to data URL, catching any browser SecurityError (e.g. tainted canvas)
  * and throwing a controlled user-friendly error instead of crashing React.
  */
 export function safeExportCanvas(
   canvas: any,
-  options: { format?: string; multiplier?: number } = { format: 'png', multiplier: 2 }
+  options: { format?: string; multiplier?: number; left?: number; top?: number; width?: number; height?: number } = { format: 'png', multiplier: 2 }
 ): string {
   if (!canvas) return '';
   try {
@@ -230,17 +284,15 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         fabricInstanceRef.current = fabric;
         setFabricInstance(fabric);
 
-        const canvasWidth = currentArea.width;
-        const canvasHeight = currentArea.height;
-
         const newCanvas = new fabric.Canvas(canvasElRef.current, {
-          width: canvasWidth,
-          height: canvasHeight,
+          width: STAGE_CANVAS_WIDTH,
+          height: STAGE_CANVAS_HEIGHT,
           selection: true,
           preserveObjectStacking: true,
         });
 
         fabricCanvasRef.current = newCanvas;
+        applyStageGeometry(newCanvas, currentArea);
 
         // Object selection listeners
         newCanvas.on('selection:created', (e: any) => {
@@ -301,10 +353,10 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   // Update canvas dimensions when template or activeSide printable area changes
   useEffect(() => {
     if (fabricCanvasRef.current) {
-      fabricCanvasRef.current.setDimensions({ width: currentArea.width, height: currentArea.height });
+      applyStageGeometry(fabricCanvasRef.current, currentArea);
       fabricCanvasRef.current.renderAll();
     }
-  }, [currentArea.width, currentArea.height]);
+  }, [currentArea]);
 
   const checkHasObjects = (jsonStr: string): boolean => {
     if (!jsonStr) return false;
@@ -358,7 +410,7 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     const targetArea = newSide === 'back' && resolvedTemplate.backPrintableArea
       ? resolvedTemplate.backPrintableArea
       : resolvedTemplate.frontPrintableArea;
-    canvas.setDimensions({ width: targetArea.width, height: targetArea.height });
+    applyStageGeometry(canvas, targetArea);
 
     // Load target side JSON with CORS normalization
     canvas.clear();
@@ -391,6 +443,11 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       if (onDesignChange) onDesignChange({ hasFront, hasBack, activeSide: newSide });
     }
   };
+
+  const sideArea = () =>
+    activeSideRef.current === 'back' && resolvedTemplate.backPrintableArea
+      ? resolvedTemplate.backPrintableArea
+      : resolvedTemplate.frontPrintableArea;
 
   // Add custom text to canvas
   const handleAddText = (
@@ -670,14 +727,18 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     centerActiveH: () => {
       const active = canvas?.getActiveObject();
       if (!active) return;
-      canvas.centerObjectH(active);
+      const area = sideArea();
+      active.setPositionByOrigin(new fabricInstanceRef.current.Point(area.width / 2, active.getCenterPoint().y), 'center', 'center');
+      active.setCoords();
       canvas.renderAll();
       saveCurrentState();
     },
     centerActiveV: () => {
       const active = canvas?.getActiveObject();
       if (!active) return;
-      canvas.centerObjectV(active);
+      const area = sideArea();
+      active.setPositionByOrigin(new fabricInstanceRef.current.Point(active.getCenterPoint().x, area.height / 2), 'center', 'center');
+      active.setCoords();
       canvas.renderAll();
       saveCurrentState();
     },
@@ -769,7 +830,7 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       const renderSideToDataUrl = async (side: 'front' | 'back'): Promise<string> => {
         // If requesting the currently active side, render directly from activeCanvas
         if (side === currentSide) {
-          return safeExportCanvas(activeCanvas);
+          return safeExportCanvas(activeCanvas, { format: 'png', multiplier: 2, ...previewCrop(activeCanvas, currentArea) });
         }
 
         const targetJson = side === 'front' ? frontJsonRef.current : backJsonRef.current;
@@ -780,7 +841,7 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         const targetArea = side === 'back' && resolvedTemplate.backPrintableArea
           ? resolvedTemplate.backPrintableArea
           : resolvedTemplate.frontPrintableArea;
-        activeCanvas.setDimensions({ width: targetArea.width, height: targetArea.height });
+        applyStageGeometry(activeCanvas, targetArea);
 
         const parsed = normalizeCanvasJsonForCORS(targetJson, cdnUrl);
 
@@ -789,10 +850,10 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
           activeCanvas.loadFromJSON(parsed, () => {
             let data = '';
             try {
-              data = safeExportCanvas(activeCanvas);
+              data = safeExportCanvas(activeCanvas, { format: 'png', multiplier: 2, ...previewCrop(activeCanvas, targetArea) });
             } catch (exportErr) {
               console.error('[CustomizerCanvas] Error exporting target side:', exportErr);
-              activeCanvas.setDimensions({ width: currentArea.width, height: currentArea.height });
+              applyStageGeometry(activeCanvas, currentArea);
               isSwitchingSideRef.current = false;
               reject(exportErr);
               return;
@@ -800,7 +861,7 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
 
             // Restore active side immediately
             const restoreJson = currentSide === 'front' ? frontJsonRef.current : backJsonRef.current;
-            activeCanvas.setDimensions({ width: currentArea.width, height: currentArea.height });
+            applyStageGeometry(activeCanvas, currentArea);
             if (restoreJson && checkHasObjects(restoreJson)) {
               const restoreParsed = normalizeCanvasJsonForCORS(restoreJson, cdnUrl);
               activeCanvas.loadFromJSON(restoreParsed, () => {
@@ -888,28 +949,32 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       <div 
         id="customizer-canvas-wrapper"
         data-canvas-ready={Boolean(canvas && fabricInstance)}
-        className="absolute z-10 flex items-center justify-center"
-        style={{
-          top: currentArea.top,
-          left: currentArea.left,
-          width: currentArea.styleWidth,
-          height: currentArea.styleHeight,
-        }}
+        className="absolute inset-0 z-10"
       >
-        <canvas ref={canvasElRef} className="rounded" />
+        <canvas ref={canvasElRef} />
 
         {/* Clean, Non-Intrusive Empty Canvas Guide Overlay (UI only - NOT a canvas object!) */}
         {!hasCurrentObjects && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-2">
-            <div className="w-7 h-7 rounded-full bg-white/80 backdrop-blur-sm border border-gray-200 shadow-sm flex items-center justify-center text-[#3B6FEB] mb-1">
-              <Sparkles className="w-3.5 h-3.5" />
+          <div
+            className="absolute flex flex-col items-center justify-center pointer-events-none text-center p-2"
+            style={{
+              top: currentArea.top,
+              left: currentArea.left,
+              width: currentArea.styleWidth,
+              height: currentArea.styleHeight,
+            }}
+          >
+            <div className="flex flex-col items-center rounded-xl bg-white/85 backdrop-blur-sm px-2.5 py-1.5 shadow-sm">
+              <div className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#3B6FEB] mb-1">
+                <Sparkles className="w-3.5 h-3.5" />
+              </div>
+              <p className="text-[10px] font-bold text-gray-700">
+                {currentArea.guideText || 'Add your logo or text'}
+              </p>
+              <p className="text-[9px] text-gray-500 max-w-[150px] leading-tight mt-0.5">
+                {currentArea.subGuideText || currentArea.label || 'Select an option from the design tools to begin'}
+              </p>
             </div>
-            <p className="text-[10px] font-bold text-gray-700">
-              {currentArea.guideText || 'Add your logo or text'}
-            </p>
-            <p className="text-[9px] text-gray-400 max-w-[150px] leading-tight mt-0.5">
-              {currentArea.subGuideText || currentArea.label || 'Select an option from the design tools to begin'}
-            </p>
           </div>
         )}
       </div>

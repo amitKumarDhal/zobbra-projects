@@ -194,29 +194,6 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
                 opacity={light ? "0.5" : "0.3"}
               />
 
-              {/* Front 3D Puff Embroidery Printable Area Outline */}
-              <rect
-                x="170"
-                y="190"
-                width="160"
-                height="115"
-                rx="8"
-                fill="none"
-                stroke={light ? "rgba(59, 111, 235, 0.5)" : "rgba(255, 255, 255, 0.45)"}
-                strokeWidth="1.5"
-                strokeDasharray="5 4"
-              />
-              <text
-                x="250"
-                y="180"
-                textAnchor="middle"
-                fontSize="9"
-                fontWeight="700"
-                letterSpacing="0.5"
-                fill={light ? "rgba(59, 111, 235, 0.8)" : "rgba(255, 255, 255, 0.75)"}
-              >
-                FRONT EMBROIDERY AREA (10cm × 5.5cm)
-              </text>
             </g>
           ) : (
             /* BACK VIEW */
@@ -299,29 +276,6 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
                 strokeWidth="2"
               />
 
-              {/* Back Printable Area Outline */}
-              <rect
-                x="175"
-                y="225"
-                width="150"
-                height="35"
-                rx="6"
-                fill="none"
-                stroke={light ? "rgba(59, 111, 235, 0.5)" : "rgba(255, 255, 255, 0.45)"}
-                strokeWidth="1.5"
-                strokeDasharray="4 3"
-              />
-              <text
-                x="250"
-                y="218"
-                textAnchor="middle"
-                fontSize="9"
-                fontWeight="700"
-                letterSpacing="0.5"
-                fill={light ? "rgba(59, 111, 235, 0.8)" : "rgba(255, 255, 255, 0.75)"}
-              >
-                BACK ARCH EMBROIDERY AREA
-              </text>
             </g>
           )}
         </svg>
@@ -451,29 +405,6 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
               opacity={light ? "0.45" : "0.25"}
             />
 
-            {/* Printable Wrap Area Outline */}
-            <rect
-              x={side === 'front' ? "155" : "175"}
-              y="195"
-              width="170"
-              height="210"
-              rx="10"
-              fill="none"
-              stroke={light ? "rgba(59, 111, 235, 0.5)" : "rgba(255, 255, 255, 0.45)"}
-              strokeWidth="1.5"
-              strokeDasharray="5 4"
-            />
-            <text
-              x={side === 'front' ? "240" : "260"}
-              y="186"
-              textAnchor="middle"
-              fontSize="9"
-              fontWeight="700"
-              letterSpacing="0.5"
-              fill={light ? "rgba(59, 111, 235, 0.85)" : "rgba(255, 255, 255, 0.8)"}
-            >
-              {side === 'front' ? 'FRONT PRINT AREA (8.5cm × 7.5cm)' : 'REVERSE PRINT AREA (8.5cm × 7.5cm)'}
-            </text>
           </g>
         </svg>
       </div>
@@ -607,29 +538,6 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
                 opacity="0.9"
               />
 
-              {/* Front Panel Logo / Branding Area Outline */}
-              <rect
-                x="165"
-                y="310"
-                width="170"
-                height="130"
-                rx="8"
-                fill="none"
-                stroke={light ? "rgba(59, 111, 235, 0.5)" : "rgba(255, 255, 255, 0.45)"}
-                strokeWidth="1.5"
-                strokeDasharray="5 4"
-              />
-              <text
-                x="250"
-                y="302"
-                textAnchor="middle"
-                fontSize="9"
-                fontWeight="700"
-                letterSpacing="0.5"
-                fill={light ? "rgba(59, 111, 235, 0.85)" : "rgba(255, 255, 255, 0.8)"}
-              >
-                FRONT BRANDING AREA (12cm × 10cm)
-              </text>
             </g>
           ) : (
             /* BACK VIEW */
@@ -708,29 +616,6 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
                 strokeWidth="1"
               />
 
-              {/* Back Branding / Identification Area Outline */}
-              <rect
-                x="175"
-                y="170"
-                width="150"
-                height="80"
-                rx="8"
-                fill="none"
-                stroke={light ? "rgba(59, 111, 235, 0.5)" : "rgba(255, 255, 255, 0.45)"}
-                strokeWidth="1.5"
-                strokeDasharray="4 3"
-              />
-              <text
-                x="250"
-                y="162"
-                textAnchor="middle"
-                fontSize="9"
-                fontWeight="700"
-                letterSpacing="0.5"
-                fill={light ? "rgba(59, 111, 235, 0.85)" : "rgba(255, 255, 255, 0.8)"}
-              >
-                UPPER BACK / STRAP AREA
-              </text>
             </g>
           )}
         </svg>
@@ -741,7 +626,8 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
   // =========================================================================
   // 4. GENERIC MERCHANDISE / PRODUCT IMAGE FALLBACK
   // =========================================================================
-  if (resolvedTemplate.type === 'generic') {
+  // Hoodies have no dedicated silhouette yet: use the catalog product image instead of a polo drawing.
+  if (resolvedTemplate.type === 'generic' || resolvedTemplate.type === 'hoodie') {
     const fallbackImg = product?.images?.[0];
     if (fallbackImg) {
       return (
@@ -929,29 +815,6 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
           strokeDasharray="4 2"
         />
 
-        {/* Printable Area Dashed Outline */}
-        <rect
-          x="165"
-          y="130"
-          width="170"
-          height="240"
-          rx="6"
-          fill="none"
-          stroke={light ? "rgba(59, 111, 235, 0.4)" : "rgba(255, 255, 255, 0.35)"}
-          strokeWidth="1.5"
-          strokeDasharray="5 4"
-        />
-        <text
-          x="250"
-          y="122"
-          textAnchor="middle"
-          fontSize="10"
-          fontWeight="600"
-          letterSpacing="0.5"
-          fill={light ? "rgba(59, 111, 235, 0.7)" : "rgba(255, 255, 255, 0.6)"}
-        >
-          {side.toUpperCase()} PRINTABLE AREA
-        </text>
       </svg>
     </div>
   );

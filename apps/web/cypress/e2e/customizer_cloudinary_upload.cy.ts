@@ -1,4 +1,8 @@
 describe('Customizer Cloudinary Logo Upload Flow', () => {
+  beforeEach(() => {
+    cy.viewport(1280, 800);
+  });
+
   it('allows a guest to upload a logo to Cloudinary and renders it on canvas', () => {
     // Intercept Cloudinary upload to verify network request
     cy.intercept('POST', 'https://api.cloudinary.com/**').as('cloudinaryUpload');
@@ -39,32 +43,14 @@ describe('Customizer Cloudinary Logo Upload Flow', () => {
     });
 
     // 7. Click the "Logo" tab in the left tool panel
-    cy.contains('button', 'Logo').click();
-    cy.contains('Upload Artwork').should('be.visible');
+    cy.get('#tab-tool-logo').click();
+    cy.contains('Upload artwork').should('be.visible');
 
     // Verify initial empty state guide is visible
-    cy.contains('Add your logo, text or artwork').should('be.visible');
+    cy.contains(/Add your logo/).should('be.visible');
 
-    // 8. Perform REAL file upload via file input using DataTransfer
-    cy.window().then((win) => {
-      const base64Png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-      const byteCharacters = atob(base64Png);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new win.Blob([byteArray], { type: 'image/png' });
-      const file = new win.File([blob], 'test-logo.png', { type: 'image/png' });
-
-      const dataTransfer = new win.DataTransfer();
-      dataTransfer.items.add(file);
-
-      const fileInput = win.document.querySelector('input[type="file"]') as HTMLInputElement;
-      expect(fileInput).to.exist;
-      fileInput.files = dataTransfer.files;
-      fileInput.dispatchEvent(new win.Event('change', { bubbles: true }));
-    });
+    // 8. Perform REAL file upload via the file input using a real image asset
+    cy.get('input[type="file"]').selectFile('public/brand/zobbra-logo-white.png', { force: true });
 
     // 9. Verify POST request reaches Cloudinary and returns 200 with secure_url
     cy.wait('@cloudinaryUpload', { timeout: 30000 }).then((interception) => {
@@ -77,11 +63,13 @@ describe('Customizer Cloudinary Logo Upload Flow', () => {
     });
 
     // 10. Verify empty state overlay disappears
-    cy.contains('Add your logo, text or artwork', { timeout: 15000 }).should('not.exist');
+    cy.contains(/Add your logo/, { timeout: 15000 }).should('not.exist');
 
-    // 11. Verify element inspector appears with Center H/V and Delete controls
-    cy.contains('Selected Element', { timeout: 15000 }).should('be.visible');
-    cy.contains('Center H').should('be.visible');
-    cy.contains('Center V').should('be.visible');
+    // 11. Verify the Layers tool shows center and delete controls for the selected element
+    cy.get('#tab-tool-layers').click();
+    cy.contains('Image selected', { timeout: 15000 }).should('be.visible');
+    cy.contains('button', 'Center').should('be.visible');
+    cy.contains('button', 'Middle').should('be.visible');
+    cy.contains('button', 'Delete').should('be.visible');
   });
 });

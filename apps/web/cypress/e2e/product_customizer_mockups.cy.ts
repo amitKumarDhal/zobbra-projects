@@ -1,13 +1,24 @@
 describe('ZOBBRA Product-Specific Customizer Mockup Verification', () => {
+  beforeEach(() => {
+    cy.viewport(1280, 800);
+  });
+
+  // Design rule: customers place artwork freely, so no printable-area boundary or label may be drawn.
+  const assertNoPrintBoundary = () => {
+    cy.contains(/PRINTABLE AREA|EMBROIDERY AREA|BRANDING AREA|Print Area:/i).should('not.exist');
+    cy.get('svg[viewBox="0 0 500 580"] rect[stroke-dasharray]').should('not.exist');
+  };
+
   it('1. T-Shirt / Polo Customizer: shows Polo mockup, chest print area, and garment color controls', () => {
     cy.visit('/products/classic-corporate-polo-tshirt/customize');
     cy.wait(1500);
 
     // Header and Apparel category
     cy.contains('Classic Corporate Pique Polo T-Shirt').should('be.visible');
-    cy.contains('Print Area: 30cm × 40cm').should('be.visible');
+    assertNoPrintBoundary();
 
-    // Color controls
+    // Color controls (Color tool)
+    cy.get('#tab-tool-colors').click();
     cy.contains('BODY COLOR').should('be.visible');
     cy.contains('COLLAR & RIB COLOR').should('be.visible');
     cy.contains('CROWN COLOR').should('not.exist');
@@ -29,9 +40,10 @@ describe('ZOBBRA Product-Specific Customizer Mockup Verification', () => {
 
     // Header and Cap category
     cy.contains('Classic Promotional Structured Cotton Cap').should('be.visible');
-    cy.contains('Embroidery Area: 10cm × 5.5cm (Front Crown)').should('be.visible');
+    assertNoPrintBoundary();
 
-    // Color controls
+    // Color controls (Color tool)
+    cy.get('#tab-tool-colors').click();
     cy.contains('CROWN COLOR').should('be.visible');
     cy.contains('VISOR / BRIM COLOR').should('be.visible');
     cy.contains('BODY COLOR').should('not.exist');
@@ -52,9 +64,10 @@ describe('ZOBBRA Product-Specific Customizer Mockup Verification', () => {
 
     // Header
     cy.contains('Classic Corporate Ceramic Coffee Mug').should('be.visible');
-    cy.contains('Print Area: 8.5cm × 7.5cm (Front View)').should('be.visible');
+    assertNoPrintBoundary();
 
-    // Color controls
+    // Color controls (Color tool)
+    cy.get('#tab-tool-colors').click();
     cy.contains('MUG COLOR').should('be.visible');
     cy.contains('HANDLE & INNER COLOR').should('be.visible');
     cy.contains('CROWN COLOR').should('not.exist');
@@ -69,7 +82,7 @@ describe('ZOBBRA Product-Specific Customizer Mockup Verification', () => {
     // Switch to BACK / REVERSE view
     cy.contains('button', 'BACK').click();
     cy.wait(500);
-    cy.contains('Print Area: 8.5cm × 7.5cm (Reverse View)').should('be.visible');
+    assertNoPrintBoundary();
   });
 
   it('4. Bag Customizer: shows Laptop Backpack mockup, front branding panel, and rear padded straps', () => {
@@ -78,9 +91,10 @@ describe('ZOBBRA Product-Specific Customizer Mockup Verification', () => {
 
     // Header
     cy.contains('Executive Corporate Laptop Backpack').should('be.visible');
-    cy.contains('Branding Area: 12cm × 10cm (Front Panel)').should('be.visible');
+    assertNoPrintBoundary();
 
-    // Color controls
+    // Color controls (Color tool)
+    cy.get('#tab-tool-colors').click();
     cy.contains('BAG COLOR').should('be.visible');
     cy.contains('TRIM & ACCENTS').should('be.visible');
     cy.contains('CROWN COLOR').should('not.exist');

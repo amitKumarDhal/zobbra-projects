@@ -127,3 +127,23 @@ describe('Customizer Template Resolver Suite', () => {
     expect(template.frontPrintableArea.height).toBeGreaterThan(0);
   });
 });
+
+describe('Customizer Template Resolver - false positive guards', () => {
+  it('does not treat substrings such as "capacity" as caps', () => {
+    const t = getCustomizerTemplate({
+      name: 'High Capacity Notebook',
+      slug: 'high-capacity-notebook',
+      category: { name: 'Stationery', slug: 'stationery' },
+    });
+    expect(t.type).toBe('generic');
+  });
+
+  it('prefers the category over ambiguous product names', () => {
+    const t = getCustomizerTemplate({
+      name: 'Cap Sleeve Tee',
+      slug: 'cap-sleeve-tee',
+      category: { name: 'T-Shirts', slug: 't-shirts' },
+    });
+    expect(t.type).toBe('tshirt');
+  });
+});
