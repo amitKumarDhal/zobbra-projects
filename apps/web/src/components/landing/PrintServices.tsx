@@ -26,7 +26,7 @@ export function PrintServices() {
   ];
 
   return (
-    <section className="bg-[#F7F6F2] py-12 sm:py-20">
+    <section className="bg-[#F7F6F2] py-8 sm:py-10 lg:py-12">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Large Black Container with Scroll Reveal */}
         <motion.div
@@ -34,43 +34,43 @@ export function PrintServices() {
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
           viewport={{ once: true, margin: '-40px' }}
           transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-[#111111] text-white rounded-[2rem] p-8 sm:p-12 lg:p-14 shadow-[0_24px_55px_-18px_rgba(17,17,17,0.42)] border border-[#2B2B2B] relative overflow-hidden"
+          className="bg-[#111111] text-white rounded-[1.5rem] p-6 sm:p-8 lg:p-10 shadow-[0_20px_45px_-15px_rgba(17,17,17,0.38)] border border-[#2B2B2B] relative overflow-hidden"
         >
           {/* Subtle background ambient gradient */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-white/[0.02] rounded-full blur-3xl pointer-events-none" />
 
           {/* Header */}
-          <div className="text-center space-y-2 mb-10 sm:mb-12">
-              <span className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#8EA8FF] font-heading block">
+          <div className="text-center space-y-1 mb-6 sm:mb-8">
+            <span className="text-[10px] sm:text-[10.5px] font-extrabold uppercase tracking-[0.18em] text-[#8EA8FF] font-heading block">
               OUR PRINT SERVICES
             </span>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-black text-white tracking-tight">
+            <h2 className="text-xl sm:text-2xl lg:text-[28px] font-heading font-black text-white tracking-tight">
               Quality Printing. Lasting Impression.
             </h2>
           </div>
 
           {/* 3 Services Columns with Vertical Dividers */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-0 divide-y md:divide-y-0 md:divide-x divide-[#222222]">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-0 divide-y md:divide-y-0 md:divide-x divide-[#222222]">
             {services.map((srv, idx) => {
               const Icon = srv.icon;
               return (
                 <div
                   key={srv.title}
-                  className={`pt-6 md:pt-0 ${
+                  className={`pt-4 md:pt-0 ${
                     idx === 0
-                      ? 'md:pr-8'
+                      ? 'md:pr-6'
                       : idx === 1
-                      ? 'md:px-8'
-                      : 'md:pl-8'
-                  } space-y-3 text-center md:text-left group`}
+                      ? 'md:px-6'
+                      : 'md:pl-6'
+                  } space-y-2 text-center md:text-left group`}
                 >
-                  <div className="w-10 h-10 rounded-lg bg-[#1C2B5A] border border-[#344B99] group-hover:border-[#8EA8FF] group-hover:bg-[#263A7A] flex items-center justify-center text-[#D9E2FF] mx-auto md:mx-0 transition-all duration-300">
-                    <Icon className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[#1C2B5A] border border-[#344B99] group-hover:border-[#8EA8FF] group-hover:bg-[#263A7A] flex items-center justify-center text-[#D9E2FF] mx-auto md:mx-0 transition-all duration-300">
+                    <Icon className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
                   </div>
-                  <h3 className="text-lg font-heading font-bold text-white tracking-tight">
+                  <h3 className="text-[15px] sm:text-base font-heading font-bold text-white tracking-tight">
                     {srv.title}
                   </h3>
-                  <p className="text-[13px] text-[#A1A1AA] leading-relaxed">
+                  <p className="text-[12px] text-[#A1A1AA] leading-snug">
                     {srv.desc}
                   </p>
                 </div>

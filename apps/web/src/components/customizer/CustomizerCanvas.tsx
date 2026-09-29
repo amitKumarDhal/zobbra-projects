@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { Sparkles, Trash2 } from 'lucide-react';
 import { GarmentBackdrop } from './GarmentBackdrop';
+import { getCustomizerTemplate, CustomizerTemplate } from '../../lib/customizerTemplates';
 import { uploadDataUrlToCloudinary, uploadToCloudinary } from '@/lib/upload';
 
 export interface CustomizerCanvasRef {
@@ -44,6 +45,8 @@ export interface CustomizerCanvasProps {
   collarColor?: string;
   category?: string;
   activeSide: 'front' | 'back';
+  template?: CustomizerTemplate;
+  product?: any;
   onSideChange?: (side: 'front' | 'back') => void;
   onDesignChange?: (info: { hasFront: boolean; hasBack: boolean; activeSide: 'front' | 'back' }) => void;
   onSelectionChange?: (selectedObj: any) => void;
@@ -145,6 +148,8 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   collarColor,
   category,
   activeSide,
+  template,
+  product,
   onSideChange,
   onDesignChange,
   onSelectionChange,
@@ -155,6 +160,11 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   innerRef,
 }, ref) => {
   const resolvedRef = (ref as any) || innerRef;
+  const resolvedTemplate = template || getCustomizerTemplate(product || { category: { name: category, slug: category } });
+  const currentArea = activeSide === 'back' && resolvedTemplate.backPrintableArea
+    ? resolvedTemplate.backPrintableArea
+    : resolvedTemplate.frontPrintableArea;
+
   const [fabricInstance, setFabricInstance] = useState<any>(null);
   const [canvas, setCanvas] = useState<any>(null);
   const [hasCurrentObjects, setHasCurrentObjects] = useState<boolean>(false);
@@ -220,9 +230,8 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         fabricInstanceRef.current = fabric;
         setFabricInstance(fabric);
 
-        const isCap = category?.toLowerCase().includes('cap');
-        const canvasWidth = isCap ? 200 : 210;
-        const canvasHeight = isCap ? 115 : 300;
+        const canvasWidth = currentArea.width;
+        const canvasHeight = currentArea.height;
 
         const newCanvas = new fabric.Canvas(canvasElRef.current, {
           width: canvasWidth,
@@ -289,16 +298,13 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     };
   }, []);
 
-  // Update canvas dimensions when product category changes
+  // Update canvas dimensions when template or activeSide printable area changes
   useEffect(() => {
     if (fabricCanvasRef.current) {
-      const isCap = category?.toLowerCase().includes('cap');
-      const width = isCap ? 200 : 210;
-      const height = isCap ? 115 : 300;
-      fabricCanvasRef.current.setDimensions({ width, height });
+      fabricCanvasRef.current.setDimensions({ width: currentArea.width, height: currentArea.height });
       fabricCanvasRef.current.renderAll();
     }
-  }, [category]);
+  }, [currentArea.width, currentArea.height]);
 
   const checkHasObjects = (jsonStr: string): boolean => {
     if (!jsonStr) return false;
@@ -348,6 +354,12 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     activeSideRef.current = newSide;
     if (onSideChange) onSideChange(newSide);
 
+    // Update canvas dimensions for target side
+    const targetArea = newSide === 'back' && resolvedTemplate.backPrintableArea
+      ? resolvedTemplate.backPrintableArea
+      : resolvedTemplate.frontPrintableArea;
+    canvas.setDimensions({ width: targetArea.width, height: targetArea.height });
+
     // Load target side JSON with CORS normalization
     canvas.clear();
     const targetJson = newSide === 'front' ? frontJsonRef.current : backJsonRef.current;
@@ -386,10 +398,9 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     options?: { fontFamily?: string; fontSize?: number; fill?: string; fontWeight?: string; fontStyle?: string; textAlign?: string }
   ) => {
     if (!canvas || !fabricInstance) return;
-    const isCap = category?.toLowerCase().includes('cap');
-    const centerX = isCap ? 100 : 105;
-    const centerY = isCap ? 57.5 : 140;
-    const defaultFontSize = isCap ? 16 : 24;
+    const centerX = currentArea.width / 2;
+    const centerY = currentArea.height / 2;
+    const defaultFontSize = resolvedTemplate.type === 'cap' ? 16 : 24;
 
     const cleanText = textString?.trim() || 'Custom Text';
     const text = new fabricInstance.IText(cleanText, {
@@ -459,11 +470,10 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
           placedImg = img;
 
           // Constrain image nicely within printable area
-          const isCap = category?.toLowerCase().includes('cap');
-          const centerX = isCap ? 100 : 105;
-          const centerY = isCap ? 57.5 : 140;
-          const maxWidth = isCap ? 160 : 150;
-          const maxHeight = isCap ? 85 : 150;
+          const centerX = currentArea.width / 2;
+          const centerY = currentArea.height / 2;
+          const maxWidth = Math.round(currentArea.width * 0.8);
+          const maxHeight = Math.round(currentArea.height * 0.8);
           const scale = Math.min(maxWidth / (img.width || 1), maxHeight / (img.height || 1), 1);
 
           img.set({
@@ -767,6 +777,11 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
           return '';
         }
 
+        const targetArea = side === 'back' && resolvedTemplate.backPrintableArea
+          ? resolvedTemplate.backPrintableArea
+          : resolvedTemplate.frontPrintableArea;
+        activeCanvas.setDimensions({ width: targetArea.width, height: targetArea.height });
+
         const parsed = normalizeCanvasJsonForCORS(targetJson, cdnUrl);
 
         return new Promise((resolve, reject) => {
@@ -777,6 +792,7 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
               data = safeExportCanvas(activeCanvas);
             } catch (exportErr) {
               console.error('[CustomizerCanvas] Error exporting target side:', exportErr);
+              activeCanvas.setDimensions({ width: currentArea.width, height: currentArea.height });
               isSwitchingSideRef.current = false;
               reject(exportErr);
               return;
@@ -784,6 +800,7 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
 
             // Restore active side immediately
             const restoreJson = currentSide === 'front' ? frontJsonRef.current : backJsonRef.current;
+            activeCanvas.setDimensions({ width: currentArea.width, height: currentArea.height });
             if (restoreJson && checkHasObjects(restoreJson)) {
               const restoreParsed = normalizeCanvasJsonForCORS(restoreJson, cdnUrl);
               activeCanvas.loadFromJSON(restoreParsed, () => {
@@ -855,33 +872,29 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     }
   }));
 
-  const isCap = category?.toLowerCase().includes('cap');
-
   return (
     <div className="relative w-full max-w-[540px] aspect-[500/580] bg-[#FAFAFA] rounded-2xl border border-[#E5E7EB] p-2 flex items-center justify-center overflow-hidden shadow-inner group select-none">
-      {/* Dynamic Garment Silhouette SVG */}
-      <GarmentBackdrop color={selectedColor} collarColor={collarColor} side={activeSide} category={category} />
+      {/* Dynamic Product Silhouette SVG or Media Backdrop */}
+      <GarmentBackdrop
+        color={selectedColor}
+        collarColor={collarColor}
+        side={activeSide}
+        category={category}
+        template={resolvedTemplate}
+        product={product}
+      />
 
       {/* Interactive Fabric Canvas overlay exactly over printable area */}
       <div 
         id="customizer-canvas-wrapper"
         data-canvas-ready={Boolean(canvas && fabricInstance)}
         className="absolute z-10 flex items-center justify-center"
-        style={
-          isCap
-            ? {
-                top: '32.8%',
-                left: '34%',
-                width: '32%',
-                height: '19.8%',
-              }
-            : {
-                top: '22.4%',
-                left: '29%',
-                width: '42%',
-                height: '52%',
-              }
-        }
+        style={{
+          top: currentArea.top,
+          left: currentArea.left,
+          width: currentArea.styleWidth,
+          height: currentArea.styleHeight,
+        }}
       >
         <canvas ref={canvasElRef} className="rounded" />
 
@@ -892,10 +905,10 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
               <Sparkles className="w-3.5 h-3.5" />
             </div>
             <p className="text-[10px] font-bold text-gray-700">
-              {isCap ? 'Add your logo or text' : 'Add your logo, text or artwork'}
+              {currentArea.guideText || 'Add your logo or text'}
             </p>
             <p className="text-[9px] text-gray-400 max-w-[150px] leading-tight mt-0.5">
-              {isCap ? 'Embroidery area (10cm × 5.5cm)' : 'Select an option from the design tools to begin'}
+              {currentArea.subGuideText || currentArea.label || 'Select an option from the design tools to begin'}
             </p>
           </div>
         )}

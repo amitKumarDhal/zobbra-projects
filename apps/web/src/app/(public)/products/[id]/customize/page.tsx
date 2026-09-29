@@ -36,6 +36,7 @@ import {
   clearCustomizerDraft, 
   CustomizerDraft 
 } from '@/lib/customizerDraft';
+import { getCustomizerTemplate } from '@/lib/customizerTemplates';
 import type { CustomizerCanvasRef, CustomizerCanvasProps } from '@/components/customizer/CustomizerCanvas';
 
 // Dynamically import Fabric canvas with SSR disabled to prevent server-side canvas.node crash
@@ -209,7 +210,10 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     async function fetchProduct() {
       try {
         setLoadingProduct(true);
-        const res = await fetch(`${API_URL}/products/${productId}`);
+        let res = await fetch(`${API_URL}/products/${productId}`);
+        if (!res.ok && (productId === 'prod-polo-200gsm' || productId?.includes('polo'))) {
+          res = await fetch(`${API_URL}/products/classic-corporate-polo-tshirt`);
+        }
         if (!res.ok) {
           throw new Error('Product not found');
         }
@@ -221,26 +225,30 @@ function CustomizeProductContent({ productId }: { productId: string }) {
         const moq = prod.bulkPricing?.[0]?.minQuantity || 50;
         setQuantity(moq);
 
-        const isCapProduct = Boolean(
-          prod.category?.slug === 'caps' ||
-          prod.category?.name?.toLowerCase().includes('cap') ||
-          prod.name?.toLowerCase().includes('cap') ||
-          prod.slug?.includes('cap')
+        const initialTemplate = getCustomizerTemplate(prod);
+        const defaultColor = prod.variants?.[0]?.color || (
+          initialTemplate.type === 'cap' || initialTemplate.type === 'bag' ? 'Charcoal Black' : 'White'
         );
+        const defaultCollar = initialTemplate.type === 'cap' || initialTemplate.type === 'bag' 
+          ? 'Charcoal Black' 
+          : initialTemplate.type === 'mug' 
+          ? 'White' 
+          : 'Yellow';
+        const defaultSize = initialTemplate.requiresSize === false ? 'Free Size' : 'L';
 
         // ONLY restore draft if user is resuming from login/register flow
         if (isResume) {
           const savedDraft = getCustomizerDraft(prod.id);
           if (savedDraft) {
             setRestoredDraft(savedDraft);
-            setSelectedColor(savedDraft.selectedColor || (isCapProduct ? 'Charcoal Black' : 'White'));
+            setSelectedColor(savedDraft.selectedColor || defaultColor);
             if (savedDraft.collarColor) setCollarColor(savedDraft.collarColor);
-            else if (isCapProduct) setCollarColor('Charcoal Black');
+            else setCollarColor(defaultCollar);
             if (savedDraft.quantity) setQuantity(savedDraft.quantity);
             if (savedDraft.variants && savedDraft.variants.length > 0) {
               setVariants(savedDraft.variants);
             } else {
-              setVariants([{ color: savedDraft.selectedColor || (isCapProduct ? 'Charcoal Black' : 'White'), size: isCapProduct ? 'Free Size' : 'L', quantity: savedDraft.quantity || moq }]);
+              setVariants([{ color: savedDraft.selectedColor || defaultColor, size: defaultSize, quantity: savedDraft.quantity || moq }]);
             }
             if (canvasRef.current) {
               canvasRef.current.loadDraftState(
@@ -252,27 +260,15 @@ function CustomizeProductContent({ productId }: { productId: string }) {
             setDraftRestoredNotice(true);
             setTimeout(() => setDraftRestoredNotice(false), 6000);
           } else {
-            if (isCapProduct) {
-              setSelectedColor('Charcoal Black');
-              setCollarColor('Charcoal Black');
-              setVariants([{ color: 'Charcoal Black', size: 'Free Size', quantity: moq }]);
-            } else {
-              setSelectedColor('White');
-              setCollarColor('Yellow');
-              setVariants([{ color: 'White', size: 'L', quantity: moq }]);
-            }
+            setSelectedColor(defaultColor);
+            setCollarColor(defaultCollar);
+            setVariants([{ color: defaultColor, size: defaultSize, quantity: moq }]);
           }
         } else {
           // Fresh, clean start matching design studio reference
-          if (isCapProduct) {
-            setSelectedColor('Charcoal Black');
-            setCollarColor('Charcoal Black');
-            setVariants([{ color: 'Charcoal Black', size: 'Free Size', quantity: moq }]);
-          } else {
-            setSelectedColor('White');
-            setCollarColor('Yellow');
-            setVariants([{ color: 'White', size: 'L', quantity: moq }]);
-          }
+          setSelectedColor(defaultColor);
+          setCollarColor(defaultCollar);
+          setVariants([{ color: defaultColor, size: defaultSize, quantity: moq }]);
         }
       } catch (err: any) {
         setProductError(err.message || 'Unable to load product specifications.');
@@ -312,13 +308,9 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     }
   });
 
-  // Check if current product belongs to Cap / Headwear category
-  const isCap = Boolean(
-    product?.category?.slug === 'caps' ||
-    product?.category?.name?.toLowerCase().includes('cap') ||
-    product?.name?.toLowerCase().includes('cap') ||
-    product?.slug?.includes('cap')
-  );
+  // Resolve customizer template for current product
+  const template = getCustomizerTemplate(product);
+  const isCap = template.type === 'cap';
 
   // Determine active print positions
   const resolvedPrintType = hasFront && hasBack 
@@ -331,9 +323,9 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   const variantSum = variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0);
   const hasVariantMismatch = variants.length > 0 && variantSum !== quantity;
 
-  // Live Server Pricing via POST /api/v1/quotes/pricing-preview
+  // Live Server Pricing via POST /api/v1/quotes/pricing-preview with client-side guest fallback
   const fetchPricing = useCallback(
-    debounce(async (pid: string, qty: number, pt: string, vars: VariantData[]) => {
+    debounce(async (pid: string, qty: number, pt: string, vars: VariantData[], prodObj: any) => {
       if (!pid || qty <= 0) {
         setPricingState({ status: 'idle' });
         return;
@@ -378,16 +370,76 @@ function CustomizeProductContent({ productId }: { productId: string }) {
         if (res.ok && data.success) {
           setPricingState({ status: 'success', data: data.data });
         } else {
-          setPricingState({
-            status: 'error',
-            message: data.message || 'Unable to calculate estimate. Please try again.',
-          });
+          // If token was missing/unauthorized or API refused guest preview, calculate client-side estimate for guest
+          if (!token || res.status === 401 || data.message?.toLowerCase().includes('token') || data.message?.toLowerCase().includes('auth')) {
+            const bulkTiers = prodObj?.bulkPricing || [];
+            let unitPrice = prodObj?.basePrice || 250;
+            if (Array.isArray(bulkTiers) && bulkTiers.length > 0) {
+              const sorted = [...bulkTiers].sort((a, b) => b.minQuantity - a.minQuantity);
+              const matched = sorted.find((t: any) => qty >= t.minQuantity);
+              if (matched && matched.price) unitPrice = matched.price;
+              else if (sorted[sorted.length - 1]?.price) unitPrice = sorted[sorted.length - 1].price;
+            }
+            const subtotal = unitPrice * qty;
+            const gstRate = prodObj?.gstRate ?? 18;
+            const gstTotal = Math.round(subtotal * (gstRate / 100));
+            const totalAmount = subtotal + gstTotal;
+            setPricingState({
+              status: 'success',
+              data: {
+                productId: pid,
+                productName: prodObj?.name || 'Product',
+                unitPrice,
+                subtotal,
+                discount: 0,
+                gstRate,
+                gstTotal,
+                totalAmount,
+              },
+            });
+          } else {
+            setPricingState({
+              status: 'error',
+              message: data.message || 'Unable to calculate estimate. Please try again.',
+            });
+          }
         }
       } catch {
-        setPricingState({
-          status: 'error',
-          message: 'Network error calculating pricing preview.',
-        });
+        const token =
+          typeof window !== 'undefined'
+            ? localStorage.getItem('token') || localStorage.getItem('zobra_token')
+            : null;
+        if (!token) {
+          const bulkTiers = prodObj?.bulkPricing || [];
+          let unitPrice = prodObj?.basePrice || 250;
+          if (Array.isArray(bulkTiers) && bulkTiers.length > 0) {
+            const sorted = [...bulkTiers].sort((a, b) => b.minQuantity - a.minQuantity);
+            const matched = sorted.find((t: any) => qty >= t.minQuantity);
+            if (matched && matched.price) unitPrice = matched.price;
+          }
+          const subtotal = unitPrice * qty;
+          const gstRate = prodObj?.gstRate ?? 18;
+          const gstTotal = Math.round(subtotal * (gstRate / 100));
+          const totalAmount = subtotal + gstTotal;
+          setPricingState({
+            status: 'success',
+            data: {
+              productId: pid,
+              productName: prodObj?.name || 'Product',
+              unitPrice,
+              subtotal,
+              discount: 0,
+              gstRate,
+              gstTotal,
+              totalAmount,
+            },
+          });
+        } else {
+          setPricingState({
+            status: 'error',
+            message: 'Network error calculating pricing preview.',
+          });
+        }
       }
     }, 300),
     []
@@ -398,9 +450,9 @@ function CustomizeProductContent({ productId }: { productId: string }) {
       const varsToSend = variants.length > 0
         ? variants
         : [{ color: selectedColor, size: isCap ? 'Free Size' : 'L', quantity }];
-      fetchPricing(product.id, quantity, resolvedPrintType, varsToSend);
+      fetchPricing(product.id, quantity, resolvedPrintType, varsToSend, product);
     }
-  }, [product?.id, quantity, resolvedPrintType, variants, selectedColor, isCap, fetchPricing]);
+  }, [product, quantity, resolvedPrintType, variants, selectedColor, isCap, fetchPricing]);
 
   const handleQuantityChange = (newQty: number) => {
     const val = Math.max(1, newQty);
@@ -569,14 +621,14 @@ function CustomizeProductContent({ productId }: { productId: string }) {
             printType: resolvedPrintType,
             color: selectedColor,
             collarColor,
-            size: finalVariants[0]?.size || (isCap ? 'Free Size' : 'L'),
+            size: finalVariants[0]?.size || (template.requiresSize === false ? 'Free Size' : 'L'),
             quantity,
             variants: finalVariants,
           },
         ],
         notes: isCap 
           ? `Custom Online Cap Design - ${resolvedPrintType} on ${selectedColor} (Visor: ${collarColor})`
-          : `Custom Online Design - ${resolvedPrintType} on ${selectedColor} (Collar & Rib: ${collarColor})`,
+          : `Custom Online Design - ${resolvedPrintType} on ${selectedColor} (${template.secondaryColorLabel || 'Secondary'}: ${collarColor})`,
       };
 
       const payloadString = JSON.stringify(quotePayload);
@@ -621,8 +673,8 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     return (
       <div className="min-h-screen bg-[#FDFDFD] flex items-center justify-center p-6">
         <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-4 border-[#050505] border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <h2 className="text-base font-black text-[#050505] uppercase tracking-wider font-heading">Loading Studio...</h2>
+          <div className="w-9 h-9 border-3 border-[#111111] border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <h2 className="text-sm font-black text-[#111111] uppercase tracking-wider font-heading">Loading Studio...</h2>
         </div>
       </div>
     );
@@ -631,13 +683,13 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   if (productError || !product) {
     return (
       <div className="min-h-screen bg-[#FDFDFD] flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-red-200 text-center space-y-4 shadow-sm">
+        <div className="max-w-md w-full bg-white p-7 rounded-2xl border border-red-200 text-center space-y-4 shadow-sm">
           <AlertCircle className="w-10 h-10 text-red-500 mx-auto" />
-          <h2 className="text-xl font-black text-[#050505] font-heading">Product Not Found</h2>
-          <p className="text-sm text-gray-600">{productError || 'The requested product could not be loaded.'}</p>
+          <h2 className="text-xl font-black text-[#111111] font-heading">Product Not Found</h2>
+          <p className="text-xs text-gray-600">{productError || 'The requested product could not be loaded.'}</p>
           <Link
             href="/products"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#050505] text-white text-xs font-bold rounded-xl uppercase tracking-wider hover:bg-[#222222] transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#111111] text-white text-xs font-bold rounded-xl uppercase tracking-wider hover:bg-[#222222] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Catalog
           </Link>
@@ -647,7 +699,6 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   }
 
   // Identity state determinations
-  // Require both a valid cached user AND a token — prevents stale localStorage from showing badge
   const hasToken = typeof window !== 'undefined' 
     ? !!(localStorage.getItem('token') || localStorage.getItem('zobra_token')) 
     : false;
@@ -655,31 +706,36 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   const isAdminOrStaff = !!user && user.role !== 'CUSTOMER' && hasToken;
 
   return (
-    <div className="min-h-screen bg-[#F8F9FC] text-[#050505] font-sans pb-16">
-      {/* 1. Header Bar: Back, Product Name, Front/Back View, and Auth/Proceed */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E5E7EB] px-4 sm:px-8 py-3 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-4 min-w-0">
+    <div className="min-h-screen bg-[#F7F8FA] text-[#111111] font-sans pb-24 lg:pb-12">
+      {/* 1. Sleek Studio Header Bar */}
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E5E7EB] px-3 sm:px-6 py-2.5 flex items-center justify-between shadow-2xs">
+        <div className="flex items-center gap-3 min-w-0">
           <Link 
             href={`/products/${product.id}`}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-black transition-colors shrink-0"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-black transition-colors shrink-0 px-2 py-1 rounded-lg hover:bg-gray-100"
           >
-            <ArrowLeft className="w-4 h-4" /> Back
+            <ArrowLeft className="w-3.5 h-3.5" /> Back
           </Link>
           <span className="text-gray-300">/</span>
-          <h1 className="text-sm font-black text-[#050505] uppercase tracking-wide truncate">
-            {product.name}
-          </h1>
+          <div className="min-w-0 flex items-center gap-2">
+            <h1 className="text-xs sm:text-sm font-black text-[#111111] uppercase tracking-wide truncate max-w-[180px] sm:max-w-xs md:max-w-md font-heading">
+              {product.name}
+            </h1>
+            <span className="hidden sm:inline-flex text-[9.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EEF2FF] text-[#3B6FEB] border border-[#D9E2FF]">
+              {product.category?.name ? product.category.name.toUpperCase() : (isCap ? 'HEADWEAR' : 'APPAREL')}
+            </span>
+          </div>
         </div>
 
         {/* Center: Front / Back View Switcher Pills */}
-        <div className="flex items-center gap-1 p-1 bg-[#F3F4F6] rounded-xl border border-[#E5E7EB]">
+        <div className="flex items-center gap-1 p-1 bg-[#F1F3F7] rounded-xl border border-[#E2E8F0]">
           <button
             id="btn-switch-front"
             type="button"
             onClick={() => handleSwitchSide('front')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
               activeSide === 'front'
-                ? 'bg-white text-[#111111] shadow-xs'
+                ? 'bg-white text-[#111111] shadow-2xs'
                 : 'text-gray-500 hover:text-black'
             }`}
           >
@@ -690,9 +746,9 @@ function CustomizeProductContent({ productId }: { productId: string }) {
             id="btn-switch-back"
             type="button"
             onClick={() => handleSwitchSide('back')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
               activeSide === 'back'
-                ? 'bg-white text-[#111111] shadow-xs'
+                ? 'bg-white text-[#111111] shadow-2xs'
                 : 'text-gray-500 hover:text-black'
             }`}
           >
@@ -702,9 +758,9 @@ function CustomizeProductContent({ productId }: { productId: string }) {
         </div>
 
         {/* Right: Actions & Top Proceed */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {isAdminOrStaff && (
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 text-amber-800 rounded-md text-[11px] font-bold border border-amber-200">
+            <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 text-amber-800 rounded-md text-[10px] font-bold border border-amber-200">
               <span>Admin Preview</span>
             </div>
           )}
@@ -713,65 +769,65 @@ function CustomizeProductContent({ productId }: { productId: string }) {
             <button
               type="button"
               onClick={() => {
-                // Save current state to draft before going to auth
                 const returnUrl = `/products/${product.id}/customize?resume=1`;
                 if (typeof window !== 'undefined') {
                   sessionStorage.setItem('zobbra_auth_return', returnUrl);
                 }
                 setShowAuthModal(true);
               }}
-              className="text-xs font-bold text-gray-600 hover:text-black transition-colors"
+              className="text-xs font-bold text-gray-600 hover:text-black transition-colors px-2 py-1 rounded-lg hover:bg-gray-100"
             >
               Sign In
             </button>
           )}
 
           <button
+            id="top-proceed-btn"
             type="button"
             onClick={handleProceed}
             disabled={submitting}
-            className="px-4 py-2 bg-[#050505] hover:bg-[#222222] text-white rounded-xl text-xs font-bold transition-all disabled:opacity-60 flex items-center gap-1.5 shadow-sm"
+            className="px-3.5 py-1.5 sm:px-4 sm:py-2 bg-[#111111] hover:bg-[#2563EB] text-white rounded-xl text-xs font-bold transition-all disabled:opacity-60 flex items-center gap-1.5 shadow-2xs"
           >
-            {submitting ? 'Saving...' : 'Proceed'}
+            <span>{submitting ? 'Saving...' : 'Proceed'}</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </header>
 
-      {/* 2. Main 3-Column Studio Layout */}
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-8 pt-6 space-y-6">
+      {/* 2. Main Studio Grid (3-Zone Design Workspace) */}
+      <main className="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-5 space-y-4">
         {draftRestoredNotice && (
-          <div className="bg-[#3B6FEB]/10 border border-[#3B6FEB]/30 text-[#1E40AF] px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#3B6FEB]" />
+          <div className="bg-[#EEF2FF] border border-[#D9E2FF] text-[#1E40AF] px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-2xs">
+            <Sparkles className="w-4 h-4 text-[#3B6FEB] shrink-0" />
             <span>Restored your saved design draft from previous session.</span>
           </div>
         )}
 
         {submitError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-2xs">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{submitError}</span>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
           {/* ========================================================================= */}
-          {/* LEFT COLUMN: TOOL PANEL (Colors, Logo, Text, Element Inspector) */}
+          {/* ZONE 1 (LEFT): DESIGN TOOLS PANEL */}
           {/* ========================================================================= */}
-          <div className="lg:col-span-3 bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-sm space-y-6">
+          <div className="lg:col-span-3 xl:col-span-3 bg-white rounded-2xl border border-[#E5E7EB] p-4 sm:p-4.5 shadow-2xs space-y-4 lg:sticky lg:top-[68px] lg:max-h-[calc(100vh-84px)] lg:overflow-y-auto">
             {/* Tool Mode Tabs */}
-            <div className="grid grid-cols-3 gap-2 p-1.5 bg-[#F9FAFB] rounded-2xl border border-[#F3F4F6]">
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#F1F3F7] rounded-xl border border-[#E2E8F0]">
               <button
                 id="tab-tool-colors"
                 type="button"
                 onClick={() => setActiveToolTab('colors')}
-                className={`py-2 px-2 text-xs font-bold rounded-2xl flex flex-col items-center gap-1.5 transition-all ${
+                className={`py-2 px-1 text-xs font-bold rounded-lg flex flex-col items-center gap-1 transition-all ${
                   activeToolTab === 'colors' 
-                    ? 'bg-[#FFF0F5] text-[#E91E63] shadow-xs' 
-                    : 'text-slate-500 hover:text-slate-800'
+                    ? 'bg-[#111111] text-white shadow-2xs'
+                    : 'text-gray-500 hover:text-black hover:bg-white/60'
                 }`}
               >
-                <Palette className="w-5 h-5" />
+                <Palette className="w-4 h-4" />
                 <span>Colors</span>
               </button>
 
@@ -779,45 +835,45 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                 id="tab-tool-logo"
                 type="button"
                 onClick={() => setActiveToolTab('logo')}
-                className={`py-2 px-2 text-xs font-bold rounded-2xl flex flex-col items-center gap-1.5 transition-all ${
+                className={`py-2 px-1 text-xs font-bold rounded-lg flex flex-col items-center gap-1 transition-all ${
                   activeToolTab === 'logo' 
-                    ? 'bg-[#FFF0F5] text-[#E91E63] shadow-xs' 
-                    : 'text-slate-500 hover:text-slate-800'
+                    ? 'bg-[#111111] text-white shadow-2xs'
+                    : 'text-gray-500 hover:text-black hover:bg-white/60'
                 }`}
               >
-                <ImagePlus className="w-5 h-5" />
+                <ImagePlus className="w-4 h-4" />
                 <span>Logo</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveToolTab('text')}
-                className={`py-2 px-2 text-xs font-bold rounded-2xl flex flex-col items-center gap-1.5 transition-all ${
+                className={`py-2 px-1 text-xs font-bold rounded-lg flex flex-col items-center gap-1 transition-all ${
                   activeToolTab === 'text' 
-                    ? 'bg-[#FFF0F5] text-[#E91E63] shadow-xs' 
-                    : 'text-slate-500 hover:text-slate-800'
+                    ? 'bg-[#111111] text-white shadow-2xs'
+                    : 'text-gray-500 hover:text-black hover:bg-white/60'
                 }`}
               >
-                <Type className="w-5 h-5" />
+                <Type className="w-4 h-4" />
                 <span>Text</span>
               </button>
             </div>
 
-            {/* TAB 1: Garment Color Selector */}
+            {/* TAB 1: Garment / Cap Color Selector */}
             {activeToolTab === 'colors' && (
-              <div className="space-y-6 pt-1">
+              <div className="space-y-4 pt-1">
                 {/* BODY / CROWN COLOR Section */}
-                <div>
-                  <div className="flex items-center justify-between mb-3.5">
-                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#718096]">
-                      {isCap ? 'CROWN COLOR' : 'BODY COLOR'}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500">
+                      {template.colorLabel || (isCap ? 'CROWN COLOR' : 'BODY COLOR')}
                     </h3>
-                    <span className="text-[11px] font-semibold text-gray-400">
+                    <span className="text-[11px] font-bold text-[#111111] bg-gray-100 px-2 py-0.5 rounded">
                       {selectedColor}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-5 gap-3.5 place-items-center">
+                  <div className="grid grid-cols-5 gap-2 place-items-center">
                     {BODY_COLORS.map((col) => {
                       const isSelected = selectedColor.toLowerCase() === col.name.toLowerCase();
                       return (
@@ -826,10 +882,10 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                           type="button"
                           title={col.name}
                           onClick={() => handleColorChange(col.name)}
-                          className={`w-9 h-9 rounded-full transition-all duration-150 relative flex items-center justify-center ${
+                          className={`w-8 h-8 rounded-full transition-all duration-150 relative flex items-center justify-center ${
                             isSelected
-                              ? 'ring-[3.5px] ring-[#E91E63] ring-offset-2 scale-105 shadow-sm'
-                              : 'border border-black/10 shadow-xs hover:scale-110'
+                              ? 'ring-2 ring-[#3B6FEB] ring-offset-2 scale-105 shadow-xs'
+                              : 'border border-black/15 shadow-2xs hover:scale-105'
                           }`}
                           style={{ backgroundColor: col.hex }}
                         >
@@ -841,17 +897,17 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                 </div>
 
                 {/* VISOR / COLLAR & RIB COLOR Section */}
-                <div className="pt-2">
-                  <div className="flex items-center justify-between mb-3.5">
-                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#718096]">
-                      {isCap ? 'VISOR / BRIM COLOR' : 'COLLAR & RIB COLOR'}
+                <div className="space-y-2 pt-2 border-t border-[#F1F3F7]">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500">
+                      {template.secondaryColorLabel || (isCap ? 'VISOR / BRIM COLOR' : 'COLLAR & RIB COLOR')}
                     </h3>
-                    <span className="text-[11px] font-semibold text-gray-400">
+                    <span className="text-[11px] font-bold text-[#111111] bg-gray-100 px-2 py-0.5 rounded">
                       {collarColor}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-5 gap-3.5 place-items-center">
+                  <div className="grid grid-cols-5 gap-2 place-items-center">
                     {COLLAR_RIB_COLORS.map((col) => {
                       const isSelected = collarColor.toLowerCase() === col.name.toLowerCase();
                       return (
@@ -860,10 +916,10 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                           type="button"
                           title={col.name}
                           onClick={() => handleCollarColorChange(col.name)}
-                          className={`w-9 h-9 rounded-full transition-all duration-150 relative flex items-center justify-center ${
+                          className={`w-8 h-8 rounded-full transition-all duration-150 relative flex items-center justify-center ${
                             isSelected
-                              ? 'ring-[3.5px] ring-[#E91E63] ring-offset-2 scale-105 shadow-sm'
-                              : 'border border-black/10 shadow-xs hover:scale-110'
+                              ? 'ring-2 ring-[#3B6FEB] ring-offset-2 scale-105 shadow-xs'
+                              : 'border border-black/15 shadow-2xs hover:scale-105'
                           }`}
                           style={{ backgroundColor: col.hex }}
                         >
@@ -878,20 +934,20 @@ function CustomizeProductContent({ productId }: { productId: string }) {
 
             {/* TAB 2: Logo / Artwork Upload Tool */}
             {activeToolTab === 'logo' && (
-              <div className="space-y-4 pt-1">
+              <div className="space-y-3 pt-1">
                 <div>
-                  <h3 className="text-xs font-black uppercase text-gray-500 tracking-wider">Upload Artwork</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Add your logo or artwork to the {activeSide} side.</p>
+                  <h3 className="text-xs font-black uppercase text-[#111111] tracking-wider">Upload Artwork</h3>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Add your logo or artwork to the {activeSide} side.</p>
                 </div>
 
-                <label className="border-2 border-dashed border-[#CBD5E1] hover:border-[#3B6FEB] bg-[#F8F9FC] hover:bg-blue-50/40 rounded-2xl p-6 text-center flex flex-col items-center justify-center gap-2.5 cursor-pointer transition-all">
-                  <div className="w-10 h-10 rounded-full bg-white shadow-xs border border-gray-200 flex items-center justify-center text-[#3B6FEB]">
-                    <UploadCloud className="w-5 h-5" />
+                <label className="border-2 border-dashed border-[#CBD5E1] hover:border-[#3B6FEB] bg-[#F8F9FC] hover:bg-blue-50/30 rounded-xl p-5 text-center flex flex-col items-center justify-center gap-2 cursor-pointer transition-all">
+                  <div className="w-9 h-9 rounded-full bg-white shadow-2xs border border-gray-200 flex items-center justify-center text-[#3B6FEB]">
+                    <UploadCloud className="w-4 h-4" />
                   </div>
-                  <span className="text-xs font-bold text-[#050505]">
+                  <span className="text-xs font-bold text-[#111111]">
                     {(isUploadingLogo || isUploadingArtwork) ? 'Uploading artwork…' : 'Click or Drag Logo File'}
                   </span>
-                  <span className="text-[11px] text-gray-400">
+                  <span className="text-[10px] text-gray-400">
                     PNG, JPG, SVG or WebP (Transparent recommended)
                   </span>
                   <input
@@ -903,15 +959,31 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                     disabled={isUploadingLogo || isUploadingArtwork}
                   />
                 </label>
+
+                {((activeSide === 'front' && hasFront) || (activeSide === 'back' && hasBack)) && (
+                  <div className="flex items-center justify-between p-2.5 bg-blue-50/60 border border-blue-200/60 rounded-xl text-xs">
+                    <span className="text-[11px] font-bold text-blue-900 flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-[#3B6FEB]" />
+                      Artwork placed on {activeSide}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-[11px] font-bold text-[#3B6FEB] hover:underline"
+                    >
+                      Replace
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
             {/* TAB 3: Text Tool */}
             {activeToolTab === 'text' && (
-              <form onSubmit={handleCreateText} className="space-y-4 pt-1">
+              <form onSubmit={handleCreateText} className="space-y-3 pt-1">
                 <div>
-                  <h3 className="text-xs font-black uppercase text-gray-500 tracking-wider">Add Custom Text</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Type your text below and add it to the garment.</p>
+                  <h3 className="text-xs font-black uppercase text-[#111111] tracking-wider">Add Custom Text</h3>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Type your text below and add it to the garment.</p>
                 </div>
 
                 <div>
@@ -921,7 +993,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
                     placeholder="Enter brand or text..."
-                    className="w-full px-3.5 py-2.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-sm font-semibold outline-none focus:border-[#3B6FEB]"
+                    className="w-full px-3 py-2 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs font-semibold outline-none focus:border-[#3B6FEB]"
                   />
                 </div>
 
@@ -930,7 +1002,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                   <select
                     value={textFont}
                     onChange={(e) => setTextFont(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs font-semibold outline-none focus:border-[#3B6FEB]"
+                    className="w-full px-2.5 py-1.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs font-semibold outline-none focus:border-[#3B6FEB]"
                   >
                     {FONTS.map(f => (
                       <option key={f.value} value={f.value}>{f.name}</option>
@@ -939,14 +1011,14 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-600 mb-1.5">Text Color</label>
-                  <div className="flex flex-wrap gap-2">
+                  <label className="block text-[11px] font-bold text-gray-600 mb-1">Text Color</label>
+                  <div className="flex flex-wrap gap-1.5">
                     {TEXT_COLORS.map(c => (
                       <button
                         key={c}
                         type="button"
                         onClick={() => setTextColor(c)}
-                        className={`w-6 h-6 rounded-full border transition-all ${
+                        className={`w-5 h-5 rounded-full border transition-all ${
                           textColor.toLowerCase() === c.toLowerCase()
                             ? 'ring-2 ring-[#3B6FEB] ring-offset-1 scale-110'
                             : 'border-gray-300 hover:scale-105'
@@ -957,43 +1029,43 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-2 pt-1">
-                  <div className="flex items-center gap-1 bg-[#F3F4F6] p-1 rounded-lg">
+                <div className="flex items-center justify-between gap-2 pt-0.5">
+                  <div className="flex items-center gap-1 bg-[#F1F3F7] p-1 rounded-lg">
                     <button
                       type="button"
                       onClick={() => setTextBold(!textBold)}
-                      className={`p-1.5 rounded text-xs font-bold transition-all ${textBold ? 'bg-white text-black shadow-xs' : 'text-gray-400'}`}
+                      className={`p-1 rounded text-xs font-bold transition-all ${textBold ? 'bg-white text-black shadow-2xs' : 'text-gray-400'}`}
                     >
                       <Bold className="w-3.5 h-3.5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setTextItalic(!textItalic)}
-                      className={`p-1.5 rounded text-xs font-bold transition-all ${textItalic ? 'bg-white text-black shadow-xs' : 'text-gray-400'}`}
+                      className={`p-1 rounded text-xs font-bold transition-all ${textItalic ? 'bg-white text-black shadow-2xs' : 'text-gray-400'}`}
                     >
                       <Italic className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-1 bg-[#F3F4F6] p-1 rounded-lg">
+                  <div className="flex items-center gap-1 bg-[#F1F3F7] p-1 rounded-lg">
                     <button
                       type="button"
                       onClick={() => setTextAlign('left')}
-                      className={`p-1.5 rounded transition-all ${textAlign === 'left' ? 'bg-white text-black shadow-xs' : 'text-gray-400'}`}
+                      className={`p-1 rounded transition-all ${textAlign === 'left' ? 'bg-white text-black shadow-2xs' : 'text-gray-400'}`}
                     >
                       <AlignLeft className="w-3.5 h-3.5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setTextAlign('center')}
-                      className={`p-1.5 rounded transition-all ${textAlign === 'center' ? 'bg-white text-black shadow-xs' : 'text-gray-400'}`}
+                      className={`p-1 rounded transition-all ${textAlign === 'center' ? 'bg-white text-black shadow-2xs' : 'text-gray-400'}`}
                     >
                       <AlignCenter className="w-3.5 h-3.5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setTextAlign('right')}
-                      className={`p-1.5 rounded transition-all ${textAlign === 'right' ? 'bg-white text-black shadow-xs' : 'text-gray-400'}`}
+                      className={`p-1 rounded transition-all ${textAlign === 'right' ? 'bg-white text-black shadow-2xs' : 'text-gray-400'}`}
                     >
                       <AlignRight className="w-3.5 h-3.5" />
                     </button>
@@ -1003,18 +1075,18 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                 <button
                   type="submit"
                   disabled={!textInput.trim()}
-                  className="w-full py-2.5 bg-[#050505] hover:bg-[#222222] disabled:bg-gray-300 text-white rounded-xl text-xs font-bold transition-all"
+                  className="w-full py-2 bg-[#111111] hover:bg-[#2563EB] disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl text-xs font-bold transition-all"
                 >
-                  + Add Text to {isCap ? 'Cap' : 'Garment'}
+                  {template.addTextButtonLabel || `+ Add Text to ${isCap ? 'Cap' : 'Garment'}`}
                 </button>
               </form>
             )}
 
             {/* Contextual Selection Inspector (Shown when canvas object is active) */}
             {selectedCanvasObj && (
-              <div className="pt-4 border-t border-[#E5E7EB] space-y-3">
+              <div className="pt-3 border-t border-[#E5E7EB] space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-black uppercase text-gray-500 tracking-wider">
+                  <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">
                     Selected Element
                   </span>
                   <button
@@ -1024,7 +1096,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                     }}
                     className="text-red-500 hover:text-red-700 text-xs font-bold flex items-center gap-1"
                   >
-                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                    <Trash2 className="w-3 h-3" /> Delete
                   </button>
                 </div>
 
@@ -1033,7 +1105,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                     type="button"
                     onClick={() => canvasRef.current?.centerActiveH()}
                     title="Center Horizontally"
-                    className="p-2 bg-[#F9FAFB] hover:bg-[#F3F4F6] border border-[#E5E7EB] rounded-lg text-xs font-bold text-gray-700 flex flex-col items-center gap-1"
+                    className="p-1.5 bg-[#F9FAFB] hover:bg-[#F3F4F6] border border-[#E5E7EB] rounded-lg text-xs font-bold text-gray-700 flex flex-col items-center gap-0.5"
                   >
                     <AlignCenter className="w-3.5 h-3.5" />
                     <span className="text-[9px]">Center</span>
@@ -1043,7 +1115,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                     type="button"
                     onClick={() => canvasRef.current?.centerActiveV()}
                     title="Center Vertically"
-                    className="p-2 bg-[#F9FAFB] hover:bg-[#F3F4F6] border border-[#E5E7EB] rounded-lg text-xs font-bold text-gray-700 flex flex-col items-center gap-1"
+                    className="p-1.5 bg-[#F9FAFB] hover:bg-[#F3F4F6] border border-[#E5E7EB] rounded-lg text-xs font-bold text-gray-700 flex flex-col items-center gap-0.5"
                   >
                     <RotateCw className="w-3.5 h-3.5" />
                     <span className="text-[9px]">Middle</span>
@@ -1053,7 +1125,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                     type="button"
                     onClick={() => canvasRef.current?.bringForward()}
                     title="Bring Forward"
-                    className="p-2 bg-[#F9FAFB] hover:bg-[#F3F4F6] border border-[#E5E7EB] rounded-lg text-xs font-bold text-gray-700 flex flex-col items-center gap-1"
+                    className="p-1.5 bg-[#F9FAFB] hover:bg-[#F3F4F6] border border-[#E5E7EB] rounded-lg text-xs font-bold text-gray-700 flex flex-col items-center gap-0.5"
                   >
                     <ArrowUp className="w-3.5 h-3.5" />
                     <span className="text-[9px]">Forward</span>
@@ -1063,7 +1135,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                     type="button"
                     onClick={() => canvasRef.current?.sendBackward()}
                     title="Send Backward"
-                    className="p-2 bg-[#F9FAFB] hover:bg-[#F3F4F6] border border-[#E5E7EB] rounded-lg text-xs font-bold text-gray-700 flex flex-col items-center gap-1"
+                    className="p-1.5 bg-[#F9FAFB] hover:bg-[#F3F4F6] border border-[#E5E7EB] rounded-lg text-xs font-bold text-gray-700 flex flex-col items-center gap-0.5"
                   >
                     <ArrowDown className="w-3.5 h-3.5" />
                     <span className="text-[9px]">Backward</span>
@@ -1074,14 +1146,51 @@ function CustomizeProductContent({ productId }: { productId: string }) {
           </div>
 
           {/* ========================================================================= */}
-          {/* CENTER COLUMN: LARGE PRODUCT PREVIEW */}
+          {/* ZONE 2 (CENTER): FOCAL PRODUCT CANVAS WORKSPACE */}
           {/* ========================================================================= */}
-          <div className="lg:col-span-5 flex flex-col items-center justify-center space-y-3">
+          <div className="lg:col-span-5 xl:col-span-5 flex flex-col items-center justify-center space-y-2.5">
+            {/* Canvas Segmented Switcher & Active View Indicator */}
+            <div className="flex items-center justify-between w-full max-w-[540px] px-1">
+              <div className="flex items-center gap-1 p-1 bg-white rounded-xl border border-[#E5E7EB] shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchSide('front')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                    activeSide === 'front'
+                      ? 'bg-[#111111] text-white shadow-2xs'
+                      : 'text-gray-500 hover:text-black'
+                  }`}
+                >
+                  <span>FRONT</span>
+                  {hasFront && <span className="w-1.5 h-1.5 rounded-full bg-[#3B6FEB]"></span>}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchSide('back')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                    activeSide === 'back'
+                      ? 'bg-[#111111] text-white shadow-2xs'
+                      : 'text-gray-500 hover:text-black'
+                  }`}
+                >
+                  <span>BACK</span>
+                  {hasBack && <span className="w-1.5 h-1.5 rounded-full bg-[#3B6FEB]"></span>}
+                </button>
+              </div>
+
+              <div className="text-[11px] font-bold text-gray-500 bg-white/90 border border-gray-200/80 px-2.5 py-1 rounded-lg">
+                View: <span className="text-[#111111] uppercase font-black">{activeSide}</span>
+              </div>
+            </div>
+
+            {/* The Main Dynamic Customizer Canvas Component */}
             <CustomizerCanvas
               ref={canvasRef}
               selectedColor={selectedColor}
               collarColor={collarColor}
-              category={isCap ? 'caps' : 't-shirts'}
+              category={product?.category?.slug || product?.category?.name || (isCap ? 'caps' : 't-shirts')}
+              template={template}
+              product={product}
               activeSide={activeSide}
               onSideChange={setActiveSide}
               onSelectionChange={setSelectedCanvasObj}
@@ -1098,47 +1207,48 @@ function CustomizeProductContent({ productId }: { productId: string }) {
               initialArtworkUrl={restoredDraft?.originalArtworkUrl}
             />
 
-            <div className="flex items-center justify-between w-full max-w-[540px] px-2 text-xs text-gray-400 font-medium">
-              <span>{isCap ? 'Embroidery Area: 10cm × 5.5cm (Front Crown)' : 'Print Area: 30cm × 40cm'}</span>
+            {/* Canvas Bottom Helper Information */}
+            <div className="flex items-center justify-between w-full max-w-[540px] px-2 text-[11px] text-gray-400 font-medium">
+              <span>{activeSide === 'back' && template.backPrintableArea ? template.backPrintableArea.label : template.frontPrintableArea.label}</span>
               <span>Click element to move, scale or rotate</span>
             </div>
           </div>
 
           {/* ========================================================================= */}
-          {/* RIGHT COLUMN: ORDER & PRICING PANEL */}
+          {/* ZONE 3 (RIGHT): CONFIGURATION, QUANTITY & PRICING SUMMARY */}
           {/* ========================================================================= */}
-          <div className="lg:col-span-4 bg-white rounded-2xl border border-[#E5E7EB] p-6 shadow-sm space-y-5">
+          <div className="lg:col-span-4 xl:col-span-4 bg-white rounded-2xl border border-[#E5E7EB] p-4 sm:p-5 shadow-2xs space-y-4 lg:sticky lg:top-[68px] lg:max-h-[calc(100vh-84px)] lg:overflow-y-auto">
             {/* Product Header */}
-            <div className="space-y-1 pb-4 border-b border-[#E5E7EB]">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#3B6FEB]">
+            <div className="space-y-1 pb-3 border-b border-[#E5E7EB]">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#3B6FEB]">
                 {product.category?.name || (isCap ? 'Custom Headwear' : 'Custom Apparel')}
               </span>
-              <h2 className="text-xl font-black text-[#050505] font-heading leading-tight">
+              <h2 className="text-base sm:text-lg font-black text-[#111111] font-heading leading-tight">
                 {product.name}
               </h2>
-              <p className="text-xs text-gray-500 line-clamp-2">
+              <p className="text-[11px] text-gray-500 line-clamp-2">
                 {product.description}
               </p>
             </div>
 
-            {/* Total Quantity */}
-            <div className="space-y-2">
+            {/* Total Quantity Input & Quick Tiers */}
+            <div className="space-y-1.5">
               <div className="flex justify-between items-center">
                 <label className="text-xs font-black text-gray-700 uppercase tracking-wider">
                   Total Quantity
                 </label>
-                <span className="text-[11px] font-semibold text-gray-500">
+                <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                   MOQ: {product.bulkPricing?.[0]?.minQuantity || 50} pcs
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <input
                   id="customizer-quantity-input"
                   type="number"
                   min={product.bulkPricing?.[0]?.minQuantity || 50}
                   value={quantity}
                   onChange={(e) => handleQuantityChange(Number(e.target.value))}
-                  className="flex-1 px-3.5 py-2.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-base font-black text-[#050505] outline-none focus:border-[#3B6FEB]"
+                  className="flex-1 px-3 py-1.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-sm font-black text-[#111111] outline-none focus:border-[#3B6FEB]"
                 />
                 <div className="flex gap-1">
                   {[50, 100, 250, 500].map(tier => (
@@ -1146,9 +1256,9 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                       key={tier}
                       type="button"
                       onClick={() => handleQuantityChange(tier)}
-                      className={`px-2 py-2 text-xs font-bold rounded-lg border transition-all ${
+                      className={`px-2 py-1.5 text-xs font-bold rounded-lg border transition-all ${
                         quantity === tier 
-                          ? 'bg-[#050505] text-white border-[#050505]' 
+                          ? 'bg-[#111111] text-white border-[#111111]'
                           : 'bg-white text-gray-600 border-[#E5E7EB] hover:border-gray-300'
                       }`}
                     >
@@ -1159,14 +1269,36 @@ function CustomizeProductContent({ productId }: { productId: string }) {
               </div>
             </div>
 
-            {/* Free Size Badge for Caps */}
+            {/* Free Size Badge for Caps and One-Size Products */}
             {isCap && (
-              <div className="flex items-start gap-2.5 p-3 bg-blue-50/70 border border-blue-200/60 rounded-xl text-xs">
-                <span className="text-base">🧢</span>
+              <div className="flex items-start gap-2.5 p-2.5 bg-blue-50/70 border border-blue-200/60 rounded-xl text-xs">
+                <span className="text-sm">🧢</span>
                 <div>
-                  <p className="font-bold text-blue-900">Standard Free Size (One Size Fits All)</p>
-                  <p className="text-[11px] text-blue-700 leading-relaxed mt-0.5">
+                  <p className="font-bold text-blue-900 text-xs">Standard Free Size (One Size Fits All)</p>
+                  <p className="text-[10.5px] text-blue-700 leading-relaxed mt-0.5">
                     Structured 6-panel fit with adjustable rear fabric strap and metal closure.
+                  </p>
+                </div>
+              </div>
+            )}
+            {template.type === 'mug' && (
+              <div className="flex items-start gap-2.5 p-2.5 bg-blue-50/70 border border-blue-200/60 rounded-xl text-xs">
+                <span className="text-sm">☕</span>
+                <div>
+                  <p className="font-bold text-blue-900 text-xs">Standard 330ml / 11oz Ceramic Mug</p>
+                  <p className="text-[10.5px] text-blue-700 leading-relaxed mt-0.5">
+                    Lead-free, microwave & dishwasher safe Grade-A ceramic stoneware with comfort handle.
+                  </p>
+                </div>
+              </div>
+            )}
+            {template.type === 'bag' && (
+              <div className="flex items-start gap-2.5 p-2.5 bg-blue-50/70 border border-blue-200/60 rounded-xl text-xs">
+                <span className="text-sm">🎒</span>
+                <div>
+                  <p className="font-bold text-blue-900 text-xs">Executive 28L Laptop Backpack</p>
+                  <p className="text-[10.5px] text-blue-700 leading-relaxed mt-0.5">
+                    Water-repellent 900D ballistic polyester with padded 15.6" laptop compartment and ergonomic straps.
                   </p>
                 </div>
               </div>
@@ -1177,28 +1309,28 @@ function CustomizeProductContent({ productId }: { productId: string }) {
               <VariantBreakdownEntry
                 totalQuantity={quantity}
                 requiresColor={product.requiresColor !== false}
-                requiresSize={!isCap && product.requiresSize !== false}
+                requiresSize={!isCap && product.requiresSize !== false && template.requiresSize !== false}
                 variants={variants}
                 onChange={setVariants}
               />
             </div>
 
-            {/* Pricing Summary */}
-            <div id="customizer-pricing-card" className="bg-[#F8F9FC] rounded-2xl p-4 border border-[#E5E7EB] space-y-2 text-xs">
+            {/* Pricing Summary Card */}
+            <div id="customizer-pricing-card" className="bg-[#F8F9FC] rounded-xl p-3.5 border border-[#E5E7EB] space-y-1.5 text-xs">
               {pricingState.status === 'loading' ? (
-                <div className="py-6 flex flex-col items-center justify-center space-y-2 text-gray-500">
-                  <div className="w-5 h-5 border-2 border-[#3B6FEB] border-t-transparent rounded-full animate-spin"></div>
+                <div className="py-4 flex flex-col items-center justify-center space-y-1.5 text-gray-500">
+                  <div className="w-4 h-4 border-2 border-[#3B6FEB] border-t-transparent rounded-full animate-spin"></div>
                   <span className="text-xs font-semibold">Calculating estimated pricing…</span>
                 </div>
               ) : pricingState.status === 'success' ? (
                 <>
                   <div className="flex justify-between text-gray-600 font-medium">
                     <span>Unit Rate ({quantity} pcs)</span>
-                    <span className="font-bold text-[#050505]">₹{pricingState.data.unitPrice} / pc</span>
+                    <span className="font-bold text-[#111111]">₹{pricingState.data.unitPrice} / pc</span>
                   </div>
                   <div className="flex justify-between text-gray-600 font-medium">
                     <span>Body / Collar</span>
-                    <span className="font-bold text-[#050505]">{selectedColor} / {collarColor}</span>
+                    <span className="font-bold text-[#111111]">{selectedColor} / {collarColor}</span>
                   </div>
                   <div className="flex justify-between text-gray-600 font-medium">
                     <span>Print Location</span>
@@ -1206,15 +1338,15 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                   </div>
                   <div className="flex justify-between text-gray-600 font-medium">
                     <span>Subtotal</span>
-                    <span className="font-bold text-[#050505]">₹{pricingState.data.subtotal.toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-[#111111]">₹{pricingState.data.subtotal.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between text-gray-600 font-medium">
                     <span>GST ({pricingState.data.gstRate}%)</span>
-                    <span className="font-bold text-[#050505]">₹{pricingState.data.gstTotal.toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-[#111111]">₹{pricingState.data.gstTotal.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="pt-2 border-t border-[#E5E7EB] flex justify-between items-baseline">
-                    <span className="text-sm font-black text-[#050505] uppercase">Total Estimate</span>
-                    <span className="text-xl font-black text-[#050505] font-heading">
+                    <span className="text-xs font-black text-[#111111] uppercase">Total Estimate</span>
+                    <span className="text-lg font-black text-[#111111] font-heading">
                       ₹{pricingState.data.totalAmount.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -1223,19 +1355,19 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                   </p>
                 </>
               ) : hasVariantMismatch ? (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs">
+                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs">
                   <p className="font-bold">Variant Mismatch</p>
                   <p className="text-[11px] mt-0.5">
                     Variant quantities sum ({variantSum}) must equal total quantity ({quantity}) to calculate price.
                   </p>
                 </div>
               ) : pricingState.status === 'error' ? (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs">
+                <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs">
                   <p className="font-bold">Pricing Estimate</p>
                   <p className="text-[11px] mt-0.5">{pricingState.message}</p>
                 </div>
               ) : (
-                <div className="py-4 text-center text-gray-500 text-xs">
+                <div className="py-3 text-center text-gray-500 text-xs">
                   Select quantity and options to calculate estimated price.
                 </div>
               )}
@@ -1251,29 +1383,29 @@ function CustomizeProductContent({ productId }: { productId: string }) {
               <p className="text-xs font-semibold text-red-600">{submitError}</p>
             )}
 
-            {/* Proceed CTA Button */}
-            <div className="space-y-2 pt-1">
+            {/* Primary Proceed CTA Button */}
+            <div className="space-y-1.5 pt-0.5">
               <button
                 id="customizer-proceed-btn"
                 type="button"
                 onClick={handleProceed}
                 disabled={submitting || isPreparingPreview || isUploadingArtwork || isUploadingLogo || hasVariantMismatch || pricingState.status === 'loading'}
-                className="w-full py-4 bg-[#3B6FEB] hover:bg-[#2563EB] disabled:bg-gray-400 text-white rounded-xl text-sm font-black shadow-md transition-all active:scale-[0.98] uppercase tracking-wider flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#3B6FEB] hover:bg-[#2563EB] disabled:bg-gray-400 text-white rounded-xl text-xs font-black shadow-sm transition-all active:scale-[0.98] uppercase tracking-wider flex items-center justify-center gap-2"
               >
                 {(isUploadingArtwork || isUploadingLogo) ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     <span>Uploading artwork…</span>
                   </>
                 ) : (isPreparingPreview || submitting) ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     <span>Preparing design preview…</span>
                   </>
                 ) : isCustomer ? (
                   <>
                     <span>Submit Quote Request</span>
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </>
                 ) : (
                   <>
@@ -1283,71 +1415,89 @@ function CustomizeProductContent({ productId }: { productId: string }) {
               </button>
 
               {!isCustomer && (
-                <p className="text-center text-[11px] text-gray-400">
+                <p className="text-center text-[10.5px] text-gray-400">
                   Create a free account to save and track your order.
                 </p>
               )}
             </div>
 
             {/* Trust Assurances */}
-            <div className="pt-3 border-t border-[#E5E7EB] grid grid-cols-2 gap-2 text-center">
-              <div className="p-2 bg-gray-50 rounded-lg">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#3B6FEB] mx-auto mb-0.5" />
-                <span className="text-[10px] font-bold text-gray-600 block">Digital Proof Included</span>
+            <div className="pt-2 border-t border-[#E5E7EB] grid grid-cols-2 gap-2 text-center">
+              <div className="p-1.5 bg-gray-50 rounded-lg">
+                <ShieldCheck className="w-3 h-3 text-[#3B6FEB] mx-auto mb-0.5" />
+                <span className="text-[9.5px] font-bold text-gray-600 block">Digital Proof Included</span>
               </div>
-              <div className="p-2 bg-gray-50 rounded-lg">
-                <Clock className="w-3.5 h-3.5 text-[#3B6FEB] mx-auto mb-0.5" />
-                <span className="text-[10px] font-bold text-gray-600 block">7-10 Days Dispatch</span>
+              <div className="p-1.5 bg-gray-50 rounded-lg">
+                <Clock className="w-3 h-3 text-[#3B6FEB] mx-auto mb-0.5" />
+                <span className="text-[9.5px] font-bold text-gray-600 block">7-10 Days Dispatch</span>
               </div>
             </div>
           </div>
         </div>
       </main>
 
+      {/* 4. Mobile Sticky Bottom Summary & Proceed Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E5E7EB] px-4 py-2.5 shadow-lg flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <span className="text-[9px] font-extrabold uppercase tracking-wider text-gray-500 block">Total Estimate</span>
+          <span className="text-sm font-black text-[#111111] font-heading truncate block">
+            {pricingState.status === 'success' ? `₹${pricingState.data.totalAmount.toLocaleString('en-IN')}` : 'Calculating…'}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleProceed}
+          disabled={submitting || isPreparingPreview || isUploadingArtwork || isUploadingLogo || hasVariantMismatch || pricingState.status === 'loading'}
+          className="px-4 py-2 bg-[#3B6FEB] hover:bg-[#2563EB] disabled:bg-gray-400 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center gap-1.5 shrink-0"
+        >
+          {isCustomer ? 'Submit Quote' : 'Proceed →'}
+        </button>
+      </div>
+
       {/* Guest → Login / Register Auth Modal */}
       {showAuthModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAuthModal(false)}>
           <div
-            className="bg-white rounded-2xl max-w-sm w-full p-7 space-y-5 shadow-2xl border border-gray-100"
+            className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl border border-gray-100"
             onClick={e => e.stopPropagation()}
           >
             {/* Icon */}
-            <div className="w-12 h-12 bg-[#3B6FEB]/10 rounded-2xl flex items-center justify-center mx-auto">
-              <UserCheck className="w-6 h-6 text-[#3B6FEB]" />
+            <div className="w-10 h-10 bg-[#3B6FEB]/10 rounded-xl flex items-center justify-center mx-auto">
+              <UserCheck className="w-5 h-5 text-[#3B6FEB]" />
             </div>
 
             {/* Copy */}
             <div className="text-center space-y-1">
-              <h3 className="text-lg font-black text-[#050505] font-heading">Almost There!</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
+              <h3 className="text-base font-black text-[#111111] font-heading">Almost There!</h3>
+              <p className="text-xs text-gray-500 leading-relaxed">
                 Your design has been saved. Create a free account or log in to place your order — you&apos;ll be counted as a regular customer.
               </p>
             </div>
 
             {/* Design preview chip */}
-            <div className="bg-[#F8F9FC] rounded-xl p-3 flex items-center gap-3 border border-[#E5E7EB]">
-              <div className="w-8 h-8 rounded-lg bg-[#3B6FEB]/10 flex items-center justify-center shrink-0">
-                <Check className="w-4 h-4 text-[#3B6FEB]" />
+            <div className="bg-[#F8F9FC] rounded-xl p-2.5 flex items-center gap-2.5 border border-[#E5E7EB]">
+              <div className="w-7 h-7 rounded-lg bg-[#3B6FEB]/10 flex items-center justify-center shrink-0">
+                <Check className="w-3.5 h-3.5 text-[#3B6FEB]" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-black text-[#050505] truncate">{product?.name}</p>
-                <p className="text-[11px] text-gray-500">{selectedColor} · {quantity} pcs · {resolvedPrintType}</p>
+                <p className="text-xs font-black text-[#111111] truncate">{product?.name}</p>
+                <p className="text-[10px] text-gray-500">{selectedColor} · {quantity} pcs · {resolvedPrintType}</p>
               </div>
             </div>
 
             {/* Auth CTAs */}
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               <Link
                 href={`/register?returnUrl=${encodeURIComponent(`/products/${product.id}/customize?resume=1`)}`}
-                className="flex items-center justify-center gap-2 w-full py-3 bg-[#3B6FEB] hover:bg-[#2563EB] text-white font-black text-sm rounded-xl transition-all shadow-md"
+                className="flex items-center justify-center gap-2 w-full py-2.5 bg-[#3B6FEB] hover:bg-[#2563EB] text-white font-black text-xs rounded-xl transition-all shadow-sm"
                 onClick={() => setShowAuthModal(false)}
               >
                 <span>Create Free Account</span>
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-3.5 h-3.5" />
               </Link>
               <Link
                 href={`/login?returnUrl=${encodeURIComponent(`/products/${product.id}/customize?resume=1`)}`}
-                className="flex items-center justify-center gap-2 w-full py-3 bg-[#050505] hover:bg-[#222222] text-white font-bold text-sm rounded-xl transition-all"
+                className="flex items-center justify-center gap-2 w-full py-2.5 bg-[#111111] hover:bg-[#222222] text-white font-bold text-xs rounded-xl transition-all"
                 onClick={() => setShowAuthModal(false)}
               >
                 Log In to My Account
@@ -1357,7 +1507,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
             <button
               type="button"
               onClick={() => setShowAuthModal(false)}
-              className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors py-1"
+              className="w-full text-center text-[11px] text-gray-400 hover:text-gray-600 transition-colors py-0.5"
             >
               Keep editing my design
             </button>

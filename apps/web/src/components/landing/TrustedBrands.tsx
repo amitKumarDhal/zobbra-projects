@@ -7,7 +7,7 @@ export function TrustedBrands() {
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <section className="bg-white py-11 sm:py-14 border-b border-[#DDDCD5]" id="clients">
+    <section className="bg-white py-5 sm:py-7 border-b border-[#DDDCD5]" id="clients">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Centered Divider Heading */}
         <motion.div
@@ -15,13 +15,13 @@ export function TrustedBrands() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-20px' }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="flex items-center justify-center gap-4 mb-8"
+          className="flex items-center justify-center gap-3 sm:gap-4 mb-4 sm:mb-5"
         >
-          <div className="h-[1px] bg-[#E5E5E5] w-12 sm:w-20 md:w-32" />
-          <span className="text-[11px] sm:text-[12px] font-black uppercase tracking-[0.2em] text-[#777777] text-center font-heading">
+          <div className="h-[1px] bg-[#E5E5E5] w-8 sm:w-16 md:w-28" />
+          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.18em] text-[#777777] text-center font-heading">
             TRUSTED BY BUSINESSES THAT MOVE FAST
           </span>
-          <div className="h-[1px] bg-[#E5E5E5] w-12 sm:w-20 md:w-32" />
+          <div className="h-[1px] bg-[#E5E5E5] w-8 sm:w-16 md:w-28" />
         </motion.div>
 
         {/* 8 Grayscale Brand Logos with subtle fade-in */}
@@ -30,7 +30,7 @@ export function TrustedBrands() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true, margin: '-20px' }}
           transition={{ duration: 0.7, delay: 0.15, ease: 'easeOut' }}
-          className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-6 sm:gap-8 items-center justify-items-center opacity-60 hover:opacity-100 transition-opacity grayscale"
+          className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 sm:gap-6 items-center justify-items-center opacity-60 hover:opacity-100 transition-opacity grayscale"
         >
           {/* 1. OLA */}
           <div className="flex items-center gap-1.5 text-gray-800 font-bold tracking-tight hover:text-black hover:scale-105 transition-all">

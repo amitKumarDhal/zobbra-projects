@@ -1,20 +1,27 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
+import { getCustomizerTemplate, CustomizerTemplate } from '../../lib/customizerTemplates';
 
-interface GarmentBackdropProps {
+export interface GarmentBackdropProps {
   color: string;
   collarColor?: string;
   side: 'front' | 'back';
   category?: string;
+  template?: CustomizerTemplate;
+  product?: any;
 }
 
 // Map color names to nice hex values matching the studio palette
 export const COLOR_HEX_MAP: Record<string, string> = {
   white: '#FFFFFF',
+  'classic white': '#F9FAFB',
   red: '#FF0000',
+  'crimson red': '#DC2626',
   'charcoal black': '#2B2B2B',
   black: '#171717',
+  'matte black': '#1C1C1E',
   yellow: '#FFD700',
   orange: '#FF7A00',
   green: '#00C853',
@@ -62,14 +69,19 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
   collarColor,
   side,
   category,
+  template,
+  product,
 }) => {
+  const resolvedTemplate = template || getCustomizerTemplate(product || { category: { slug: category }, name: category });
   const hex = getColorHex(color);
   const collarHex = getColorHex(collarColor || color);
   const light = isLightColor(hex);
   const collarLight = isLightColor(collarHex);
 
-  // Dedicated Cap & Headwear Silhouette Renderer
-  if (category?.toLowerCase().includes('cap')) {
+  // =========================================================================
+  // 1. CAP & HEADWEAR SILHOUETTE
+  // =========================================================================
+  if (resolvedTemplate.type === 'cap') {
     return (
       <div className="relative w-full h-full flex items-center justify-center pointer-events-none select-none">
         <svg
@@ -104,7 +116,6 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
                 stroke={collarLight ? "#CBD5E1" : "rgba(0,0,0,0.5)"}
                 strokeWidth="2"
               />
-              {/* Visor Lighting Overlay */}
               <path
                 d="M 85 325 C 80 345, 120 445, 250 445 C 380 445, 420 345, 415 325 C 330 350, 170 350, 85 325 Z"
                 fill="url(#visorLighting)"
@@ -126,8 +137,6 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
                 stroke={light ? "#CBD5E1" : "rgba(0,0,0,0.4)"}
                 strokeWidth="2"
               />
-
-              {/* Crown 3D Lighting Overlay */}
               <path
                 d="M 95 330 C 95 180, 180 125, 250 125 C 320 125, 405 180, 405 330 C 340 346, 160 346, 95 330 Z"
                 fill="url(#capCrownLighting)"
@@ -185,7 +194,7 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
                 opacity={light ? "0.5" : "0.3"}
               />
 
-              {/* Front 3D Puff Embroidery / Branding Printable Area Outline */}
+              {/* Front 3D Puff Embroidery Printable Area Outline */}
               <rect
                 x="170"
                 y="190"
@@ -219,8 +228,6 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
                 stroke={light ? "#CBD5E1" : "rgba(0,0,0,0.4)"}
                 strokeWidth="2"
               />
-
-              {/* Crown Lighting */}
               <path
                 d="M 95 330 C 95 180, 180 125, 250 125 C 320 125, 405 180, 405 330 C 340 338, 160 338, 95 330 Z"
                 fill="url(#capCrownLighting)"
@@ -322,6 +329,452 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
     );
   }
 
+  // =========================================================================
+  // 2. CERAMIC COFFEE MUG / DRINKWARE SILHOUETTE
+  // =========================================================================
+  if (resolvedTemplate.type === 'mug') {
+    return (
+      <div className="relative w-full h-full flex items-center justify-center pointer-events-none select-none">
+        <svg
+          viewBox="0 0 500 580"
+          className="w-full h-full max-h-[580px] drop-shadow-2xl transition-colors duration-300"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <linearGradient id="mugBodyLighting" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#000000" stopOpacity="0.18" />
+              <stop offset="22%" stopColor="#ffffff" stopOpacity={light ? "0.38" : "0.22"} />
+              <stop offset="55%" stopColor="#ffffff" stopOpacity="0.05" />
+              <stop offset="85%" stopColor="#000000" stopOpacity="0.08" />
+              <stop offset="100%" stopColor="#000000" stopOpacity="0.32" />
+            </linearGradient>
+            <radialGradient id="mugInnerCavity" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#1E293B" stopOpacity="0.75" />
+              <stop offset="80%" stopColor="#0F172A" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#020617" stopOpacity="0.95" />
+            </radialGradient>
+            <linearGradient id="mugHandleLighting" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.3" />
+              <stop offset="50%" stopColor="#000000" stopOpacity="0" />
+              <stop offset="100%" stopColor="#000000" stopOpacity="0.35" />
+            </linearGradient>
+            <filter id="mugShadow" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="18" stdDeviation="16" floodOpacity="0.14" />
+            </filter>
+          </defs>
+
+          <g filter="url(#mugShadow)">
+            {/* Ceramic C-Handle */}
+            {side === 'front' ? (
+              /* Front View: Handle on Right Side */
+              <g>
+                <path
+                  d="M 360 200 C 455 200, 455 375, 355 375 L 355 335 C 415 335, 415 240, 360 240 Z"
+                  fill={collarHex}
+                  stroke={collarLight ? "#CBD5E1" : "rgba(0,0,0,0.4)"}
+                  strokeWidth="2"
+                />
+                <path
+                  d="M 360 200 C 455 200, 455 375, 355 375 L 355 335 C 415 335, 415 240, 360 240 Z"
+                  fill="url(#mugHandleLighting)"
+                />
+              </g>
+            ) : (
+              /* Back / Reverse View: Handle on Left Side */
+              <g>
+                <path
+                  d="M 140 200 C 45 200, 45 375, 145 375 L 145 335 C 85 335, 85 240, 140 240 Z"
+                  fill={collarHex}
+                  stroke={collarLight ? "#CBD5E1" : "rgba(0,0,0,0.4)"}
+                  strokeWidth="2"
+                />
+                <path
+                  d="M 140 200 C 45 200, 45 375, 145 375 L 145 335 C 85 335, 85 240, 140 240 Z"
+                  fill="url(#mugHandleLighting)"
+                />
+              </g>
+            )}
+
+            {/* Mug Cylindrical Base & Body Wall */}
+            <path
+              d="M 135 155 L 140 435 C 140 460, 360 460, 360 435 L 365 155 Z"
+              fill={hex}
+              stroke={light ? "#E2E8F0" : "rgba(0,0,0,0.4)"}
+              strokeWidth="2"
+            />
+            {/* Cylindrical 3D Lighting Overlay */}
+            <path
+              d="M 135 155 L 140 435 C 140 460, 360 460, 360 435 L 365 155 Z"
+              fill="url(#mugBodyLighting)"
+            />
+
+            {/* Bottom Rounded Base Ring */}
+            <ellipse
+              cx="250"
+              cy="435"
+              rx="110"
+              ry="22"
+              fill={hex}
+              stroke={light ? "#E2E8F0" : "rgba(0,0,0,0.4)"}
+              strokeWidth="1.5"
+            />
+
+            {/* Top Outer Rim */}
+            <ellipse
+              cx="250"
+              cy="155"
+              rx="115"
+              ry="24"
+              fill={hex}
+              stroke={light ? "#CBD5E1" : "rgba(0,0,0,0.4)"}
+              strokeWidth="2"
+            />
+
+            {/* Inner Cup Opening / Depth Cavity */}
+            <ellipse
+              cx="250"
+              cy="155"
+              rx="103"
+              ry="19"
+              fill="url(#mugInnerCavity)"
+            />
+
+            {/* Ceramic Glaze Reflection Streak */}
+            <rect
+              x="185"
+              y="178"
+              width="14"
+              height="240"
+              rx="7"
+              fill="#ffffff"
+              opacity={light ? "0.45" : "0.25"}
+            />
+
+            {/* Printable Wrap Area Outline */}
+            <rect
+              x={side === 'front' ? "155" : "175"}
+              y="195"
+              width="170"
+              height="210"
+              rx="10"
+              fill="none"
+              stroke={light ? "rgba(59, 111, 235, 0.5)" : "rgba(255, 255, 255, 0.45)"}
+              strokeWidth="1.5"
+              strokeDasharray="5 4"
+            />
+            <text
+              x={side === 'front' ? "240" : "260"}
+              y="186"
+              textAnchor="middle"
+              fontSize="9"
+              fontWeight="700"
+              letterSpacing="0.5"
+              fill={light ? "rgba(59, 111, 235, 0.85)" : "rgba(255, 255, 255, 0.8)"}
+            >
+              {side === 'front' ? 'FRONT PRINT AREA (8.5cm × 7.5cm)' : 'REVERSE PRINT AREA (8.5cm × 7.5cm)'}
+            </text>
+          </g>
+        </svg>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // 3. EXECUTIVE LAPTOP BACKPACK / BAG SILHOUETTE
+  // =========================================================================
+  if (resolvedTemplate.type === 'bag') {
+    return (
+      <div className="relative w-full h-full flex items-center justify-center pointer-events-none select-none">
+        <svg
+          viewBox="0 0 500 580"
+          className="w-full h-full max-h-[580px] drop-shadow-2xl transition-colors duration-300"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <radialGradient id="backpackLighting" cx="50%" cy="35%" r="60%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity={light ? "0.22" : "0.14"} />
+              <stop offset="70%" stopColor="#000000" stopOpacity="0" />
+              <stop offset="100%" stopColor="#000000" stopOpacity={light ? "0.18" : "0.45"} />
+            </radialGradient>
+            <linearGradient id="strapLighting" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#000000" stopOpacity="0.4" />
+            </linearGradient>
+            <filter id="backpackShadow" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="16" stdDeviation="16" floodOpacity="0.16" />
+            </filter>
+          </defs>
+
+          {/* FRONT VIEW */}
+          {side === 'front' ? (
+            <g filter="url(#backpackShadow)">
+              {/* Top Padded Grab Handle */}
+              <path
+                d="M 210 95 C 210 48, 290 48, 290 95"
+                stroke={collarHex}
+                strokeWidth="16"
+                strokeLinecap="round"
+                fill="none"
+              />
+              <path
+                d="M 218 95 C 218 56, 282 56, 282 95"
+                stroke="#1E293B"
+                strokeWidth="4"
+                strokeLinecap="round"
+                fill="none"
+              />
+
+              {/* Main Backpack Outer Dome & Shell */}
+              <path
+                d="M 125 480 C 115 470, 115 280, 125 210 C 138 125, 190 90, 250 90 C 310 90, 362 125, 375 210 C 385 280, 385 470, 375 480 C 320 502, 180 502, 125 480 Z"
+                fill={hex}
+                stroke={light ? "#CBD5E1" : "rgba(0,0,0,0.5)"}
+                strokeWidth="2.5"
+              />
+              {/* Lighting Overlay */}
+              <path
+                d="M 125 480 C 115 470, 115 280, 125 210 C 138 125, 190 90, 250 90 C 310 90, 362 125, 375 210 C 385 280, 385 470, 375 480 C 320 502, 180 502, 125 480 Z"
+                fill="url(#backpackLighting)"
+              />
+
+              {/* Side Mesh Water Bottle Pockets */}
+              <path
+                d="M 116 325 C 108 340, 110 435, 122 455 L 126 345 Z"
+                fill="#1E293B"
+                opacity="0.85"
+              />
+              <path
+                d="M 384 325 C 392 340, 390 435, 378 455 L 374 345 Z"
+                fill="#1E293B"
+                opacity="0.85"
+              />
+
+              {/* Main Laptop Zipper Arc */}
+              <path
+                d="M 145 220 C 158 145, 200 115, 250 115 C 300 115, 342 145, 355 220"
+                stroke={collarLight ? "#64748B" : "#94A3B8"}
+                strokeWidth="2.5"
+                strokeDasharray="4 2"
+                fill="none"
+              />
+              {/* Twin Metal Zipper Sliders */}
+              <circle cx="242" cy="115" r="4.5" fill="#E2E8F0" stroke="#475569" strokeWidth="1.5" />
+              <circle cx="258" cy="115" r="4.5" fill="#E2E8F0" stroke="#475569" strokeWidth="1.5" />
+
+              {/* Secondary Organizer Compartment Arc */}
+              <path
+                d="M 152 255 C 175 225, 325 225, 348 255"
+                stroke={light ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.25)"}
+                strokeWidth="2"
+                fill="none"
+              />
+
+              {/* Lower Large Front Branding Pocket */}
+              <rect
+                x="150"
+                y="270"
+                width="200"
+                height="185"
+                rx="18"
+                fill={hex}
+                stroke={light ? "#CBD5E1" : "rgba(0,0,0,0.4)"}
+                strokeWidth="2"
+              />
+              {/* Pocket Lighting */}
+              <rect
+                x="150"
+                y="270"
+                width="200"
+                height="185"
+                rx="18"
+                fill="url(#backpackLighting)"
+              />
+              {/* Front Pocket Horizontal Zipper Track */}
+              <path
+                d="M 165 292 L 335 292"
+                stroke={collarLight ? "#64748B" : "#94A3B8"}
+                strokeWidth="2"
+                strokeDasharray="3 2"
+              />
+              <circle cx="178" cy="292" r="3.5" fill="#E2E8F0" stroke="#475569" strokeWidth="1" />
+
+              {/* Reinforced Heavy-Duty Base Guard */}
+              <path
+                d="M 130 460 C 180 488, 320 488, 370 460 L 375 480 C 320 502, 180 502, 125 480 Z"
+                fill={collarHex}
+                opacity="0.9"
+              />
+
+              {/* Front Panel Logo / Branding Area Outline */}
+              <rect
+                x="165"
+                y="310"
+                width="170"
+                height="130"
+                rx="8"
+                fill="none"
+                stroke={light ? "rgba(59, 111, 235, 0.5)" : "rgba(255, 255, 255, 0.45)"}
+                strokeWidth="1.5"
+                strokeDasharray="5 4"
+              />
+              <text
+                x="250"
+                y="302"
+                textAnchor="middle"
+                fontSize="9"
+                fontWeight="700"
+                letterSpacing="0.5"
+                fill={light ? "rgba(59, 111, 235, 0.85)" : "rgba(255, 255, 255, 0.8)"}
+              >
+                FRONT BRANDING AREA (12cm × 10cm)
+              </text>
+            </g>
+          ) : (
+            /* BACK VIEW */
+            <g filter="url(#backpackShadow)">
+              {/* Outer Shell Silhouette */}
+              <path
+                d="M 125 480 C 115 470, 115 280, 125 210 C 138 125, 190 90, 250 90 C 310 90, 362 125, 375 210 C 385 280, 385 470, 375 480 C 320 502, 180 502, 125 480 Z"
+                fill={hex}
+                stroke={light ? "#CBD5E1" : "rgba(0,0,0,0.5)"}
+                strokeWidth="2.5"
+              />
+
+              {/* Breathable Air-Mesh Back Ventilation Panels */}
+              <rect
+                x="170"
+                y="150"
+                width="65"
+                height="140"
+                rx="14"
+                fill="#1E293B"
+                opacity="0.8"
+              />
+              <rect
+                x="265"
+                y="150"
+                width="65"
+                height="140"
+                rx="14"
+                fill="#1E293B"
+                opacity="0.8"
+              />
+              {/* Lower Lumbar Air-Mesh Cushion */}
+              <rect
+                x="165"
+                y="330"
+                width="170"
+                height="95"
+                rx="16"
+                fill="#1E293B"
+                opacity="0.85"
+              />
+
+              {/* S-Curve Padded Ergonomic Shoulder Straps */}
+              {/* Left Shoulder Strap */}
+              <path
+                d="M 215 100 C 185 105, 135 240, 140 370 L 155 370 C 152 250, 198 125, 222 105 Z"
+                fill={collarHex}
+                stroke={collarLight ? "#CBD5E1" : "rgba(0,0,0,0.5)"}
+                strokeWidth="2"
+              />
+              {/* Right Shoulder Strap */}
+              <path
+                d="M 285 100 C 315 105, 365 240, 360 370 L 345 370 C 348 250, 302 125, 278 105 Z"
+                fill={collarHex}
+                stroke={collarLight ? "#CBD5E1" : "rgba(0,0,0,0.5)"}
+                strokeWidth="2"
+              />
+
+              {/* Chest Sternum Buckle Strap */}
+              <rect
+                x="150"
+                y="265"
+                width="200"
+                height="12"
+                rx="2"
+                fill="#0F172A"
+              />
+              <rect
+                x="240"
+                y="260"
+                width="20"
+                height="22"
+                rx="3"
+                fill="#334155"
+                stroke="#64748B"
+                strokeWidth="1"
+              />
+
+              {/* Back Branding / Identification Area Outline */}
+              <rect
+                x="175"
+                y="170"
+                width="150"
+                height="80"
+                rx="8"
+                fill="none"
+                stroke={light ? "rgba(59, 111, 235, 0.5)" : "rgba(255, 255, 255, 0.45)"}
+                strokeWidth="1.5"
+                strokeDasharray="4 3"
+              />
+              <text
+                x="250"
+                y="162"
+                textAnchor="middle"
+                fontSize="9"
+                fontWeight="700"
+                letterSpacing="0.5"
+                fill={light ? "rgba(59, 111, 235, 0.85)" : "rgba(255, 255, 255, 0.8)"}
+              >
+                UPPER BACK / STRAP AREA
+              </text>
+            </g>
+          )}
+        </svg>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // 4. GENERIC MERCHANDISE / PRODUCT IMAGE FALLBACK
+  // =========================================================================
+  if (resolvedTemplate.type === 'generic') {
+    const fallbackImg = product?.images?.[0];
+    if (fallbackImg) {
+      return (
+        <div className="relative w-full h-full flex items-center justify-center p-6 select-none">
+          <div className="relative w-full max-w-[380px] aspect-square rounded-2xl overflow-hidden shadow-xl border border-gray-200 bg-white">
+            <Image
+              src={fallbackImg}
+              alt={product?.name || "Product Mockup"}
+              fill
+              className="object-contain p-4"
+              sizes="(max-width: 768px) 100vw, 400px"
+              priority
+            />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative w-full h-full flex flex-col items-center justify-center p-6 text-center select-none">
+        <div className="p-4 bg-gray-100 rounded-2xl max-w-xs space-y-2 border border-gray-200">
+          <p className="text-xs font-bold text-gray-700">Customization preview unavailable</p>
+          <p className="text-[11px] text-gray-500">
+            {product?.name ? `Template for ${product.name} will be prepared upon order.` : 'Visual preview is being prepared.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // 5. T-SHIRTS & POLO APPAREL SILHOUETTE (DEFAULT)
+  // =========================================================================
   return (
     <div className="relative w-full h-full flex items-center justify-center pointer-events-none select-none">
       <svg

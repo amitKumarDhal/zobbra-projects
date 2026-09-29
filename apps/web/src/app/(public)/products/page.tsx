@@ -127,8 +127,8 @@ function ProductsCatalog() {
     <div className="bg-[#FBFBFA] min-h-screen text-[#111111]">
       {/* Top Banner / Breadcrumb Area */}
       <div className="border-b border-[#EBEAE5] bg-white/60 backdrop-blur-sm sticky top-0 z-20">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between text-xs font-medium text-[#6B7280]">
-          <div className="flex items-center gap-2">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between text-[11px] sm:text-xs font-medium text-[#6B7280]">
+          <div className="flex items-center gap-1.5">
             <Link href="/" className="hover:text-[#111111] transition-colors">Home</Link>
             <span>/</span>
             <span className="text-[#111111] font-bold">Catalog</span>
@@ -141,95 +141,96 @@ function ProductsCatalog() {
               </>
             )}
           </div>
-          <div className="hidden sm:flex items-center gap-4 text-[11px] text-[#4B5563]">
-            <span className="flex items-center gap-1.5">
-              <Truck className="w-3.5 h-3.5 text-[#3B6FEB]" /> Pan-India Express Delivery
+          <div className="hidden sm:flex items-center gap-3 text-[10.5px] text-[#4B5563]">
+            <span className="flex items-center gap-1">
+              <Truck className="w-3 h-3 text-[#3B6FEB]" /> Pan-India Express Delivery
             </span>
             <span className="text-gray-300">•</span>
-            <span className="flex items-center gap-1.5">
-              <Package className="w-3.5 h-3.5 text-[#3B6FEB]" /> Bulk Orders from 20 Units
+            <span className="flex items-center gap-1">
+              <Package className="w-3 h-3 text-[#3B6FEB]" /> Bulk Orders from 20 Units
             </span>
           </div>
         </div>
       </div>
 
-      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-10">
-        {/* HERO SECTION */}
-        <div className="space-y-6">
-          <div className="max-w-3xl space-y-3.5">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white border border-[#E2E8F0] rounded-full text-xs font-bold tracking-wide text-[#3B6FEB] shadow-xs">
-              <Sparkles className="w-3.5 h-3.5 text-[#3B6FEB]" />
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+        {/* HERO SECTION - COMPACT */}
+        <div className="space-y-4">
+          <div className="max-w-2xl space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#E2E8F0] rounded-full text-[10.5px] font-bold tracking-wide text-[#3B6FEB] shadow-2xs">
+              <Sparkles className="w-3 h-3 text-[#3B6FEB]" />
               <span>OFFICIAL B2B MERCHANDISE CATALOG</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-[46px] font-heading font-black text-[#111111] tracking-tight leading-[1.12]">
+            <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-heading font-black text-[#111111] tracking-tight leading-tight">
               Merchandise crafted to <span className="text-[#3B6FEB]">elevate your brand.</span>
             </h1>
-            <p className="text-[#555555] text-base sm:text-lg leading-relaxed max-w-2xl">
-              Engineered for enterprise uniforms, team apparel, client welcome kits, and corporate gifting. Custom-branded with premium embroidery, screen printing, and DTF.
+            <p className="text-[#555555] text-xs sm:text-sm leading-relaxed max-w-xl">
+              Enterprise uniforms, team apparel, welcome kits, and corporate gifting. Custom-branded with premium embroidery, screen printing, and DTF.
             </p>
           </div>
 
-          {/* VALUE PROPS STRIP */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-[#EAE9E4] shadow-xs">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#3B6FEB] flex items-center justify-center flex-shrink-0">
-                <Package className="w-4 h-4" />
+          {/* VALUE PROPS STRIP - COMPACT ROW */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 pt-0.5">
+            <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-lg bg-white border border-[#EAE9E4] shadow-2xs">
+              <div className="w-7 h-7 rounded-md bg-blue-50 text-[#3B6FEB] flex items-center justify-center flex-shrink-0">
+                <Package className="w-3.5 h-3.5" />
               </div>
-              <div>
-                <p className="text-xs font-bold text-[#111111]">Low MOQ: 20 Pcs</p>
-                <p className="text-[11px] text-[#6B7280]">Low barrier for teams</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-[#EAE9E4] shadow-xs">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                <Truck className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-[#111111]">Fast Turnaround</p>
-                <p className="text-[11px] text-[#6B7280]">Dispatch in 3–5 days</p>
+              <div className="leading-tight">
+                <p className="text-[11.5px] font-bold text-[#111111]">Low MOQ: 20 Pcs</p>
+                <p className="text-[10px] text-[#6B7280]">Low barrier for teams</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-[#EAE9E4] shadow-xs">
-              <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-4 h-4" />
+            <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-lg bg-white border border-[#EAE9E4] shadow-2xs">
+              <div className="w-7 h-7 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                <Truck className="w-3.5 h-3.5" />
               </div>
-              <div>
-                <p className="text-xs font-bold text-[#111111]">Free 3D Mockups</p>
-                <p className="text-[11px] text-[#6B7280]">Live interactive customizer</p>
+              <div className="leading-tight">
+                <p className="text-[11.5px] font-bold text-[#111111]">Fast Turnaround</p>
+                <p className="text-[10px] text-[#6B7280]">Dispatch in 3–5 days</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-[#EAE9E4] shadow-xs">
-              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-                <ShieldCheck className="w-4 h-4" />
+            <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-lg bg-white border border-[#EAE9E4] shadow-2xs">
+              <div className="w-7 h-7 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-3.5 h-3.5" />
               </div>
-              <div>
-                <p className="text-xs font-bold text-[#111111]">Quality Assured</p>
-                <p className="text-[11px] text-[#6B7280]">Bio-washed compact cotton</p>
+              <div className="leading-tight">
+                <p className="text-[11.5px] font-bold text-[#111111]">Free 3D Mockups</p>
+                <p className="text-[10px] text-[#6B7280]">Live interactive customizer</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-lg bg-white border border-[#EAE9E4] shadow-2xs">
+              <div className="w-7 h-7 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck className="w-3.5 h-3.5" />
+              </div>
+              <div className="leading-tight">
+                <p className="text-[11.5px] font-bold text-[#111111]">Quality Assured</p>
+                <p className="text-[10px] text-[#6B7280]">Bio-washed compact cotton</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* SEARCH, FILTERS & CONTROLS CONTAINER */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E5E4DE] shadow-[0_4px_24px_rgba(0,0,0,0.03)] space-y-4">
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        {/* SEARCH, FILTERS & CONTROLS CONTAINER - COMPACT */}
+        <div className="bg-white p-3 sm:p-3.5 rounded-xl border border-[#E5E4DE] shadow-2xs space-y-2.5">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
             {/* Search Input */}
             <div className="relative flex-1 max-w-lg">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
               <input
                 type="text"
                 placeholder="Search products by title, material, or keyword..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 bg-[#F8F8F6] border border-[#DDDCD5] rounded-xl text-sm text-[#111111] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#3B6FEB] focus:ring-2 focus:ring-[#3B6FEB]/15 transition-all"
+                className="w-full pl-9 pr-8 py-1.5 sm:py-2 bg-[#F8F8F6] border border-[#DDDCD5] rounded-lg text-xs sm:text-[13px] text-[#111111] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#3B6FEB] focus:ring-1 focus:ring-[#3B6FEB]/20 transition-all"
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+                  aria-label="Clear search"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -237,16 +238,16 @@ function ProductsCatalog() {
             </div>
 
             {/* Sort Dropdown & Product Count */}
-            <div className="flex items-center justify-between md:justify-end gap-3">
+            <div className="flex items-center justify-between md:justify-end gap-2.5">
               <span className="text-xs font-semibold text-[#6B7280]">
                 {sortedProducts.length} product{sortedProducts.length === 1 ? '' : 's'}
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <label className="text-xs font-semibold text-[#6B7280] hidden sm:block">Sort:</label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="px-3 py-2 bg-[#F8F8F6] border border-[#DDDCD5] rounded-xl text-xs font-semibold text-[#374151] outline-none focus:border-[#3B6FEB] cursor-pointer"
+                  className="px-2.5 py-1.5 bg-[#F8F8F6] border border-[#DDDCD5] rounded-lg text-xs font-semibold text-[#374151] outline-none focus:border-[#3B6FEB] cursor-pointer"
                 >
                   <option value="featured">Featured</option>
                   <option value="price-asc">Price: Low to High</option>
@@ -259,16 +260,16 @@ function ProductsCatalog() {
 
           {/* Category Tabs Strip with Clean Scrolling */}
           <div className="pt-2 border-t border-[#F0EFEB]">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1.5 hide-scrollbar">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
               {CATEGORIES.map((cat) => {
                 const isActive = category === cat.id;
                 return (
                   <button
                     key={cat.id}
                     onClick={() => handleCategoryChange(cat.id)}
-                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 ${
+                    className={`px-3 py-1 rounded-full text-[11.5px] font-bold transition-all whitespace-nowrap border flex items-center gap-1 ${
                       isActive
-                        ? 'bg-[#111111] border-[#111111] text-white shadow-sm'
+                        ? 'bg-[#111111] border-[#111111] text-white shadow-2xs'
                         : 'bg-[#F9FAFB] border-[#E5E7EB] text-[#4B5563] hover:border-[#3B6FEB] hover:text-[#3B6FEB] hover:bg-white'
                     }`}
                   >
@@ -280,20 +281,20 @@ function ProductsCatalog() {
           </div>
         </div>
 
-        {/* PRODUCT GRID SECTION */}
+        {/* PRODUCT GRID SECTION - 4 COLUMNS ON DESKTOP FOR HIGH DENSITY */}
         {loading ? (
-          <div className="py-28 flex flex-col items-center justify-center text-[#6B7280]">
-            <Loader2 className="w-9 h-9 animate-spin text-[#3B6FEB] mb-4" />
-            <p className="text-sm font-semibold text-[#374151]">Loading catalog...</p>
-            <p className="text-xs text-[#9CA3AF] mt-1">Retrieving latest specifications and bulk pricing</p>
+          <div className="py-16 flex flex-col items-center justify-center text-[#6B7280]">
+            <Loader2 className="w-8 h-8 animate-spin text-[#3B6FEB] mb-3" />
+            <p className="text-xs sm:text-sm font-semibold text-[#374151]">Loading catalog...</p>
+            <p className="text-[11px] text-[#9CA3AF] mt-0.5">Retrieving latest specifications and bulk pricing</p>
           </div>
         ) : sortedProducts.length === 0 ? (
-          <div className="py-24 px-6 flex flex-col items-center justify-center text-center bg-white border border-[#E5E4DE] rounded-2xl shadow-xs">
-            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4 text-gray-400">
-              <PackageX className="w-8 h-8" />
+          <div className="py-14 px-4 flex flex-col items-center justify-center text-center bg-white border border-[#E5E4DE] rounded-xl shadow-2xs">
+            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3 text-gray-400">
+              <PackageX className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-heading font-black text-[#111111]">No products found</h3>
-            <p className="text-sm text-[#6B7280] max-w-md mt-1 mb-6">
+            <h3 className="text-base font-heading font-black text-[#111111]">No products found</h3>
+            <p className="text-xs text-[#6B7280] max-w-sm mt-1 mb-4">
               We couldn't find any products matching your current category or search criteria.
             </p>
             <button
@@ -302,13 +303,13 @@ function ProductsCatalog() {
                 setCategory('all');
                 router.push('/products');
               }}
-              className="px-5 py-2.5 bg-[#111111] text-white text-xs font-bold rounded-xl hover:bg-black transition-colors"
+              className="px-4 py-2 bg-[#111111] text-white text-xs font-bold rounded-lg hover:bg-black transition-colors"
             >
               Reset Filters & View All
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-4.5">
             {sortedProducts.map((item) => {
               const primaryImage = item.images?.[0] || '/images/products/classic-black-polo.jpg';
               const uniqueColors = Array.from(new Set((item.variants || []).map((v: any) => v.color).filter(Boolean)));
@@ -317,20 +318,20 @@ function ProductsCatalog() {
               return (
                 <Card
                   key={item.id}
-                  className="group bg-white border-[#E6E5E0] rounded-2xl overflow-hidden shadow-xs hover:shadow-[0_20px_45px_-16px_rgba(0,0,0,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col"
+                  className="group bg-white border-[#E6E5E0] rounded-xl overflow-hidden shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col"
                 >
-                  {/* FULL GARMENT IMAGE CONTAINER - Fixed aspect ratio & object-contain */}
-                  <div className="relative aspect-[4/5] bg-gradient-to-b from-[#F9F9F8] via-[#F5F5F3] to-[#ECECE8] flex items-center justify-center p-6 sm:p-8 overflow-hidden border-b border-[#EBEAE4]">
+                  {/* FULL GARMENT IMAGE CONTAINER - Fixed compact 4/3 aspect ratio & object-contain */}
+                  <div className="relative aspect-[4/3] bg-gradient-to-b from-[#F9F9F8] via-[#F5F5F3] to-[#ECECE8] flex items-center justify-center p-3 sm:p-4 overflow-hidden border-b border-[#EBEAE4]">
                     {/* Badges Overlay */}
-                    <div className="absolute top-3.5 left-3.5 z-10 flex flex-col gap-1.5 items-start">
-                      <span className="px-2.5 py-1 bg-white/95 backdrop-blur-md text-[10px] font-extrabold uppercase tracking-wider text-[#111111] rounded-full border border-black/5 shadow-xs flex items-center gap-1">
-                        <Tag className="w-3 h-3 text-[#3B6FEB]" />
+                    <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
+                      <span className="px-2 py-0.5 bg-white/95 backdrop-blur-md text-[9px] font-extrabold uppercase tracking-wider text-[#111111] rounded-full border border-black/5 shadow-2xs flex items-center gap-1">
+                        <Tag className="w-2.5 h-2.5 text-[#3B6FEB]" />
                         {item.category?.name || 'Apparel'}
                       </span>
                     </div>
 
-                    <div className="absolute top-3.5 right-3.5 z-10">
-                      <span className="px-2.5 py-1 bg-[#EEF2FF]/95 backdrop-blur-md text-[10px] font-bold text-[#3B6FEB] rounded-full border border-[#D9E2FF] shadow-xs">
+                    <div className="absolute top-2 right-2 z-10">
+                      <span className="px-2 py-0.5 bg-[#EEF2FF]/95 backdrop-blur-md text-[9px] font-bold text-[#3B6FEB] rounded-full border border-[#D9E2FF] shadow-2xs">
                         MOQ: {moq} Pcs
                       </span>
                     </div>
@@ -339,57 +340,57 @@ function ProductsCatalog() {
                     <img
                       src={primaryImage}
                       alt={item.name}
-                      className="w-full h-full object-contain drop-shadow-[0_12px_22px_rgba(0,0,0,0.12)] group-hover:scale-105 group-hover:drop-shadow-[0_20px_32px_rgba(0,0,0,0.18)] transition-all duration-500 ease-out select-none"
+                      className="w-full h-full object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.1)] group-hover:scale-105 group-hover:drop-shadow-[0_12px_22px_rgba(0,0,0,0.15)] transition-all duration-300 ease-out select-none"
                     />
 
                     {/* Subtle Hover Pill */}
-                    <div className="absolute bottom-3 inset-x-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none flex justify-center">
-                      <span className="px-3 py-1 bg-black/80 backdrop-blur-md text-white text-[11px] font-semibold rounded-full shadow-md">
+                    <div className="absolute bottom-2 inset-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none flex justify-center">
+                      <span className="px-2.5 py-0.5 bg-black/80 backdrop-blur-md text-white text-[10px] font-semibold rounded-full shadow-sm">
                         Custom branding ready
                       </span>
                     </div>
                   </div>
 
                   {/* Card Content */}
-                  <CardContent className="p-5 sm:p-6 space-y-4 flex-1 flex flex-col justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-bold text-[#3B6FEB] uppercase tracking-[0.14em]">
+                  <CardContent className="p-3 sm:p-3.5 space-y-2.5 flex-1 flex flex-col justify-between">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="text-[9.5px] font-bold text-[#3B6FEB] uppercase tracking-wider">
                           {item.slug ? `SKU: ${item.slug}` : 'In Stock'}
                         </span>
-                        <span className="text-[11px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
                           Dispatch in 3-5 days
                         </span>
                       </div>
 
-                      <h3 className="text-lg font-heading font-black text-[#111111] leading-snug group-hover:text-[#3B6FEB] transition-colors line-clamp-2">
+                      <h3 className="text-[13.5px] sm:text-[14px] font-heading font-black text-[#111111] leading-snug group-hover:text-[#3B6FEB] transition-colors line-clamp-1 sm:line-clamp-2">
                         {item.name}
                       </h3>
 
-                      <p className="text-xs text-[#555555] line-clamp-2 leading-relaxed">
-                        {item.description ? item.description.replace(/[#*`]/g, '').slice(0, 110) + '...' : 'Premium quality merchandise.'}
+                      <p className="text-[11px] text-[#555555] line-clamp-1 leading-relaxed">
+                        {item.description ? item.description.replace(/[#*`]/g, '').slice(0, 90) + '...' : 'Premium quality merchandise.'}
                       </p>
                     </div>
 
                     {/* Color Swatches */}
                     {uniqueColors.length > 0 && (
-                      <div className="pt-2 border-t border-[#F0EFEB] flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-[#6B7280]">Colors ({uniqueColors.length}):</span>
-                        <div className="flex items-center gap-1.5">
+                      <div className="pt-1.5 border-t border-[#F0EFEB] flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-[#6B7280]">Colors ({uniqueColors.length}):</span>
+                        <div className="flex items-center gap-1">
                           {uniqueColors.slice(0, 5).map((col: any) => {
                             const clean = String(col).toLowerCase();
                             const bg = COLOR_MAP[clean] || clean;
                             return (
                               <span
                                 key={col}
-                                className="w-4 h-4 rounded-full border border-gray-300 shadow-xs inline-block transition-transform hover:scale-110"
+                                className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border border-gray-300 shadow-2xs inline-block transition-transform hover:scale-110"
                                 style={{ backgroundColor: bg }}
                                 title={col}
                               />
                             );
                           })}
                           {uniqueColors.length > 5 && (
-                            <span className="text-[10px] text-gray-500 font-bold">
+                            <span className="text-[9.5px] text-gray-500 font-bold">
                               +{uniqueColors.length - 5}
                             </span>
                           )}
@@ -398,35 +399,35 @@ function ProductsCatalog() {
                     )}
 
                     {/* Pricing Row */}
-                    <div className="pt-3 border-t border-[#EAE9E3] flex items-center justify-between">
+                    <div className="pt-2 border-t border-[#EAE9E3] flex items-baseline justify-between">
                       <div>
-                        <span className="text-[11px] text-[#6B7280] font-medium block">Starting from</span>
+                        <span className="text-[9.5px] text-[#6B7280] font-medium block">Starting from</span>
                         <div className="flex items-baseline gap-1">
-                          <span className="text-2xl font-heading font-black text-[#111111]">₹{item.basePrice}</span>
-                          <span className="text-[11px] text-[#6B7280]">/ pc</span>
+                          <span className="text-base sm:text-lg font-heading font-black text-[#111111]">₹{item.basePrice}</span>
+                          <span className="text-[10px] text-[#6B7280]">/ pc</span>
                         </div>
                       </div>
 
                       {item.bulkPricing && item.bulkPricing.length > 1 && (
                         <div className="text-right">
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-1 rounded-md block">
-                            Bulk discounts available
+                          <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 rounded block">
+                            Bulk discounts
                           </span>
                         </div>
                       )}
                     </div>
 
                     {/* Dual Action Buttons */}
-                    <div className="grid grid-cols-2 gap-2.5 pt-2">
+                    <div className="grid grid-cols-2 gap-2 pt-1">
                       <Link href={`/products/${item.id}`} className="block">
-                        <button className="w-full py-2.5 px-3 bg-white hover:bg-gray-50 text-[#111111] text-xs font-bold rounded-xl border border-[#DDDCD5] transition-all hover:border-[#111111] shadow-2xs">
+                        <button className="w-full py-1.5 sm:py-2 px-2.5 bg-white hover:bg-gray-50 text-[#111111] text-[11px] font-bold rounded-lg border border-[#DDDCD5] transition-all hover:border-[#111111] shadow-2xs min-h-[32px] sm:min-h-[34px] flex items-center justify-center">
                           DETAILS
                         </button>
                       </Link>
 
                       <Link href={`/products/${item.id}/customize`} className="block">
-                        <button className="w-full py-2.5 px-3 bg-[#3B6FEB] hover:bg-[#2563EB] text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 hover:gap-2">
-                          CUSTOMIZE <ArrowRight className="w-3.5 h-3.5" />
+                        <button className="w-full py-1.5 sm:py-2 px-2.5 bg-[#3B6FEB] hover:bg-[#2563EB] text-white text-[11px] font-bold rounded-lg transition-all shadow-2xs flex items-center justify-center gap-1 hover:gap-1.5 min-h-[32px] sm:min-h-[34px]">
+                          CUSTOMIZE <ArrowRight className="w-3 h-3" />
                         </button>
                       </Link>
                     </div>
@@ -445,9 +446,9 @@ export default function ProductsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#FBFBFA] flex flex-col items-center justify-center text-[#6B7280]">
-          <Loader2 className="w-8 h-8 animate-spin text-[#3B6FEB] mb-4" />
-          <p className="text-sm font-semibold">Loading catalog...</p>
+        <div className="min-h-[50vh] bg-[#FBFBFA] flex flex-col items-center justify-center text-[#6B7280]">
+          <Loader2 className="w-8 h-8 animate-spin text-[#3B6FEB] mb-3" />
+          <p className="text-xs sm:text-sm font-semibold">Loading catalog...</p>
         </div>
       }
     >
