@@ -427,9 +427,9 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
         ]
       });
       setVariants([
-        { color: 'Matte Black', size: '330ml (Standard)', sku: 'MUG-CER-BLK', stock: 1000 },
-        { color: 'Classic White', size: '330ml (Standard)', sku: 'MUG-CER-WHT', stock: 800 },
-        { color: 'Navy Blue', size: '330ml (Standard)', sku: 'MUG-CER-NVY', stock: 500 },
+        { color: 'Matte Black', size: '330ml (Standard)', sku: '', stock: 1000 },
+        { color: 'Classic White', size: '330ml (Standard)', sku: '', stock: 800 },
+        { color: 'Navy Blue', size: '330ml (Standard)', sku: '', stock: 500 },
       ]);
       setPricing([
         { minQuantity: 25, maxQuantity: 49, pricePerUnit: 149, printType: 'Screen Print / UV DTF' },
@@ -453,11 +453,11 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
         ]
       });
       setVariants([
-        { color: 'Charcoal Black', size: 'Free Size', sku: 'CAP-BLK-FS', stock: 500 },
-        { color: 'Navy Blue', size: 'Free Size', sku: 'CAP-NVY-FS', stock: 350 },
-        { color: 'Classic White', size: 'Free Size', sku: 'CAP-WHT-FS', stock: 250 },
-        { color: 'Royal Blue', size: 'Free Size', sku: 'CAP-RBL-FS', stock: 200 },
-        { color: 'Crimson Red', size: 'Free Size', sku: 'CAP-RED-FS', stock: 150 },
+        { color: 'Charcoal Black', size: 'Free Size', sku: '', stock: 500 },
+        { color: 'Navy Blue', size: 'Free Size', sku: '', stock: 350 },
+        { color: 'Classic White', size: 'Free Size', sku: '', stock: 250 },
+        { color: 'Royal Blue', size: 'Free Size', sku: '', stock: 200 },
+        { color: 'Crimson Red', size: 'Free Size', sku: '', stock: 150 },
       ]);
       setPricing([
         { minQuantity: 20, maxQuantity: 49, pricePerUnit: 149, printType: 'Front 3D Embroidery' },
@@ -495,9 +495,9 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
         ]
       });
       setVariants([
-        { color: 'Charcoal Black', size: 'Free Size', sku: 'BAG-EXEC-BLK-FS', stock: 500 },
-        { color: 'Navy Blue', size: 'Free Size', sku: 'BAG-EXEC-NVY-FS', stock: 350 },
-        { color: 'Heather Grey', size: 'Free Size', sku: 'BAG-EXEC-GRY-FS', stock: 250 },
+        { color: 'Charcoal Black', size: 'Free Size', sku: '', stock: 500 },
+        { color: 'Navy Blue', size: 'Free Size', sku: '', stock: 350 },
+        { color: 'Heather Grey', size: 'Free Size', sku: '', stock: 250 },
       ]);
       setPricing([
         { minQuantity: 20, maxQuantity: 49, pricePerUnit: 699, printType: 'Front Logo Print / Embroidery' },
@@ -511,7 +511,9 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
 
   useEffect(() => {
     if (mode === 'EDIT' && productId) {
-      fetch(`${API_URL}/products/${productId}`)
+      // Authenticated so hidden (inactive) products can be opened for editing too.
+      const token = localStorage.getItem('token');
+      fetch(`${API_URL}/products/${productId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
         .then(r => r.json())
         .then(res => {
           const p = res.data || res.product;
@@ -838,9 +840,9 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
                   <button
                     type="button"
                     onClick={() => setVariants([
-                      { color: 'Matte Black', size: '330ml (Standard)', sku: 'MUG-CER-BLK', stock: 1000 },
-                      { color: 'Classic White', size: '330ml (Standard)', sku: 'MUG-CER-WHT', stock: 800 },
-                      { color: 'Navy Blue', size: '330ml (Standard)', sku: 'MUG-CER-NVY', stock: 500 },
+                      { color: 'Matte Black', size: '330ml (Standard)', sku: '', stock: 1000 },
+                      { color: 'Classic White', size: '330ml (Standard)', sku: '', stock: 800 },
+                      { color: 'Navy Blue', size: '330ml (Standard)', sku: '', stock: 500 },
                     ])}
                     className="px-3 py-2 bg-blue-50 border border-blue-200 text-[#3B6FEB] rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
                   >
@@ -851,11 +853,11 @@ function ProductDrawer({ mode, productId, categories, onClose, onRefresh }: { mo
                   <button
                     type="button"
                     onClick={() => setVariants([
-                      { color: 'Charcoal Black', size: 'Free Size', sku: 'CAP-BLK-FS', stock: 500 },
-                      { color: 'Navy Blue', size: 'Free Size', sku: 'CAP-NVY-FS', stock: 350 },
-                      { color: 'Classic White', size: 'Free Size', sku: 'CAP-WHT-FS', stock: 250 },
-                      { color: 'Royal Blue', size: 'Free Size', sku: 'CAP-RBL-FS', stock: 200 },
-                      { color: 'Crimson Red', size: 'Free Size', sku: 'CAP-RED-FS', stock: 150 },
+                      { color: 'Charcoal Black', size: 'Free Size', sku: '', stock: 500 },
+                      { color: 'Navy Blue', size: 'Free Size', sku: '', stock: 350 },
+                      { color: 'Classic White', size: 'Free Size', sku: '', stock: 250 },
+                      { color: 'Royal Blue', size: 'Free Size', sku: '', stock: 200 },
+                      { color: 'Crimson Red', size: 'Free Size', sku: '', stock: 150 },
                     ])}
                     className="px-3 py-2 bg-blue-50 border border-blue-200 text-[#3B6FEB] rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
                   >

@@ -77,6 +77,8 @@ function ProductsCatalog() {
       setLoading(true);
       try {
         const query = new URLSearchParams();
+        // The API pages at 10 by default; the catalog shows every active product.
+        query.set('pageSize', '100');
         if (category !== 'all') {
           query.set('category', category);
         }
@@ -311,13 +313,14 @@ function ProductsCatalog() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-4.5">
             {sortedProducts.map((item) => {
-              const primaryImage = item.images?.[0] || '/images/products/classic-black-polo.jpg';
+              const primaryImage: string | undefined = item.images?.[0];
               const uniqueColors = Array.from(new Set((item.variants || []).map((v: any) => v.color).filter(Boolean)));
               const moq = item.bulkPricing?.[0]?.minQuantity || 20;
 
               return (
                 <Card
                   key={item.id}
+                  data-cy={`product-card-${item.slug}`}
                   className="group bg-white border-[#E6E5E0] rounded-xl overflow-hidden shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col"
                 >
                   {/* FULL GARMENT IMAGE CONTAINER - Fixed compact 4/3 aspect ratio & object-contain */}
@@ -337,11 +340,17 @@ function ProductsCatalog() {
                     </div>
 
                     {/* Image with object-contain to ensure whole garment is visible */}
-                    <img
-                      src={primaryImage}
-                      alt={item.name}
-                      className="w-full h-full object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.1)] group-hover:scale-105 group-hover:drop-shadow-[0_12px_22px_rgba(0,0,0,0.15)] transition-all duration-300 ease-out select-none"
-                    />
+                    {primaryImage ? (
+                      <img
+                        src={primaryImage}
+                        alt={item.name}
+                        data-cy="product-card-image"
+                        className="w-full h-full object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.1)] group-hover:scale-105 group-hover:drop-shadow-[0_12px_22px_rgba(0,0,0,0.15)] transition-all duration-300 ease-out select-none"
+                      />
+                    ) : (
+                      // No admin image yet: neutral placeholder rather than another product's photo.
+                      <Package className="w-12 h-12 text-[#C9C8C1]" aria-label="No product image" />
+                    )}
 
                     {/* Subtle Hover Pill */}
                     <div className="absolute bottom-2 inset-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none flex justify-center">
