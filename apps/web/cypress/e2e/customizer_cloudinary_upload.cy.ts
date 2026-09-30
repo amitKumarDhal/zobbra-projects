@@ -25,7 +25,8 @@ describe('Customizer Cloudinary Logo Upload Flow', () => {
 
     // 5. Confirm guest header has NO "Signed in as" banner
     cy.contains('Signed in as').should('not.exist');
-    cy.contains('Sign In').should('be.visible');
+    // Guests reach sign-in via Proceed (auth modal); the header only has Front/Back + Proceed
+    cy.get('#customizer-proceed-btn').should('be.visible');
 
     // 6. Contract test: Verify guest signature response contract from local runtime
     cy.window().then(async (win) => {
@@ -44,10 +45,10 @@ describe('Customizer Cloudinary Logo Upload Flow', () => {
 
     // 7. Click the "Logo" tab in the left tool panel
     cy.get('#tab-tool-logo').click();
-    cy.contains('Upload artwork').should('be.visible');
+    cy.contains('Upload logo').should('be.visible');
 
     // Verify initial empty state guide is visible
-    cy.contains(/Add your logo/).should('be.visible');
+    cy.contains('use tools to add').should('be.visible');
 
     // 8. Perform REAL file upload via the file input using a real image asset
     cy.get('input[type="file"]').selectFile('public/brand/zobbra-logo-white.png', { force: true });
@@ -63,10 +64,9 @@ describe('Customizer Cloudinary Logo Upload Flow', () => {
     });
 
     // 10. Verify empty state overlay disappears
-    cy.contains(/Add your logo/, { timeout: 15000 }).should('not.exist');
+    cy.contains('use tools to add', { timeout: 15000 }).should('not.exist');
 
-    // 11. Verify the Layers tool shows center and delete controls for the selected element
-    cy.get('#tab-tool-layers').click();
+    // 11. Verify the side panel shows center and delete controls for the selected element
     cy.contains('Image selected', { timeout: 15000 }).should('be.visible');
     cy.contains('button', 'Center').should('be.visible');
     cy.contains('button', 'Middle').should('be.visible');

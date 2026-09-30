@@ -80,7 +80,7 @@ describe('ZOBBRA Product-Specific Customizer Mockup Verification', () => {
     cy.contains('button', '+ Add Text to Mug').should('be.visible');
 
     // Switch to BACK / REVERSE view
-    cy.contains('button', 'BACK').click();
+    cy.contains('button', 'Back').click();
     cy.wait(500);
     assertNoPrintBoundary();
   });
@@ -107,7 +107,7 @@ describe('ZOBBRA Product-Specific Customizer Mockup Verification', () => {
     cy.contains('button', '+ Add Text to Bag').should('be.visible');
 
     // Switch to BACK view
-    cy.contains('button', 'BACK').click();
+    cy.contains('button', 'Back').click();
     cy.wait(500);
     cy.get('svg[viewBox="0 0 500 580"]').should('be.visible');
   });

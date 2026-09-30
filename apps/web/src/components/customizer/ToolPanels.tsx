@@ -25,18 +25,21 @@ import { BODY_COLORS, COLLAR_RIB_COLORS, FONTS, TEXT_COLORS } from './customizer
 export type ToolKey = 'logo' | 'text' | 'colors' | 'layers';
 
 export const TOOL_ITEMS: Array<{ key: ToolKey; id: string; label: string; Icon: React.ElementType }> = [
-  { key: 'logo', id: 'tab-tool-logo', label: 'Upload', Icon: ImagePlus },
+  { key: 'colors', id: 'tab-tool-colors', label: 'Colors', Icon: Palette },
+  { key: 'logo', id: 'tab-tool-logo', label: 'Logo', Icon: ImagePlus },
   { key: 'text', id: 'tab-tool-text', label: 'Text', Icon: Type },
-  { key: 'colors', id: 'tab-tool-colors', label: 'Color', Icon: Palette },
   { key: 'layers', id: 'tab-tool-layers', label: 'Layers', Icon: Layers },
 ];
 
 export const TOOL_TITLES: Record<ToolKey, string> = {
-  logo: 'Upload artwork',
-  text: 'Add text',
+  logo: 'Logo',
+  text: 'Text',
   colors: 'Colors',
   layers: 'Selected element',
 };
+
+/** Section heading used inside the tool panels (e.g. "BODY COLOR"). */
+export const PANEL_HEADING = 'text-[13px] font-semibold uppercase tracking-wide text-gray-500';
 
 /* -------------------------------------------------------------------------- */
 /* Tool rail / bottom navigation                                              */
@@ -46,19 +49,18 @@ interface ToolRailProps {
   active: ToolKey | null;
   onSelect: (key: ToolKey) => void;
   hasSelection: boolean;
-  orientation: 'vertical' | 'horizontal';
-  /** Extra items (e.g. the mobile "Order" button) rendered after the tools. */
-  trailing?: React.ReactNode;
+  /** Which tools to show (kept in TOOL_ITEMS order). Defaults to all of them. */
+  tools?: ToolKey[];
+  /** `panel`: tab row at the top of the desktop side panel. `bar`: mobile bottom navigation. */
+  variant: 'panel' | 'bar';
 }
 
-export function ToolRail({ active, onSelect, hasSelection, orientation, trailing }: ToolRailProps) {
-  const vertical = orientation === 'vertical';
+export function ToolRail({ active, onSelect, hasSelection, tools, variant }: ToolRailProps) {
+  const items = tools ? TOOL_ITEMS.filter((t) => tools.includes(t.key)) : TOOL_ITEMS;
+  const panel = variant === 'panel';
   return (
-    <nav
-      aria-label="Design tools"
-      className={vertical ? 'flex flex-col gap-1 p-1.5 w-[60px]' : 'flex items-stretch justify-around px-1'}
-    >
-      {TOOL_ITEMS.map(({ key, id, label, Icon }) => {
+    <nav aria-label="Design tools" className={`flex items-stretch gap-1 ${panel ? 'p-2.5' : 'px-2 py-1.5'}`}>
+      {items.map(({ key, id, label, Icon }) => {
         const isActive = active === key;
         return (
           <button
@@ -67,19 +69,18 @@ export function ToolRail({ active, onSelect, hasSelection, orientation, trailing
             type="button"
             onClick={() => onSelect(key)}
             aria-pressed={isActive}
-            className={`relative flex flex-col items-center justify-center gap-0.5 rounded-lg text-[10px] font-bold transition-colors ${
-              vertical ? 'py-2 w-full' : 'flex-1 py-1.5'
-            } ${isActive ? 'bg-[#111111] text-white' : 'text-gray-500 hover:text-black hover:bg-gray-100'}`}
+            className={`relative flex flex-1 flex-col items-center justify-center rounded-xl font-medium transition-colors ${
+              panel ? 'gap-1 py-2.5 text-sm' : 'gap-0.5 py-1.5 text-[11px]'
+            } ${isActive ? 'bg-[#EEF2FF] text-[#3B6FEB]' : 'text-gray-600 hover:text-[#111111] hover:bg-gray-50'}`}
           >
-            <Icon className="w-[18px] h-[18px]" />
+            <Icon className={panel ? 'w-5 h-5' : 'w-[18px] h-[18px]'} strokeWidth={1.75} />
             <span>{label}</span>
             {key === 'layers' && hasSelection && (
-              <span className="absolute top-1.5 right-2.5 w-1.5 h-1.5 rounded-full bg-[#3B6FEB]" />
+              <span className="absolute top-1.5 right-3 w-1.5 h-1.5 rounded-full bg-[#3B6FEB]" />
             )}
           </button>
         );
       })}
-      {trailing}
     </nav>
   );
 }
@@ -274,7 +275,7 @@ interface SwatchGridProps {
 
 function SwatchGrid({ colors, selected, onPick }: SwatchGridProps) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(36px,1fr))] gap-3 justify-items-center">
       {colors.map((col) => {
         const isSelected = selected.toLowerCase() === col.name.toLowerCase();
         return (
@@ -282,11 +283,12 @@ function SwatchGrid({ colors, selected, onPick }: SwatchGridProps) {
             key={col.name}
             type="button"
             title={col.name}
+            aria-pressed={isSelected}
             onClick={() => onPick(col.name)}
-            className={`w-7 h-7 shrink-0 rounded-full transition-all duration-150 ${
+            className={`w-9 h-9 shrink-0 rounded-full transition-all duration-150 ${
               isSelected
-                ? 'ring-2 ring-[#3B6FEB] ring-offset-1 scale-105'
-                : 'border border-black/15 hover:scale-105'
+                ? 'ring-[3px] ring-[#3B6FEB] ring-offset-2'
+                : 'border-[3px] border-white shadow-[0_0_0_1px_rgba(0,0,0,0.12)] hover:scale-105'
             }`}
             style={{ backgroundColor: col.hex }}
           >
@@ -308,22 +310,20 @@ interface ColorPanelProps {
 
 export function ColorPanel({ template, selectedColor, collarColor, onBodyColor, onCollarColor }: ColorPanelProps) {
   return (
-    <div className="space-y-3">
-      <section className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">{template.colorLabel}</h3>
-          <span className="text-[10px] font-bold text-[#111111] bg-gray-100 px-1.5 py-0.5 rounded">{selectedColor}</span>
+    <div className="space-y-5">
+      <section className="space-y-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <h3 className={PANEL_HEADING}>{template.colorLabel}</h3>
+          <span className="truncate text-xs text-gray-400">{selectedColor}</span>
         </div>
         <SwatchGrid colors={BODY_COLORS} selected={selectedColor} onPick={onBodyColor} />
       </section>
 
       {template.secondaryColorLabel && (
-        <section className="space-y-1.5 pt-2.5 border-t border-[#F1F3F7]">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">
-              {template.secondaryColorLabel}
-            </h3>
-            <span className="text-[10px] font-bold text-[#111111] bg-gray-100 px-1.5 py-0.5 rounded">{collarColor}</span>
+        <section className="space-y-3 pt-4 border-t border-[#F1F3F7]">
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className={PANEL_HEADING}>{template.secondaryColorLabel}</h3>
+            <span className="truncate text-xs text-gray-400">{collarColor}</span>
           </div>
           <SwatchGrid colors={COLLAR_RIB_COLORS} selected={collarColor} onPick={onCollarColor} />
         </section>

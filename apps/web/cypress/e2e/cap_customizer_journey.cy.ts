@@ -18,8 +18,8 @@ describe('ZOBBRA Cap Customizer — Dedicated Headwear Silhouette & Free-Size Ve
     cy.contains('VISOR / BRIM COLOR').should('be.visible');
     cy.contains('BODY COLOR').should('not.exist');
 
-    // 3. Verify Free Size One-Size-Fits-All Badge
-    cy.contains('One size').should('be.visible');
+    // 3. No quantity/size UI in the customizer (Free Size is applied to the submitted variant)
+    cy.contains('One size').should('not.exist');
 
     // 4. Verify Cap Vector Silhouette is rendered
     cy.get('svg[viewBox="0 0 500 580"]').within(() => {
@@ -28,13 +28,13 @@ describe('ZOBBRA Cap Customizer — Dedicated Headwear Silhouette & Free-Size Ve
     });
 
     // 5. Test FRONT / BACK switcher
-    cy.contains('button', 'BACK').click();
+    cy.contains('button', 'Back').click();
     cy.wait(500);
     // Rear view should display rear strap and brass buckle elements
     cy.get('svg').should('be.visible');
 
     // Switch back to FRONT
-    cy.contains('button', 'FRONT').click();
+    cy.contains('button', 'Front').click();
     cy.wait(500);
 
     // 6. Test Text Tool for Cap
@@ -44,6 +44,6 @@ describe('ZOBBRA Cap Customizer — Dedicated Headwear Silhouette & Free-Size Ve
     cy.contains('button', '+ Add Text to Cap').click();
 
     // 7. Verify empty guide disappears
-    cy.contains('Add your logo or text').should('not.exist');
+    cy.contains('use tools to add').should('not.exist');
   });
 });

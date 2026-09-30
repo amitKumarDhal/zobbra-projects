@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
-import { Sparkles, Trash2 } from 'lucide-react';
-import { GarmentBackdrop } from './GarmentBackdrop';
+import { Trash2 } from 'lucide-react';
+import { GarmentBackdrop, getColorHex, isLightColor } from './GarmentBackdrop';
 import { getCustomizerTemplate, CustomizerTemplate, PrintableAreaConfig } from '../../lib/customizerTemplates';
 import { uploadDataUrlToCloudinary, uploadToCloudinary } from '@/lib/upload';
 
@@ -218,6 +218,8 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   const currentArea = activeSide === 'back' && resolvedTemplate.backPrintableArea
     ? resolvedTemplate.backPrintableArea
     : resolvedTemplate.frontPrintableArea;
+  // Guide line/label contrast against the product body color.
+  const guideOnLight = isLightColor(getColorHex(selectedColor));
 
   const [fabricInstance, setFabricInstance] = useState<any>(null);
   const [canvas, setCanvas] = useState<any>(null);
@@ -239,6 +241,8 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     activeSideRef.current = activeSide;
   }, [activeSide]);
   const isSwitchingSideRef = useRef<boolean>(false);
+  // Latest side requested while a switch (or export) was still loading; applied once it finishes.
+  const pendingSideRef = useRef<'front' | 'back' | null>(null);
 
   // Initialize Fabric.js dynamically on client only
   useEffect(() => {
@@ -388,8 +392,32 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   };
 
   // Switch between Front and Back sides
+  // Apply a side request that arrived while the previous switch was loading.
+  const flushPendingSide = () => {
+    const next = pendingSideRef.current;
+    pendingSideRef.current = null;
+    if (next && next !== activeSideRef.current) switchSide(next);
+  };
+
   const switchSide = (newSide: 'front' | 'back') => {
-    if (!canvas || newSide === activeSideRef.current) return;
+    if (!canvas) {
+      // Fabric not initialised yet: nothing to save or load, just track the requested side.
+      if (newSide !== activeSideRef.current) {
+        activeSideRef.current = newSide;
+        if (onSideChange) onSideChange(newSide);
+      }
+      return;
+    }
+
+    // Re-entrancy guard: while a previous switch is still loading, the canvas is cleared or only
+    // partially rehydrated. Serializing it now would overwrite the other side with an empty/partial
+    // design, so defer the request until the in-flight load completes.
+    if (isSwitchingSideRef.current) {
+      pendingSideRef.current = newSide;
+      return;
+    }
+    pendingSideRef.current = null;
+    if (newSide === activeSideRef.current) return;
 
     isSwitchingSideRef.current = true;
 
@@ -426,12 +454,14 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
           const hasFront = checkHasObjects(frontJsonRef.current);
           const hasBack = checkHasObjects(backJsonRef.current);
           if (onDesignChange) onDesignChange({ hasFront, hasBack, activeSide: newSide });
+          flushPendingSide();
         });
       } catch (err) {
         console.error('Failed loading side json', err);
         canvas.renderAll();
         isSwitchingSideRef.current = false;
         setHasCurrentObjects(false);
+        flushPendingSide();
       }
     } else {
       canvas.renderAll();
@@ -441,6 +471,7 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       const hasFront = checkHasObjects(frontJsonRef.current);
       const hasBack = checkHasObjects(backJsonRef.current);
       if (onDesignChange) onDesignChange({ hasFront, hasBack, activeSide: newSide });
+      flushPendingSide();
     }
   };
 
@@ -934,7 +965,9 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   }));
 
   return (
-    <div className="relative w-full max-w-[540px] aspect-[500/580] bg-[#FAFAFA] rounded-2xl border border-[#E5E7EB] p-2 flex items-center justify-center overflow-hidden shadow-inner group select-none">
+    // The 1px transparent border is load-bearing: it keeps the padding box at exactly
+    // STAGE_CANVAS_WIDTH x STAGE_CANVAS_HEIGHT so the guide and the Fabric canvas line up.
+    <div className="relative w-full max-w-[540px] aspect-[500/580] border border-transparent p-2 flex items-center justify-center overflow-hidden group select-none">
       {/* Dynamic Product Silhouette SVG or Media Backdrop */}
       <GarmentBackdrop
         color={selectedColor}
@@ -945,38 +978,43 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         product={product}
       />
 
-      {/* Interactive Fabric Canvas overlay exactly over printable area */}
-      <div 
+      <span className="absolute top-2 left-2 z-20 pointer-events-none rounded-md bg-gray-500/80 px-2 py-0.5 text-[11px] font-semibold text-white">
+        {activeSide}
+      </span>
+
+      {/*
+        Design-area guide: purely visual and rendered BELOW the Fabric layer, so it never intercepts
+        pointer events, never clips objects (placement stays free), and is not part of any export.
+      */}
+      <div
+        id="customizer-design-guide"
+        aria-hidden="true"
+        className={`absolute z-[5] pointer-events-none flex flex-col items-center justify-center text-center border-[1.5px] border-dashed ${
+          guideOnLight ? 'border-black/25 text-black/45' : 'border-white/70 text-white/85'
+        }`}
+        style={{
+          top: currentArea.top,
+          left: currentArea.left,
+          width: currentArea.styleWidth,
+          height: currentArea.styleHeight,
+        }}
+      >
+        {!hasCurrentObjects && (
+          <p className="text-[13px] font-medium leading-snug">
+            Design area
+            <br />
+            use tools to add
+          </p>
+        )}
+      </div>
+
+      {/* Interactive Fabric canvas covering the whole stage (free placement) */}
+      <div
         id="customizer-canvas-wrapper"
         data-canvas-ready={Boolean(canvas && fabricInstance)}
         className="absolute inset-0 z-10"
       >
         <canvas ref={canvasElRef} />
-
-        {/* Clean, Non-Intrusive Empty Canvas Guide Overlay (UI only - NOT a canvas object!) */}
-        {!hasCurrentObjects && (
-          <div
-            className="absolute flex flex-col items-center justify-center pointer-events-none text-center p-2"
-            style={{
-              top: currentArea.top,
-              left: currentArea.left,
-              width: currentArea.styleWidth,
-              height: currentArea.styleHeight,
-            }}
-          >
-            <div className="flex flex-col items-center rounded-xl bg-white/85 backdrop-blur-sm px-2.5 py-1.5 shadow-sm">
-              <div className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#3B6FEB] mb-1">
-                <Sparkles className="w-3.5 h-3.5" />
-              </div>
-              <p className="text-[10px] font-bold text-gray-700">
-                {currentArea.guideText || 'Add your logo or text'}
-              </p>
-              <p className="text-[9px] text-gray-500 max-w-[150px] leading-tight mt-0.5">
-                {currentArea.subGuideText || currentArea.label || 'Select an option from the design tools to begin'}
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Subtle clear button on canvas bottom right */}

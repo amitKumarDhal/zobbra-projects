@@ -58,14 +58,11 @@ describe('Customizer — Quote Payload Sanitization & Cloudinary Upload', () => 
     cy.get('#tab-tool-colors').click();
     cy.get('button[title="Charcoal Black"]').first().click();
 
-    // 5. Select quantity tier 50
-    cy.contains('button', '50').click();
-
     // 6. Wait for submit button to be enabled and ready
     cy.get('#customizer-proceed-btn').should('not.be.disabled');
-    cy.get('#customizer-proceed-btn').should('contain', 'Submit Quote Request');
+    cy.get('#customizer-proceed-btn').should('contain', 'Proceed');
 
-    // 7. Click Submit Quote Request
+    // 7. Click Proceed
     cy.get('#customizer-proceed-btn').click();
 
     // 8. Intercept and inspect outgoing payload
@@ -130,7 +127,7 @@ describe('Customizer — Quote Payload Sanitization & Cloudinary Upload', () => 
 
     // After upload finishes, button is enabled
     cy.get('#customizer-proceed-btn').should('not.be.disabled');
-    cy.get('#customizer-proceed-btn').should('contain', 'Submit Quote Request');
+    cy.get('#customizer-proceed-btn').should('contain', 'Proceed');
   });
 
   it('G: Displays retryable error and blocks submission if Cloudinary upload fails', () => {

@@ -6,13 +6,14 @@ import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
+  ArrowRight,
   Sparkles,
   AlertCircle,
   ChevronRight,
   Check,
   UserCheck,
   X,
-  ShoppingBag,
+  ShoppingCart,
 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 import { useCustomerUser } from '@/hooks/useCustomerUser';
@@ -24,12 +25,13 @@ import {
   CustomizerDraft 
 } from '@/lib/customizerDraft';
 import { getCustomizerTemplate } from '@/lib/customizerTemplates';
+import { applyMainColorToVariants } from '@/lib/customizerVariants';
 import type { CustomizerCanvasRef, CustomizerCanvasProps } from '@/components/customizer/CustomizerCanvas';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { getColorHex, isLightColor } from '@/components/customizer/GarmentBackdrop';
 import { StageScaler } from '@/components/customizer/StageScaler';
 import { BottomSheet } from '@/components/customizer/BottomSheet';
-import { OrderPanel, type PricingState } from '@/components/customizer/OrderPanel';
+import type { PricingState } from '@/components/customizer/OrderPanel';
 import {
   ToolRail,
   UploadPanel,
@@ -37,9 +39,20 @@ import {
   ColorPanel,
   SelectionPanel,
   TOOL_TITLES,
+  PANEL_HEADING,
   type ToolKey,
   type TextValue,
 } from '@/components/customizer/ToolPanels';
+
+// Desktop/tablet side panel shows these three; element controls appear contextually below them.
+// Mobile keeps its Layers tab in the bottom navigation.
+const PANEL_TOOLS: ToolKey[] = ['colors', 'logo', 'text'];
+const MOBILE_TOOLS: ToolKey[] = ['colors', 'logo', 'text', 'layers'];
+// Section headings in the side panel (the Colors panel carries its own "BODY COLOR" style headings).
+const PANEL_SECTION_TITLES: Partial<Record<ToolKey, string>> = {
+  logo: 'Upload logo',
+  text: 'Add text',
+};
 
 // Natural size of the customizer stage (matches CustomizerCanvas: max-w-[540px], aspect 500/580).
 const STAGE_WIDTH = 540;
@@ -88,11 +101,10 @@ function CustomizeProductContent({ productId }: { productId: string }) {
 
   // Active side and tool tab
   const [activeSide, setActiveSide] = useState<'front' | 'back'>('front');
-  const [activeToolTab, setActiveToolTab] = useState<ToolKey>('logo');
-  const [panelOpen, setPanelOpen] = useState<boolean>(true);
-  const [mobileSheet, setMobileSheet] = useState<ToolKey | 'order' | null>(null);
-  const [variantsOpen, setVariantsOpen] = useState<boolean>(false);
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const [activeToolTab, setActiveToolTab] = useState<ToolKey>('colors');
+  const [mobileSheet, setMobileSheet] = useState<ToolKey | null>(null);
+  // Side-panel layout from tablet width up; bottom sheets below.
+  const isDesktop = useMediaQuery('(min-width: 768px)');
 
   // Garment & Order specs (real catalog data)
   const [selectedColor, setSelectedColor] = useState<string>('White');
@@ -133,8 +145,8 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   // Guest → Login/Register modal (replaces direct redirect)
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
 
-  // Live Server Pricing State
-  const [pricingState, setPricingState] = useState<PricingState>({ status: 'idle' });
+  // Live Server Pricing State. Still computed (pricing-preview), but no longer displayed in the customizer.
+  const [, setPricingState] = useState<PricingState>({ status: 'idle' });
 
   const canvasRef = useRef<CustomizerCanvasRef>(null);
 
@@ -226,12 +238,11 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     }
   }, [productId, isResume]);
 
-  // Handle body color change: updates garment body silhouette and synchronizes variants
+  // Handle body color change: updates the garment silhouette. Only the untouched default variant row
+  // follows the main color; rows the customer configured keep their own colors.
   const handleColorChange = (col: string) => {
+    setVariants(prev => applyMainColorToVariants(prev, selectedColor, col));
     setSelectedColor(col);
-    if (variants.length > 0) {
-      setVariants(prev => prev.map(v => ({ ...v, color: col })));
-    }
   };
 
   // Handle collar & rib color change: updates collar, placket, and sleeve cuff ribbing
@@ -398,19 +409,13 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     }
   }, [product, quantity, resolvedPrintType, variants, selectedColor, isCap, fetchPricing]);
 
-  const handleQuantityChange = (newQty: number) => {
-    const val = Math.max(1, newQty);
-    setQuantity(val);
-    if (variants.length === 1) {
-      setVariants([{ ...variants[0], quantity: val }]);
-    }
-  };
-
-  // Handle Side Switcher
+  // Handle Side Switcher. The canvas owns the switch and reports the side it actually moved to via
+  // onSideChange, so the toggle never runs ahead of a switch that is still loading (or deferred).
   const handleSwitchSide = (side: 'front' | 'back') => {
-    setActiveSide(side);
     if (canvasRef.current) {
       canvasRef.current.switchSide(side);
+    } else {
+      setActiveSide(side);
     }
   };
 
@@ -440,11 +445,10 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     if (patch.align !== undefined) setTextAlign(patch.align);
   };
 
-  // Desktop: pick a tool and open its flyout. Mobile: toggle its bottom sheet.
+  // Desktop/tablet: switch the side panel's tab. Mobile: toggle its bottom sheet.
   const handleToolSelect = (key: ToolKey) => {
     if (isDesktop) {
       setActiveToolTab(key);
-      setPanelOpen(true);
     } else {
       setMobileSheet((prev) => (prev === key ? null : key));
     }
@@ -665,58 +669,37 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   const hasToken = typeof window !== 'undefined'
     ? !!(localStorage.getItem('token') || localStorage.getItem('zobra_token'))
     : false;
-  const isCustomer = !!user && user.role === 'CUSTOMER' && hasToken;
   const isAdminOrStaff = !!user && user.role !== 'CUSTOMER' && hasToken;
 
-  const moq = product.bulkPricing?.[0]?.minQuantity || 50;
-  const requiresColor = product.requiresColor !== false;
-  const requiresSize = !isCap && product.requiresSize !== false && template.requiresSize !== false;
+  // Quantity/variant state is still validated and submitted with the quote; it just isn't edited here.
+  // Pricing is no longer shown in the customizer, so an in-flight estimate must not block Proceed.
   const proceedDisabled =
-    submitting || isPreparingPreview || isUploadingArtwork || isUploadingLogo || hasVariantMismatch || pricingState.status === 'loading';
-  const totalLabel =
-    pricingState.status === 'success'
-      ? `₹${pricingState.data.totalAmount.toLocaleString('en-IN')}`
-      : pricingState.status === 'loading'
-      ? '…'
-      : '—';
+    submitting || isPreparingPreview || isUploadingArtwork || isUploadingLogo || hasVariantMismatch;
   const hasArtworkOnActiveSide = activeSide === 'front' ? hasFront : hasBack;
   const isUploadBusy = isUploadingLogo || isUploadingArtwork;
 
-  const openSignIn = () => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('zobbra_auth_return', `/products/${product.id}/customize?resume=1`);
-    }
-    setShowAuthModal(true);
-  };
-
-  // The single primary action. Rendered in the top bar on desktop and the bottom bar on mobile.
-  const proceedButton = (compact: boolean) => (
+  // The single primary action. Rendered in the header on desktop/tablet and the bottom bar on mobile.
+  const proceedButton = (fullWidth: boolean) => (
     <button
       id="customizer-proceed-btn"
       type="button"
       onClick={handleProceed}
       disabled={proceedDisabled}
-      className={`shrink-0 bg-[#3B6FEB] hover:bg-[#2563EB] disabled:bg-gray-400 text-white rounded-xl font-black shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 ${
-        compact ? 'px-4 py-2.5 text-xs' : 'px-4 py-2 text-xs'
+      className={`shrink-0 bg-[#3B6FEB] hover:bg-[#2F5FD6] disabled:bg-gray-400 text-white rounded-xl font-semibold shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 px-5 text-[15px] ${
+        fullWidth ? 'w-full h-11' : 'h-11'
       }`}
     >
-      {isUploadBusy ? (
+      {isUploadBusy || isPreparingPreview || submitting ? (
         <>
-          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          <span>{compact ? 'Uploading…' : 'Uploading artwork…'}</span>
-        </>
-      ) : isPreparingPreview || submitting ? (
-        <>
-          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          <span>{compact ? 'Preparing…' : 'Preparing design preview…'}</span>
-        </>
-      ) : isCustomer ? (
-        <>
-          <span>{compact ? 'Submit Quote' : 'Submit Quote Request'}</span>
-          <ChevronRight className="w-3.5 h-3.5" />
+          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <span>{isUploadBusy ? 'Uploading artwork…' : 'Preparing design…'}</span>
         </>
       ) : (
-        <span>{compact ? 'Continue →' : 'Proceed & Save Design →'}</span>
+        <>
+          <ShoppingCart className="w-[18px] h-[18px]" strokeWidth={2} />
+          <span>Proceed</span>
+          <ArrowRight className="w-4 h-4" />
+        </>
       )}
     </button>
   );
@@ -774,55 +757,29 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     }
   };
 
-  const orderPanel = (
-    <>
-      <OrderPanel
-        template={template}
-        quantity={quantity}
-        moq={moq}
-        onQuantityChange={handleQuantityChange}
-        variants={variants}
-        onVariantsChange={setVariants}
-        requiresColor={requiresColor}
-        requiresSize={requiresSize}
-        variantSum={variantSum}
-        hasVariantMismatch={hasVariantMismatch}
-        variantsOpen={variantsOpen}
-        onVariantsOpenChange={setVariantsOpen}
-        pricingState={pricingState}
-        printType={resolvedPrintType}
-      />
-      {!isCustomer && (
-        <p className="mt-2 text-center text-[10.5px] text-gray-400">
-          Create a free account to save and track your order.
-        </p>
-      )}
-    </>
-  );
-
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden bg-[#F7F8FA] text-[#111111] font-sans [&_button]:min-h-0 [&_a]:min-h-0">
-      {/* Top bar: back, product, one Front/Back toggle, total + the single primary action (desktop) */}
-      <header className="shrink-0 h-12 z-30 bg-white border-b border-[#E5E7EB] px-2 sm:px-4 flex items-center gap-2 sm:gap-3">
-        <div className="flex-1 min-w-0 flex items-center gap-2">
-          <Link
-            href={`/products/${product.id}`}
-            aria-label="Back to product"
-            className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-black transition-colors shrink-0 px-2 py-1.5 rounded-lg hover:bg-gray-100"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Back to Product</span>
-          </Link>
-          <span className="hidden sm:inline text-gray-300">/</span>
-          <h1 className="min-w-0 truncate text-xs sm:text-sm font-black text-[#111111] uppercase tracking-wide font-heading">
-            {product.name}
-          </h1>
-          <span className="hidden xl:inline-flex shrink-0 text-[9.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EEF2FF] text-[#3B6FEB] border border-[#D9E2FF]">
-            {product.category?.name || template.label || 'Custom product'}
-          </span>
+    <div className="h-[100dvh] flex flex-col overflow-hidden bg-[#EDEEF2] text-[#111111] font-sans [&_button]:min-h-0 [&_a]:min-h-0">
+      {/* Header: back + product, one Front/Back toggle, one Proceed (desktop/tablet) */}
+      <header className="shrink-0 h-14 md:h-16 z-30 bg-white border-b border-[#E5E7EB] px-2 sm:px-4 md:px-6 flex items-center gap-2 sm:gap-4">
+        <Link
+          href={`/products/${product.id}`}
+          aria-label="Back to product"
+          className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-700 hover:text-black hover:bg-gray-100 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Link>
+        <div className="flex-1 min-w-0 leading-tight">
+          <h1 className="truncate text-sm sm:text-base font-semibold text-[#111111] font-heading">{product.name}</h1>
+          <p className="truncate text-xs sm:text-[13px] text-gray-500">Customize your design</p>
         </div>
 
-        <div className="flex items-center gap-0.5 p-0.5 bg-[#F1F3F7] rounded-lg border border-[#E2E8F0] shrink-0">
+        {isAdminOrStaff && (
+          <span className="hidden xl:inline-flex shrink-0 px-2 py-0.5 bg-amber-50 text-amber-800 rounded-md text-[10px] font-bold border border-amber-200">
+            Admin Preview
+          </span>
+        )}
+
+        <div className="shrink-0 flex items-center gap-0.5 p-1 bg-[#F1F3F7] rounded-xl">
           {(['front', 'back'] as const).map((side) => {
             const placed = side === 'front' ? hasFront : hasBack;
             return (
@@ -830,71 +787,55 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                 key={side}
                 id={`btn-switch-${side}`}
                 type="button"
+                aria-pressed={activeSide === side}
                 onClick={() => handleSwitchSide(side)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold uppercase transition-all ${
-                  activeSide === side ? 'bg-white text-[#111111] shadow-2xs' : 'text-gray-500 hover:text-black'
+                className={`relative px-3 sm:px-4 h-8 sm:h-9 rounded-lg text-sm font-medium transition-all ${
+                  activeSide === side ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-500 hover:text-black'
                 }`}
               >
-                {side.toUpperCase()}
-                {placed && <span className="w-1.5 h-1.5 rounded-full bg-[#3B6FEB]" />}
+                {side === 'front' ? 'Front' : 'Back'}
+                {placed && (
+                  <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#3B6FEB]" aria-label="has design" />
+                )}
               </button>
             );
           })}
         </div>
 
-        <div className="hidden lg:flex flex-1 min-w-0 items-center justify-end gap-3">
-          {isAdminOrStaff && (
-            <span className="px-2 py-0.5 bg-amber-50 text-amber-800 rounded-md text-[10px] font-bold border border-amber-200">
-              Admin Preview
-            </span>
-          )}
-          {!isCustomer && (
-            <button
-              type="button"
-              onClick={openSignIn}
-              className="text-xs font-bold text-gray-600 hover:text-black transition-colors px-2 py-1 rounded-lg hover:bg-gray-100"
-            >
-              Sign In
-            </button>
-          )}
-          <div className="text-right leading-tight">
-            <span className="block text-[9px] font-extrabold uppercase tracking-wider text-gray-400">Total</span>
-            <span className="block text-sm font-black font-heading tabular-nums">{totalLabel}</span>
-          </div>
-          {isDesktop && proceedButton(false)}
-        </div>
+        {isDesktop && proceedButton(false)}
       </header>
 
       <div className="flex-1 min-h-0 flex">
-        {/* Desktop tool rail + flyout */}
+        {/* Desktop/tablet tool panel: Colors / Logo / Text tabs, then the active tool's content */}
         {isDesktop && (
-          <aside className="shrink-0 flex min-h-0 bg-white border-r border-[#E5E7EB]">
-            <div className="border-r border-[#F1F3F7]">
-              <ToolRail active={panelOpen ? activeToolTab : null} onSelect={handleToolSelect} hasSelection={!!selectedCanvasObj} orientation="vertical" />
+          <aside className="shrink-0 w-[260px] lg:w-[320px] min-h-0 flex flex-col bg-white border-r border-[#E5E7EB]">
+            <div className="shrink-0 border-b border-[#F1F3F7]">
+              <ToolRail
+                active={activeToolTab}
+                onSelect={handleToolSelect}
+                hasSelection={!!selectedCanvasObj}
+                tools={PANEL_TOOLS}
+                variant="panel"
+              />
             </div>
-            {panelOpen && (
-              <div className="w-[264px] overflow-y-auto p-3">
-                <div className="flex items-center justify-between mb-2.5">
-                  <h2 className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500">
-                    {TOOL_TITLES[activeToolTab]}
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={() => setPanelOpen(false)}
-                    aria-label="Collapse tool panel"
-                    className="p-1 -mr-1 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                {renderToolContent(activeToolTab)}
-              </div>
-            )}
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+              {PANEL_SECTION_TITLES[activeToolTab] && (
+                <h2 className={`${PANEL_HEADING} mb-3`}>{PANEL_SECTION_TITLES[activeToolTab]}</h2>
+              )}
+              {renderToolContent(activeToolTab)}
+
+              {selectedCanvasObj && (
+                <section className="mt-5 pt-4 border-t border-[#F1F3F7]">
+                  <h2 className={`${PANEL_HEADING} mb-3`}>{TOOL_TITLES.layers}</h2>
+                  {renderToolContent('layers')}
+                </section>
+              )}
+            </div>
           </aside>
         )}
 
         {/* Canvas stage */}
-        <div className="relative flex-1 min-w-0 min-h-0 p-2 lg:p-4">
+        <div className="relative flex-1 min-w-0 min-h-0 p-2 md:p-6">
           {(draftRestoredNotice || submitError) && (
             <div className="absolute top-2 inset-x-2 z-20 flex flex-col items-center gap-1.5 pointer-events-none">
               {draftRestoredNotice && (
@@ -915,7 +856,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
             </div>
           )}
 
-          <StageScaler baseWidth={STAGE_WIDTH} baseHeight={STAGE_HEIGHT}>
+          <StageScaler baseWidth={STAGE_WIDTH} baseHeight={STAGE_HEIGHT} maxScale={1.35}>
             <CustomizerCanvas
               ref={canvasRef}
               selectedColor={selectedColor}
@@ -941,60 +882,28 @@ function CustomizeProductContent({ productId }: { productId: string }) {
           </StageScaler>
         </div>
 
-        {/* Desktop order panel */}
-        {isDesktop && (
-          <aside className="shrink-0 w-[320px] min-h-0 overflow-y-auto bg-white border-l border-[#E5E7EB] p-3">
-            {orderPanel}
-          </aside>
-        )}
       </div>
 
-      {/* Mobile: bottom sheets, one sticky price + action bar, compact tool navigation */}
+      {/* Mobile: docked tool sheet, the single Proceed action, compact tool navigation */}
       {!isDesktop && (
         <div className="shrink-0 bg-white">
           <BottomSheet
             open={mobileSheet !== null}
-            title={mobileSheet === 'order' ? 'Order' : mobileSheet ? TOOL_TITLES[mobileSheet] : ''}
+            title={mobileSheet ? TOOL_TITLES[mobileSheet] : ''}
             onClose={() => setMobileSheet(null)}
-            tall={mobileSheet === 'order'}
           >
-            {mobileSheet === 'order' ? orderPanel : mobileSheet ? renderToolContent(mobileSheet) : null}
+            {mobileSheet ? renderToolContent(mobileSheet) : null}
           </BottomSheet>
 
-          <div className="flex items-center justify-between gap-3 px-3 py-2 border-t border-[#E5E7EB]">
-            <div className="min-w-0 leading-tight">
-              <span className="block text-[9px] font-extrabold uppercase tracking-wider text-gray-400">Total estimate</span>
-              <span className="block text-base font-black font-heading tabular-nums truncate">{totalLabel}</span>
-            </div>
-            {!isCustomer && (
-              <button type="button" onClick={openSignIn} className="text-[11px] font-bold text-gray-500 underline underline-offset-2">
-                Sign in
-              </button>
-            )}
-            {proceedButton(true)}
-          </div>
+          <div className="px-3 py-2 border-t border-[#E5E7EB]">{proceedButton(true)}</div>
 
           <div className="border-t border-[#E5E7EB] pb-[env(safe-area-inset-bottom)]">
             <ToolRail
-              active={mobileSheet !== 'order' ? mobileSheet : null}
+              active={mobileSheet}
               onSelect={handleToolSelect}
               hasSelection={!!selectedCanvasObj}
-              orientation="horizontal"
-              trailing={
-                <button
-                  id="tab-tool-order"
-                  type="button"
-                  onClick={() => setMobileSheet((prev) => (prev === 'order' ? null : 'order'))}
-                  aria-pressed={mobileSheet === 'order'}
-                  className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${
-                    mobileSheet === 'order' ? 'bg-[#111111] text-white' : 'text-gray-500 hover:text-black hover:bg-gray-100'
-                  }`}
-                >
-                  <ShoppingBag className="w-[18px] h-[18px]" />
-                  <span>Order</span>
-                  {hasVariantMismatch && <span className="absolute top-1.5 right-4 w-1.5 h-1.5 rounded-full bg-amber-500" />}
-                </button>
-              }
+              tools={MOBILE_TOOLS}
+              variant="bar"
             />
           </div>
         </div>
@@ -1027,7 +936,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-black text-[#111111] truncate">{product?.name}</p>
-                <p className="text-[10px] text-gray-500">{selectedColor} · {quantity} pcs · {resolvedPrintType}</p>
+                <p className="text-[10px] text-gray-500">{selectedColor} · {resolvedPrintType}</p>
               </div>
             </div>
 
