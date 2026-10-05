@@ -47,9 +47,16 @@ function getJwtSecret(): string {
   return secret;
 }
 
+function intEnv(name: string, fallback: number): number {
+  const parsed = parseInt(process.env[name] || '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const jwtSecret = getJwtSecret();
+
 export const config = {
   port: parseInt(process.env.PORT || '5000', 10),
-  jwtSecret: getJwtSecret(),
+  jwtSecret,
   jwtExpiresIn: (process.env.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'],
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME?.trim() || '',
@@ -57,6 +64,33 @@ export const config = {
     apiSecret: getCloudinarySecret(),
   },
   resendApiKey: process.env.RESEND_API_KEY || 're_mock_key',
+  // WhatsApp Cloud API (Meta) — server-side only, never sent to the browser.
+  whatsapp: {
+    accessToken: process.env.WHATSAPP_ACCESS_TOKEN?.trim() || '',
+    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() || '',
+    apiVersion: process.env.WHATSAPP_API_VERSION?.trim() || 'v21.0',
+    otpTemplateName: process.env.WHATSAPP_OTP_TEMPLATE_NAME?.trim() || '',
+    otpTemplateLanguage: process.env.WHATSAPP_OTP_TEMPLATE_LANGUAGE?.trim() || 'en',
+    // Authentication templates with a "copy code" button need the code passed to the button too.
+    otpTemplateHasCopyButton: process.env.WHATSAPP_OTP_TEMPLATE_COPY_BUTTON !== 'false',
+  },
+  otp: {
+    // Separate secret recommended; falls back to a key derived from JWT_SECRET.
+    hashSecret: process.env.OTP_HASH_SECRET?.trim() || `otp:${jwtSecret}`,
+    ttlSeconds: intEnv('OTP_TTL_SECONDS', 300),
+    resendCooldownSeconds: intEnv('OTP_RESEND_COOLDOWN_SECONDS', 30),
+    maxVerifyAttempts: intEnv('OTP_MAX_VERIFY_ATTEMPTS', 5),
+    maxSendsPerWindow: intEnv('OTP_MAX_SENDS_PER_HOUR', 5),
+    sendWindowSeconds: 3600,
+    ipRequestLimit: intEnv('OTP_IP_REQUEST_LIMIT', 10),
+    ipVerifyLimit: intEnv('OTP_IP_VERIFY_LIMIT', 30),
+    ipWindowSeconds: 900,
+    // Dial codes (without +) that may receive OTPs. Defaults to India only.
+    allowedCountryCodes: (process.env.OTP_ALLOWED_COUNTRY_CODES || '91')
+      .split(',')
+      .map((c) => c.trim().replace(/^\+/, ''))
+      .filter(Boolean),
+  },
   company: {
     name: 'Zobra Prints & Merchandise',
     email: 'sales@zobbra.com',

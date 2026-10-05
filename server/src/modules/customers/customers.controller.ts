@@ -95,7 +95,7 @@ export const createCustomer = async (req: AuthRequest, res: Response) => {
         name: contactName,
         email: contactEmail,
         phone: contactPhone,
-        passwordHash: '$2a$10$e846M7G65x/t2E8j7R6W/.1p2.g1L1h4Zz0u11', // Temp hash
+        // No password: customers sign in with WhatsApp OTP (bound via this phone)
         role: 'CUSTOMER',
         companyId: company.id,
       },
@@ -300,5 +300,242 @@ export const bulkDeleteCustomers = async (req: AuthRequest, res: Response) => {
     console.error('Bulk delete error:', error);
     return res.status(500).json({ success: false, message: 'Failed to delete customers' });
   }
+};
+
+// ─── Customer accounts (Customers & Leads) ──────────────────────────────────
+// One row per CUSTOMER user, so OTP-only sign-ups are listed before they have a
+// company or an order. Profile values are read live from User + Company.
+
+/** Profile completion never moves a customer between these — only quotes and orders do. */
+function lifecycleStatus(orders: { status: string }[], quoteCount: number) {
+  if (orders.some((o) => o.status !== 'CANCELLED')) return 'PURCHASED';
+  if (orders.length > 0 || quoteCount > 0) return 'ABANDONED_CHECKOUT';
+  return 'ABANDONED_CART';
+}
+
+const blankToNull = (value: string | null | undefined) => (value && value.trim() ? value : null);
+
+function customerProfile(user: {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  verifiedPhone: string | null;
+  createdAt: Date;
+  company: {
+    id: string;
+    name: string;
+    gstin: string | null;
+    address: string;
+    addressType: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+  } | null;
+}) {
+  return {
+    id: user.id,
+    name: blankToNull(user.name),
+    phone: user.verifiedPhone || blankToNull(user.phone),
+    email: blankToNull(user.email),
+    companyId: user.company?.id ?? null,
+    company: blankToNull(user.company?.name),
+    gstin: blankToNull(user.company?.gstin),
+    address: blankToNull(user.company?.address),
+    addressType: blankToNull(user.company?.addressType),
+    city: blankToNull(user.company?.city),
+    state: blankToNull(user.company?.state),
+    pincode: blankToNull(user.company?.pincode),
+    joinedAt: user.createdAt,
+  };
+}
+
+const PROFILE_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
+  verifiedPhone: true,
+  createdAt: true,
+  company: true,
+} as const;
+
+export const getCustomerAccounts = async (req: AuthRequest, res: Response) => {
+  const { search, page = '1', pageSize = '10' } = req.query;
+
+  const where: any = { role: 'CUSTOMER', isActive: true };
+  if (search) {
+    const contains = { contains: String(search), mode: 'insensitive' };
+    where.OR = [
+      { name: contains },
+      { email: contains },
+      { phone: contains },
+      { verifiedPhone: contains },
+      { company: { name: contains } },
+      { company: { gstin: contains } },
+    ];
+  }
+
+  const pageNum = Math.max(1, parseInt(String(page), 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(String(pageSize), 10) || 10));
+
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      skip: (pageNum - 1) * limitNum,
+      take: limitNum,
+      select: {
+        ...PROFILE_SELECT,
+        orders: { select: { totalAmount: true, createdAt: true, status: true }, orderBy: { createdAt: 'desc' } },
+        _count: { select: { quotes: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  const data = users.map((user) => {
+    const placed = user.orders.filter((o) => o.status !== 'CANCELLED');
+    return {
+      ...customerProfile(user),
+      ordersCount: placed.length,
+      totalValue: placed.reduce((sum, o) => sum + o.totalAmount, 0),
+      lastOrderAt: placed[0]?.createdAt ?? null,
+      status: lifecycleStatus(user.orders, user._count.quotes),
+    };
+  });
+
+  return res.json({
+    success: true,
+    data,
+    pagination: { page: pageNum, pageSize: limitNum, total, totalPages: Math.ceil(total / limitNum) },
+  });
+};
+
+export const getCustomerAccountById = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+
+  const user = await prisma.user.findFirst({
+    where: { id, role: 'CUSTOMER' },
+    select: {
+      ...PROFILE_SELECT,
+      orders: {
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          paymentStatus: true,
+          totalAmount: true,
+          createdAt: true,
+          deliveryAddress: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      },
+      quotes: {
+        select: {
+          id: true,
+          quoteNumber: true,
+          status: true,
+          totalAmount: true,
+          createdAt: true,
+          artworkUrl: true,
+          previewFrontUrl: true,
+          previewBackUrl: true,
+          items: { select: { product: { select: { name: true } } }, take: 1 },
+          order: { select: { orderNumber: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      },
+      inquiries: {
+        select: { id: true, inquiryNumber: true, productInterest: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+      },
+    },
+  });
+
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'Customer not found' });
+  }
+
+  const systemActivities = await prisma.systemActivity.findMany({
+    where: { OR: [{ userId: id }, { entityType: 'User', entityId: id }] },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  });
+
+  const activity = [
+    {
+      type: 'ACCOUNT',
+      message: user.verifiedPhone ? 'Account created with WhatsApp OTP' : 'Customer account created',
+      at: user.createdAt,
+    },
+    ...systemActivities.map((a) => ({ type: a.action, message: a.message, at: a.createdAt })),
+    ...user.inquiries.map((i) => ({
+      type: 'INQUIRY',
+      message: `Inquiry ${i.inquiryNumber} submitted${i.productInterest ? ` (${i.productInterest})` : ''}`,
+      at: i.createdAt,
+    })),
+    ...user.quotes.map((q) => ({ type: 'QUOTE', message: `Quote ${q.quoteNumber} created`, at: q.createdAt })),
+    ...user.orders.map((o) => ({ type: 'ORDER', message: `Order ${o.orderNumber} placed`, at: o.createdAt })),
+  ]
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, 50);
+
+  const designHistory = user.quotes
+    .filter((q) => q.previewFrontUrl || q.previewBackUrl || q.artworkUrl)
+    .map((q) => ({
+      quoteId: q.id,
+      quoteNumber: q.quoteNumber,
+      orderNumber: q.order?.orderNumber ?? null,
+      product: q.items[0]?.product.name ?? null,
+      status: q.status,
+      createdAt: q.createdAt,
+      artworkUrl: q.artworkUrl,
+      previewFrontUrl: q.previewFrontUrl,
+      previewBackUrl: q.previewBackUrl,
+    }));
+
+  const placed = user.orders.filter((o) => o.status !== 'CANCELLED');
+
+  return res.json({
+    success: true,
+    customer: {
+      ...customerProfile(user),
+      notes: user.company?.notes ?? null,
+      ordersCount: placed.length,
+      totalValue: placed.reduce((sum, o) => sum + o.totalAmount, 0),
+      status: lifecycleStatus(user.orders, user.quotes.length),
+      orders: user.orders,
+      designHistory,
+      activity,
+    },
+  });
+};
+
+export const getCustomerAccountStats = async (_req: AuthRequest, res: Response) => {
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const where = { role: 'CUSTOMER' as const, isActive: true };
+  const [totalCustomers, newThisMonth, withOrders] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.count({ where: { ...where, createdAt: { gte: startOfMonth } } }),
+    prisma.user.findMany({
+      where: { ...where, orders: { some: { status: { not: 'CANCELLED' } } } },
+      select: { orders: { where: { status: { not: 'CANCELLED' } }, select: { totalAmount: true } } },
+    }),
+  ]);
+
+  return res.json({
+    success: true,
+    stats: {
+      totalCustomers,
+      activeCustomers: withOrders.length,
+      newThisMonth,
+      repeatCustomers: withOrders.filter((u) => u.orders.length > 1).length,
+      topCustomerCount: withOrders.filter((u) => u.orders.reduce((sum, o) => sum + o.totalAmount, 0) > 50000).length,
+    },
+  });
 };
 

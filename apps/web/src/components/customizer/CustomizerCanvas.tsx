@@ -2,9 +2,19 @@
 
 import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { Trash2 } from 'lucide-react';
-import { GarmentBackdrop, getColorHex, isLightColor } from './GarmentBackdrop';
+import { GarmentBackdrop, getBackdropImage, getColorHex, isLightColor } from './GarmentBackdrop';
 import { getCustomizerTemplate, CustomizerTemplate, PrintableAreaConfig } from '../../lib/customizerTemplates';
 import { uploadDataUrlToCloudinary, uploadToCloudinary } from '@/lib/upload';
+import {
+  STAGE_CANVAS_HEIGHT,
+  STAGE_CANVAS_WIDTH,
+  composeOverPhoto,
+  getCustomizerSideImage,
+  getCustomizerViews,
+  getSideRecolor,
+} from '@/lib/customizerViews';
+import { renderRecolored } from '@/lib/photoRecolor';
+import { getProductColors, getProductCollarColors } from '@/lib/productConfig';
 
 export interface CustomizerCanvasRef {
   addText: (text: string, options?: { fontFamily?: string; fontSize?: number; fill?: string; fontWeight?: string; fontStyle?: string; textAlign?: string }) => void;
@@ -47,6 +57,8 @@ export interface CustomizerCanvasProps {
   activeSide: 'front' | 'back';
   template?: CustomizerTemplate;
   product?: any;
+  /** False when the admin turned the back off: the back can't be opened and never holds a design. */
+  backEnabled?: boolean;
   onSideChange?: (side: 'front' | 'back') => void;
   onDesignChange?: (info: { hasFront: boolean; hasBack: boolean; activeSide: 'front' | 'back' }) => void;
   onSelectionChange?: (selectedObj: any) => void;
@@ -64,9 +76,8 @@ const EMPTY_CANVAS_JSON = JSON.stringify({ version: '5.3.0', objects: [] });
  * not just the legacy printable box. Stored object coordinates are unchanged - they stay relative to the
  * legacy box origin - and a viewport translation places that origin exactly where the box used to render.
  * Existing drafts/quotes therefore load and render as before with no migration.
+ * (Stage size: STAGE_CANVAS_WIDTH x STAGE_CANVAS_HEIGHT from lib/customizerViews.)
  */
-const STAGE_CANVAS_WIDTH = 538;
-const STAGE_CANVAS_HEIGHT = 624;
 
 /** Where the legacy box's top-left sits inside the stage canvas (matches the old centered overlay). */
 function legacyBoxOrigin(area: PrintableAreaConfig): { x: number; y: number } {
@@ -204,6 +215,7 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   activeSide,
   template,
   product,
+  backEnabled = true,
   onSideChange,
   onDesignChange,
   onSelectionChange,
@@ -220,6 +232,8 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     : resolvedTemplate.frontPrintableArea;
   // Guide line/label contrast against the product body color.
   const guideOnLight = isLightColor(getColorHex(selectedColor));
+  // A product photo has no known body colour, so its guide is white with a dark outline to read on any photo.
+  const guideOverPhoto = Boolean(getBackdropImage(product, activeSide));
 
   const [fabricInstance, setFabricInstance] = useState<any>(null);
   const [canvas, setCanvas] = useState<any>(null);
@@ -232,7 +246,10 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   const canvasElRef = useRef<HTMLCanvasElement>(null);
   // Guarantee clean empty canvas state by default - zero pre-populated elements
   const frontJsonRef = useRef<string>(initialFrontJson || EMPTY_CANVAS_JSON);
-  const backJsonRef = useRef<string>(initialBackJson || EMPTY_CANVAS_JSON);
+  // A disabled back never carries a design, even one left in an older draft.
+  const backJsonRef = useRef<string>((backEnabled && initialBackJson) || EMPTY_CANVAS_JSON);
+  const backEnabledRef = useRef<boolean>(backEnabled);
+  backEnabledRef.current = backEnabled;
   // Track the original uploaded artwork Cloudinary URL (first user image upload)
   const originalArtworkUrlRef = useRef<string | null>(initialArtworkUrl || null);
 
@@ -400,6 +417,7 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   };
 
   const switchSide = (newSide: 'front' | 'back') => {
+    if (newSide === 'back' && !backEnabledRef.current) return;
     if (!canvas) {
       // Fabric not initialised yet: nothing to save or load, just track the requested side.
       if (newSide !== activeSideRef.current) {
@@ -474,6 +492,12 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       flushPendingSide();
     }
   };
+
+  useEffect(() => {
+    if (activeSide !== activeSideRef.current) {
+      switchSide(activeSide);
+    }
+  }, [activeSide]);
 
   const sideArea = () =>
     activeSideRef.current === 'back' && resolvedTemplate.backPrintableArea
@@ -796,10 +820,12 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       setHasCurrentObjects(false);
     },
     getCanvasState: () => {
-      if (canvas) {
+      // While a side switch is loading, the canvas is empty or partly rehydrated: the stored JSON
+      // is the truth then, so it must not be overwritten (same guard as switchSide/saveCurrentState).
+      if (canvas && !isSwitchingSideRef.current) {
         const cdnUrl = originalArtworkUrlRef.current;
         const curJson = sanitizeCanvasJson(JSON.stringify(canvas.toJSON()), cdnUrl);
-        if (activeSide === 'front') frontJsonRef.current = curJson;
+        if (activeSideRef.current === 'front') frontJsonRef.current = curJson;
         else backJsonRef.current = curJson;
       }
       const cdnUrl = originalArtworkUrlRef.current;
@@ -814,9 +840,9 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       if (artworkUrl) originalArtworkUrlRef.current = artworkUrl;
       const cdnUrl = originalArtworkUrlRef.current;
       if (frontJson) frontJsonRef.current = sanitizeCanvasJson(frontJson, cdnUrl);
-      if (backJson) backJsonRef.current = sanitizeCanvasJson(backJson, cdnUrl);
+      if (backJson && backEnabledRef.current) backJsonRef.current = sanitizeCanvasJson(backJson, cdnUrl);
       if (canvas) {
-        const target = activeSide === 'front' ? frontJsonRef.current : backJsonRef.current;
+        const target = activeSideRef.current === 'front' ? frontJsonRef.current : backJsonRef.current;
         if (target && checkHasObjects(target)) {
           const parsed = normalizeCanvasJsonForCORS(target, cdnUrl);
           canvas.loadFromJSON(parsed, () => {
@@ -845,6 +871,11 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         }
       }
 
+      // A side switch still loading leaves the canvas partly rehydrated: let it finish first.
+      for (let i = 0; i < 100 && isSwitchingSideRef.current; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+
       // Save active side ONLY if activeCanvas has objects
       const currentSide = activeSideRef.current;
       const currentJson = JSON.stringify(activeCanvas.toJSON());
@@ -855,18 +886,66 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         else backJsonRef.current = sanitized;
       }
 
+      if (!backEnabledRef.current) backJsonRef.current = EMPTY_CANVAS_JSON;
       frontJsonRef.current = sanitizeCanvasJson(frontJsonRef.current, cdnUrl);
       backJsonRef.current = sanitizeCanvasJson(backJsonRef.current, cdnUrl);
 
-      const renderSideToDataUrl = async (side: 'front' | 'back'): Promise<string> => {
+      // Products with admin-chosen view photos or reusable templates get a composite preview (photo/mockup + design); the
+      // design-only crop is kept as the fallback and stays the preview for older products without photos or templates.
+      const views = getCustomizerViews(product);
+      const hasBackdrop = Boolean(views || getCustomizerSideImage(product, 'front'));
+      const exportLayers = (area: PrintableAreaConfig) => ({
+        crop: safeExportCanvas(activeCanvas, { format: 'png', multiplier: 2, ...previewCrop(activeCanvas, area) }),
+        full: hasBackdrop
+          ? safeExportCanvas(activeCanvas, { format: 'png', multiplier: 2, left: 0, top: 0, width: STAGE_CANVAS_WIDTH, height: STAGE_CANVAS_HEIGHT })
+          : '',
+      });
+      type SideLayers = ReturnType<typeof exportLayers>;
+      const NO_LAYERS: SideLayers = { crop: '', full: '' };
+
+      const productColors = getProductColors(product);
+      const productCollarColors = getProductCollarColors(product);
+      const bodyHex =
+        productColors.find((c) => c.name.toLowerCase() === (selectedColor || '').toLowerCase())?.hex ||
+        getColorHex(selectedColor);
+      const trimHex =
+        collarColor
+          ? productCollarColors.find((c) => c.name.toLowerCase() === collarColor.toLowerCase())?.hex ||
+            getColorHex(collarColor)
+          : bodyHex;
+
+      const composeSide = async (side: 'front' | 'back', layers: SideLayers): Promise<string> => {
+        const photo = getCustomizerSideImage(product, side);
+        if (!layers.crop || !layers.full || !photo) return layers.crop;
+        // The same recolouring the canvas background shows, so the preview matches the screen.
+        const recolor = getSideRecolor(product, side);
+        let photoSource: string | HTMLCanvasElement = photo;
+        if (recolor) {
+          try {
+            photoSource = await renderRecolored(recolor, bodyHex, trimHex);
+          } catch (err) {
+            console.warn(`[CustomizerCanvas] ${side} recolouring failed; using the plain photo.`, err);
+          }
+        }
+        try {
+          return await composeOverPhoto(photoSource, layers.full);
+        } catch (err) {
+          console.warn(`[CustomizerCanvas] ${side} photo composite failed; using the design-only preview.`, err);
+          return layers.crop;
+        }
+      };
+
+      const renderSideToDataUrl = async (side: 'front' | 'back'): Promise<SideLayers> => {
         // If requesting the currently active side, render directly from activeCanvas
         if (side === currentSide) {
-          return safeExportCanvas(activeCanvas, { format: 'png', multiplier: 2, ...previewCrop(activeCanvas, currentArea) });
+          return checkHasObjects(side === 'front' ? frontJsonRef.current : backJsonRef.current)
+            ? exportLayers(currentArea)
+            : NO_LAYERS;
         }
 
         const targetJson = side === 'front' ? frontJsonRef.current : backJsonRef.current;
         if (!targetJson || !checkHasObjects(targetJson)) {
-          return '';
+          return NO_LAYERS;
         }
 
         const targetArea = side === 'back' && resolvedTemplate.backPrintableArea
@@ -879,9 +958,9 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         return new Promise((resolve, reject) => {
           isSwitchingSideRef.current = true;
           activeCanvas.loadFromJSON(parsed, () => {
-            let data = '';
+            let data: SideLayers = NO_LAYERS;
             try {
-              data = safeExportCanvas(activeCanvas, { format: 'png', multiplier: 2, ...previewCrop(activeCanvas, targetArea) });
+              data = exportLayers(targetArea);
             } catch (exportErr) {
               console.error('[CustomizerCanvas] Error exporting target side:', exportErr);
               applyStageGeometry(activeCanvas, currentArea);
@@ -912,8 +991,10 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         });
       };
 
-      const frontDataUrl = await renderSideToDataUrl('front');
-      const backDataUrl = await renderSideToDataUrl('back');
+      const frontLayers = await renderSideToDataUrl('front');
+      const backLayers = await renderSideToDataUrl('back');
+      const frontDataUrl = await composeSide('front', frontLayers);
+      const backDataUrl = await composeSide('back', backLayers);
 
       const hasFront = checkHasObjects(frontJsonRef.current);
       const hasBack = checkHasObjects(backJsonRef.current);
@@ -967,7 +1048,10 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
   return (
     // The 1px transparent border is load-bearing: it keeps the padding box at exactly
     // STAGE_CANVAS_WIDTH x STAGE_CANVAS_HEIGHT so the guide and the Fabric canvas line up.
-    <div className="relative w-full max-w-[540px] aspect-[500/580] border border-transparent p-2 flex items-center justify-center overflow-hidden group select-none">
+    <div
+      data-cy="customizer-canvas-container"
+      className="relative w-full max-w-[540px] aspect-[500/580] border border-transparent p-2 flex items-center justify-center overflow-hidden group select-none rounded-3xl bg-[radial-gradient(ellipse_at_50%_35%,#FFFFFF_0%,#F3F6FC_55%,#E3E9F8_100%)] shadow-[0_24px_60px_-28px_rgba(30,58,138,0.35)] ring-1 ring-white/70"
+    >
       {/* Dynamic Product Silhouette SVG or Media Backdrop */}
       <GarmentBackdrop
         color={selectedColor}
@@ -978,7 +1062,7 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         product={product}
       />
 
-      <span className="absolute top-2 left-2 z-20 pointer-events-none rounded-md bg-gray-500/80 px-2 py-0.5 text-[11px] font-semibold text-white">
+      <span className="absolute top-3 inset-x-0 mx-auto w-max z-20 pointer-events-none rounded-md bg-[#94A3B8] px-2.5 py-0.5 text-[11px] font-medium lowercase text-white shadow-xs">
         {activeSide}
       </span>
 
@@ -990,7 +1074,11 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         id="customizer-design-guide"
         aria-hidden="true"
         className={`absolute z-[5] pointer-events-none flex flex-col items-center justify-center text-center border-[1.5px] border-dashed ${
-          guideOnLight ? 'border-black/25 text-black/45' : 'border-white/70 text-white/85'
+          guideOverPhoto
+            ? 'border-white/90 text-white shadow-[0_0_0_1px_rgba(0,0,0,0.5)] [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]'
+            : guideOnLight
+              ? 'border-black/25 text-black/45'
+              : 'border-white/70 text-white/85'
         }`}
         style={{
           top: currentArea.top,
@@ -1000,11 +1088,22 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         }}
       >
         {!hasCurrentObjects && (
-          <p className="text-[13px] font-medium leading-snug">
-            Design area
-            <br />
-            use tools to add
-          </p>
+          <div className="px-3">
+            <p className="text-[13px] font-medium leading-snug">
+              {currentArea.guideText || (
+                <>
+                  Design area
+                  <br />
+                  use tools to add
+                </>
+              )}
+            </p>
+            {currentArea.subGuideText && (
+              <p className="text-[11px] opacity-80 mt-0.5 leading-tight">
+                {currentArea.subGuideText}
+              </p>
+            )}
+          </div>
         )}
       </div>
 

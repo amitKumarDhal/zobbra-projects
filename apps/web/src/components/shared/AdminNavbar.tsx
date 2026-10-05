@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { clearSession } from '@/lib/otpAuth';
 import {
   Search,
   Bell,
@@ -135,7 +136,7 @@ export function AdminNavbar({ onMenuToggle }: AdminNavbarProps) {
                   <Settings className="w-4 h-4" /> Account Settings
                 </Link>
                 <div className="my-1 border-t border-[#E5E7EB]" />
-                <Link href="/login" className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 font-medium">
+                <Link href="/login" onClick={clearSession} className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 font-medium">
                   <LogOut className="w-4 h-4" /> Sign Out
                 </Link>
               </div>

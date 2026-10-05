@@ -1,17 +1,6 @@
 describe('ZOBBRA Customer Portal — Canonical Design System Validation', () => {
   beforeEach(() => {
-    cy.login('customer@zobra.test', 'customer123');
-  });
-
-  it('1. Verifies Customer Dashboard layout, StatCards, and typography', () => {
-    cy.visit('/customer', { failOnStatusCode: false });
-    cy.url().should('include', '/customer');
-    cy.contains('CLIENT PORTAL').should('be.visible');
-    cy.contains('Active Quotes').should('be.visible');
-    cy.contains('Approved Quotes').should('be.visible');
-    cy.contains('Total Approved Spend').should('be.visible');
-    cy.get('[data-cy="create-quote-cta"]').should('be.visible');
-    cy.get('[data-cy="browse-products-cta"]').should('be.visible');
+    cy.loginAsCustomer();
   });
 
   it('2. Verifies Merchandise Catalog, filter toolbar, and product cards', () => {
@@ -52,32 +41,6 @@ describe('ZOBBRA Customer Portal — Canonical Design System Validation', () => 
     cy.contains('Shipment Tracking').should('be.visible');
     cy.contains('EXPRESS SHIPPING').should('be.visible');
     cy.contains('AWB #BLUEDART-9922').should('be.visible');
-  });
-
-  it('7. Verifies Tax Invoices page and GST records', () => {
-    cy.visit('/customer/invoices');
-    cy.url().should('include', '/customer/invoices');
-    cy.contains('Tax Invoices').should('be.visible');
-    cy.contains('GST BILLING').should('be.visible');
-    cy.contains('INV-2026-088').should('be.visible');
-  });
-
-  it('8. Verifies Notification Center tabs and cards', () => {
-    cy.visit('/customer/notifications');
-    cy.url().should('include', '/customer/notifications');
-    cy.contains('Notification Center').should('be.visible');
-    cy.contains('NOTIFICATIONS').should('be.visible');
-  });
-
-  it('9. Verifies Customer Support helpdesk & tickets list', () => {
-    cy.visit('/customer/support');
-    cy.url().should('include', '/customer/support');
-    cy.contains('Customer Support').should('be.visible');
-    cy.contains('Dedicated Account Manager').should('be.visible');
-    cy.contains('Priority Email Desk').should('be.visible');
-    cy.contains('My Support Tickets').should('be.visible');
-    cy.contains('TCK-551').should('be.visible');
-    cy.contains('Change Print Placement for Order #ORD-5001').should('be.visible');
   });
 
   it('10. Verifies Company Profile & Settings form', () => {

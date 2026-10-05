@@ -59,7 +59,7 @@ describe('Order Management Module', () => {
   });
 
   it('should display customer orders correctly when logged in as customer', () => {
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.visit('/customer/orders');
     
     cy.get('h1').contains('My Orders').should('be.visible');

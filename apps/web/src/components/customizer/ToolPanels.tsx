@@ -20,6 +20,7 @@ import {
   AlignVerticalJustifyCenter,
 } from 'lucide-react';
 import type { CustomizerTemplate } from '@/lib/customizerTemplates';
+import { isLightColor } from '@/lib/colors';
 import { BODY_COLORS, COLLAR_RIB_COLORS, FONTS, TEXT_COLORS } from './customizerOptions';
 
 export type ToolKey = 'logo' | 'text' | 'colors' | 'layers';
@@ -59,7 +60,7 @@ export function ToolRail({ active, onSelect, hasSelection, tools, variant }: Too
   const items = tools ? TOOL_ITEMS.filter((t) => tools.includes(t.key)) : TOOL_ITEMS;
   const panel = variant === 'panel';
   return (
-    <nav aria-label="Design tools" className={`flex items-stretch gap-1 ${panel ? 'p-2.5' : 'px-2 py-1.5'}`}>
+    <nav aria-label="Design tools" className={`flex items-stretch gap-1 ${panel ? 'p-2' : 'px-2 py-1.5'}`}>
       {items.map(({ key, id, label, Icon }) => {
         const isActive = active === key;
         return (
@@ -70,13 +71,17 @@ export function ToolRail({ active, onSelect, hasSelection, tools, variant }: Too
             onClick={() => onSelect(key)}
             aria-pressed={isActive}
             className={`relative flex flex-1 flex-col items-center justify-center rounded-xl font-medium transition-colors ${
-              panel ? 'gap-1 py-2.5 text-sm' : 'gap-0.5 py-1.5 text-[11px]'
-            } ${isActive ? 'bg-[#EEF2FF] text-[#3B6FEB]' : 'text-gray-600 hover:text-[#111111] hover:bg-gray-50'}`}
+              panel ? 'gap-1 py-2 text-xs' : 'gap-0.5 py-1.5 text-[11px]'
+            } ${
+              isActive
+                ? 'bg-[#FFF1F2] text-[#E11D48] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.25)]'
+                : 'text-gray-600 hover:text-[#111111] hover:bg-gray-50'
+            }`}
           >
-            <Icon className={panel ? 'w-5 h-5' : 'w-[18px] h-[18px]'} strokeWidth={1.75} />
-            <span>{label}</span>
+            <Icon className={panel ? 'w-[18px] h-[18px]' : 'w-4 h-4'} strokeWidth={isActive ? 2 : 1.75} />
+            <span className={isActive ? 'font-bold' : 'font-medium'}>{label}</span>
             {key === 'layers' && hasSelection && (
-              <span className="absolute top-1.5 right-3 w-1.5 h-1.5 rounded-full bg-[#3B6FEB]" />
+              <span className="absolute top-1.5 right-3 w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
             )}
           </button>
         );
@@ -275,23 +280,28 @@ interface SwatchGridProps {
 
 function SwatchGrid({ colors, selected, onPick }: SwatchGridProps) {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(36px,1fr))] gap-3 justify-items-center">
+    <div className="grid grid-cols-5 gap-2.5 justify-items-center">
       {colors.map((col) => {
         const isSelected = selected.toLowerCase() === col.name.toLowerCase();
+        const light = isLightColor(col.hex);
         return (
           <button
             key={col.name}
             type="button"
             title={col.name}
+            aria-label={col.name}
             aria-pressed={isSelected}
             onClick={() => onPick(col.name)}
-            className={`w-9 h-9 shrink-0 rounded-full transition-all duration-150 ${
+            className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-all duration-150 cursor-pointer ${
               isSelected
-                ? 'ring-[3px] ring-[#3B6FEB] ring-offset-2'
-                : 'border-[3px] border-white shadow-[0_0_0_1px_rgba(0,0,0,0.12)] hover:scale-105'
+                ? 'ring-2 ring-[#E11D48] ring-offset-2 scale-105 shadow-sm'
+                : 'border border-black/10 hover:scale-105 shadow-2xs'
             }`}
             style={{ backgroundColor: col.hex }}
           >
+            {isSelected && (
+              <Check className={`w-4 h-4 ${light ? 'text-black' : 'text-white'}`} strokeWidth={2.5} />
+            )}
             <span className="sr-only">{col.name}</span>
           </button>
         );
@@ -302,30 +312,156 @@ function SwatchGrid({ colors, selected, onPick }: SwatchGridProps) {
 
 interface ColorPanelProps {
   template: CustomizerTemplate;
+  /** The colours configured for this product. The generic palettes are only a fallback for products with none. */
+  productColors?: Array<{ name: string; hex: string }>;
+  productCollarColors?: Array<{ name: string; hex: string }>;
   selectedColor: string;
   collarColor: string;
+  tapingColor?: string;
   onBodyColor: (name: string) => void;
   onCollarColor: (name: string) => void;
+  onTapingColor?: (name: string) => void;
+  /** True when the canvas shows the product photo, whose colour cannot change with the swatches. */
+  photoPreview?: boolean;
+  /** True when the photo is recoloured through masks, so the swatches do change the preview. */
+  photoRecolor?: boolean;
+  /** Explicit switch to display or hide collar/rib color options based on Phase 3 product permissions */
+  showTrimColor?: boolean;
+  /** Explicit switch to display or hide taping color options based on Phase 3 product permissions */
+  showTapingColor?: boolean;
+  tapingLabel?: string;
+  /** Branding method (Print vs Embroidery) when enabled for product */
+  brandingMethod?: 'Print' | 'Embroidery';
+  onBrandingMethodChange?: (method: 'Print' | 'Embroidery') => void;
+  showBrandingMethod?: boolean;
 }
 
-export function ColorPanel({ template, selectedColor, collarColor, onBodyColor, onCollarColor }: ColorPanelProps) {
+export function ColorPanel({
+  template,
+  productColors,
+  productCollarColors,
+  selectedColor,
+  collarColor,
+  tapingColor,
+  onBodyColor,
+  onCollarColor,
+  onTapingColor,
+  photoPreview,
+  photoRecolor,
+  showTrimColor,
+  showTapingColor,
+  tapingLabel,
+  brandingMethod = 'Print',
+  onBrandingMethodChange,
+  showBrandingMethod,
+}: ColorPanelProps) {
+  const hasProductColors = !!productColors && productColors.length > 0;
+  const bodyColors = hasProductColors ? productColors : BODY_COLORS;
+  const trimColors =
+    productCollarColors && productCollarColors.length > 0
+      ? productCollarColors
+      : hasProductColors
+      ? productColors
+      : COLLAR_RIB_COLORS;
+  const canShowTrim = showTrimColor !== undefined ? showTrimColor : Boolean(template.secondaryColorLabel);
+
   return (
-    <div className="space-y-5">
-      <section className="space-y-3">
-        <div className="flex items-baseline justify-between gap-2">
-          <h3 className={PANEL_HEADING}>{template.colorLabel}</h3>
-          <span className="truncate text-xs text-gray-400">{selectedColor}</span>
+    <div className="space-y-4">
+      {photoPreview && !photoRecolor && (
+        <p
+          data-cy="customizer-photo-colour-note"
+          className="rounded-xl border border-[#D9E2FF] bg-gradient-to-r from-[#F3F6FF] to-[#EAF0FF] px-3 py-2 text-[11px] leading-snug text-[#1E3A8A]"
+        >
+          The preview shows the product photo. The colour you pick here is saved with your order.
+        </p>
+      )}
+
+      {/* BRANDING METHOD SELECTOR - Only shown when product allows embroidery */}
+      {showBrandingMethod && (
+        <section className="space-y-2 pb-3 border-b border-gray-100" data-cy="branding-method-container">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              Branding Method
+            </h3>
+            <span className="text-xs font-bold text-[#3B6FEB]">
+              {brandingMethod === 'Embroidery' ? 'Embroidery' : 'Standard Print'}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 bg-[#F1F3F7] p-1 rounded-xl" data-cy="branding-method-selector">
+            <button
+              type="button"
+              data-cy="branding-method-print"
+              aria-pressed={brandingMethod === 'Print'}
+              onClick={() => onBrandingMethodChange?.('Print')}
+              className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                brandingMethod === 'Print'
+                  ? 'bg-white text-[#111111] shadow-2xs'
+                  : 'text-gray-500 hover:text-[#111111]'
+              }`}
+            >
+              Print (DTF / Screen)
+            </button>
+            <button
+              type="button"
+              data-cy="branding-method-embroidery"
+              aria-pressed={brandingMethod === 'Embroidery'}
+              onClick={() => onBrandingMethodChange?.('Embroidery')}
+              className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                brandingMethod === 'Embroidery'
+                  ? 'bg-white text-[#111111] shadow-2xs'
+                  : 'text-gray-500 hover:text-[#111111]'
+              }`}
+            >
+              High-Density Embroidery
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* BODY COLOR */}
+      <section className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+            {template.colorLabel || 'BODY COLOR'}
+          </h3>
+          <span className="text-xs font-semibold text-gray-700">{selectedColor}</span>
         </div>
-        <SwatchGrid colors={BODY_COLORS} selected={selectedColor} onPick={onBodyColor} />
+        <div data-cy="customizer-body-colors">
+          <SwatchGrid colors={bodyColors} selected={selectedColor} onPick={onBodyColor} />
+        </div>
       </section>
 
-      {template.secondaryColorLabel && (
-        <section className="space-y-3 pt-4 border-t border-[#F1F3F7]">
-          <div className="flex items-baseline justify-between gap-2">
-            <h3 className={PANEL_HEADING}>{template.secondaryColorLabel}</h3>
-            <span className="truncate text-xs text-gray-400">{collarColor}</span>
+      {/* COLLAR & RIB COLOR - only shown when template/product supports secondary color */}
+      {canShowTrim && (
+        <section className="space-y-2 pt-3 border-t border-gray-100">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              {template.secondaryColorLabel || 'COLLAR & RIB COLOR'}
+            </h3>
+            <span className="text-xs font-semibold text-gray-700">{collarColor}</span>
           </div>
-          <SwatchGrid colors={COLLAR_RIB_COLORS} selected={collarColor} onPick={onCollarColor} />
+          <div data-cy="customizer-collar-colors">
+            <SwatchGrid colors={trimColors} selected={collarColor} onPick={onCollarColor} />
+          </div>
+        </section>
+      )}
+
+      {/* TAPING COLOR - only shown when template & product support taping customization */}
+      {showTapingColor && (
+        <section className="space-y-2 pt-3 border-t border-gray-100" data-cy="taping-color-section">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              {tapingLabel || 'INNER NECK TAPING COLOR'}
+            </h3>
+            <span className="text-xs font-semibold text-gray-700">{tapingColor || selectedColor}</span>
+          </div>
+          <div data-cy="customizer-taping-colors">
+            <SwatchGrid
+              colors={bodyColors}
+              selected={tapingColor || selectedColor}
+              onPick={onTapingColor || (() => {})}
+            />
+          </div>
         </section>
       )}
     </div>

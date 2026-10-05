@@ -1,10 +1,12 @@
 import { Response } from 'express';
 import { prisma } from '../../config/index.js';
-import { AuthRequest } from '../../middleware/auth.js';
+import { AuthRequest, customerOwnershipFilter, isCustomerOwner } from '../../middleware/auth.js';
 import { generateQuotePDFBuffer } from '../../utils/pdfGenerator.js';
 import { sendQuoteEmail } from '../../utils/email.js';
 import { buildWhatsAppClickUrl, generateWhatsAppMessage, WhatsAppTemplateKey } from '../../utils/whatsappTemplates.js';
-import { calculateServerPricing } from './quote-pricing.js';
+import { calculateServerPricing, resolveAddonAmount } from './quote-pricing.js';
+import { getMinAllowedQty } from '../products/product-config.js';
+import { getCustomizerTemplateById, getTemplateCapabilities } from '../products/customizer-templates.js';
 
 // Re-export so existing imports from this module (including tests) still work
 export { calculateServerPricing } from './quote-pricing.js';
@@ -13,6 +15,17 @@ export { calculateServerPricing } from './quote-pricing.js';
 // NOTE: calculateServerPricing is now imported from ./quote-pricing.ts
 //       and re-exported above. Do not duplicate the formula here.
 // -----------------------------------------------------------------------
+
+/** New quotes may only be raised against products that are live in the catalog. */
+const ORDERABLE_PRODUCT = { isActive: true, NOT: { slug: { contains: '-deleted-' } } };
+
+/** The free gift a product gives at this quantity, if any. */
+const resolveFreeGiftTitle = (product: { freeGift?: unknown }, quantity: number): string | null => {
+  const gift = product.freeGift as { enabled?: boolean; title?: string; minQuantity?: number | null } | null;
+  if (!gift?.enabled || !gift.title) return null;
+  if (gift.minQuantity && quantity < gift.minQuantity) return null;
+  return gift.title;
+};
 
 // Allowed status transitions state machine
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
@@ -46,10 +59,7 @@ export const getQuotes = async (req: AuthRequest, res: Response) => {
     // If the customer search overlaps, ensure it stays within their bounds
     where.AND = [
       {
-        OR: [
-          { customerId: req.user.id },
-          { companyId: req.user.companyId || undefined },
-        ]
+        OR: customerOwnershipFilter(req.user)
       }
     ];
   }
@@ -105,10 +115,7 @@ export const getQuoteStats = async (req: AuthRequest, res: Response) => {
   // Base where clause for role security
   const baseWhere: any = {};
   if (req.user?.role === 'CUSTOMER') {
-    baseWhere.OR = [
-      { customerId: req.user.id },
-      { companyId: req.user.companyId || undefined },
-    ];
+    baseWhere.OR = customerOwnershipFilter(req.user);
   }
 
   const [total, sent, draft, approved, expired, rejected] = await Promise.all([
@@ -157,7 +164,7 @@ export const getQuoteById = async (req: AuthRequest, res: Response) => {
   }
 
   // Ownership security check for CUSTOMER role
-  if (req.user?.role === 'CUSTOMER' && quote.customerId !== req.user.id && quote.companyId !== req.user.companyId) {
+  if (req.user?.role === 'CUSTOMER' && !isCustomerOwner(req.user, quote)) {
     return res.status(403).json({ success: false, message: 'Unauthorized access to quote' });
   }
 
@@ -175,6 +182,139 @@ export const getQuoteById = async (req: AuthRequest, res: Response) => {
     },
   });
 };
+
+/**
+ * Next quote number for this year. The row count alone repeats an existing (unique) number once
+ * any quote has been deleted, so the sequence continues from the highest number already issued.
+ */
+async function nextQuoteNumber(): Promise<string> {
+  const prefix = `ZQB-QT-${new Date().getFullYear()}-`;
+  const [count, recent] = await Promise.all([
+    prisma.quote.count(),
+    prisma.quote.findMany({
+      where: { quoteNumber: { startsWith: prefix } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: { quoteNumber: true },
+    }),
+  ]);
+  const highest = recent.reduce((max, q) => {
+    const seq = parseInt(q.quoteNumber.slice(prefix.length), 10);
+    return Number.isFinite(seq) ? Math.max(max, seq) : max;
+  }, 0);
+  return `${prefix}${String(Math.max(count + 1001, highest + 1)).padStart(4, '0')}`;
+}
+
+/**
+ * Validates that customizer submission only uses features explicitly enabled for the product
+ * and supported by the product's customizer template (Phase 3).
+ */
+export function validateProductCustomizerFeatures(itemProduct: any, payload: any, item: any = {}): string | null {
+  if (!itemProduct || itemProduct.customizationEnabled === false) return null;
+
+  const template = getCustomizerTemplateById(itemProduct.customizerTemplateId);
+  const capabilities = getTemplateCapabilities(template, itemProduct);
+
+  const trimEnabled = (itemProduct.trimColorEnabled ?? capabilities.supportsTrimColor) && capabilities.supportsTrimColor;
+  const tapingEnabled = (itemProduct.tapingColorEnabled ?? false) && capabilities.supportsTapingColor;
+  const backEnabled = (itemProduct.backDesignEnabled ?? capabilities.supportsBack) && capabilities.supportsBack;
+  const embroideryEnabled = (itemProduct.embroideryEnabled ?? false) && capabilities.supportsEmbroidery;
+  const zipperEnabled = (itemProduct.zipperEnabled ?? false) && capabilities.supportsZipper;
+
+  // 1. Trim / Collar / Rib color
+  const sendsTrim = Boolean(
+    (payload.collarColor && String(payload.collarColor).trim()) ||
+    (payload.trimColor && String(payload.trimColor).trim()) ||
+    (item.collarColor && String(item.collarColor).trim()) ||
+    (item.trimColor && String(item.trimColor).trim())
+  );
+  if (!trimEnabled && sendsTrim) {
+    return `Collar & rib color customization is disabled for '${itemProduct.name}'.`;
+  }
+
+  // 2. Taping color
+  const sendsTaping = Boolean(
+    (payload.tapingColor && String(payload.tapingColor).trim()) ||
+    (item.tapingColor && String(item.tapingColor).trim())
+  );
+  if (!tapingEnabled && sendsTaping) {
+    return `Taping color customization is disabled for '${itemProduct.name}'.`;
+  }
+
+  // 3. Back design / mockup / preview
+  let hasBackCanvas = false;
+  const canvasJson = item.canvasStateJson || payload.canvasStateJson;
+  if (typeof canvasJson === 'string' && canvasJson.trim()) {
+    try {
+      const parsed = JSON.parse(canvasJson);
+      if (parsed?.back && Array.isArray(parsed.back?.objects) && parsed.back.objects.length > 0) {
+        hasBackCanvas = true;
+      }
+    } catch {}
+  }
+  const sendsBack = Boolean(
+    (typeof payload.previewBackUrl === 'string' && payload.previewBackUrl.trim()) ||
+    (typeof item.previewBackUrl === 'string' && item.previewBackUrl.trim()) ||
+    hasBackCanvas
+  );
+  if (!backEnabled && sendsBack) {
+    return `Back design is disabled for '${itemProduct.name}'.`;
+  }
+
+  // 4. Embroidery option
+  const sendsEmbroidery = Boolean(
+    payload.embroidery === true ||
+    payload.embroideryOption === true ||
+    payload.isEmbroidery === true ||
+    item.embroidery === true ||
+    item.embroideryOption === true ||
+    (typeof payload.printingType === 'string' && /embroidery/i.test(payload.printingType)) ||
+    (typeof payload.printType === 'string' && /embroidery/i.test(payload.printType)) ||
+    (typeof item.printType === 'string' && /embroidery/i.test(item.printType))
+  );
+  if (!embroideryEnabled && sendsEmbroidery) {
+    return `Embroidery option is disabled for '${itemProduct.name}'.`;
+  }
+
+  // 5. Zipper option
+  const sendsZipper = Boolean(
+    payload.zipper === true ||
+    payload.zipperOption === true ||
+    payload.hasZipper === true ||
+    item.zipper === true ||
+    item.zipperOption === true ||
+    (typeof payload.zipperColor === 'string' && payload.zipperColor.trim()) ||
+    (typeof item.zipperColor === 'string' && item.zipperColor.trim())
+  );
+  if (!zipperEnabled && sendsZipper) {
+    return `Zipper option is disabled for '${itemProduct.name}'.`;
+  }
+
+  // Check structured customizationRequirements metadata if sent as JSON
+  const rawReqs = item.customizationRequirements || payload.customizationRequirements;
+  if (typeof rawReqs === 'string' && rawReqs.trim()) {
+    try {
+      const reqs = JSON.parse(rawReqs);
+      if (!trimEnabled && reqs.collarColor && String(reqs.collarColor).trim()) {
+        return `Collar & rib color customization is disabled for '${itemProduct.name}'.`;
+      }
+      if (!tapingEnabled && reqs.tapingColor && String(reqs.tapingColor).trim()) {
+        return `Taping color customization is disabled for '${itemProduct.name}'.`;
+      }
+      if (!backEnabled && (reqs.hasBack === true || (typeof reqs.printPosition === 'string' && /back/i.test(reqs.printPosition)))) {
+        return `Back design is disabled for '${itemProduct.name}'.`;
+      }
+      if (!embroideryEnabled && reqs.embroidery === true) {
+        return `Embroidery option is disabled for '${itemProduct.name}'.`;
+      }
+      if (!zipperEnabled && reqs.zipper === true) {
+        return `Zipper option is disabled for '${itemProduct.name}'.`;
+      }
+    } catch {}
+  }
+
+  return null;
+}
 
 export const createQuote = async (req: AuthRequest, res: Response) => {
   const {
@@ -208,13 +348,15 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
     message,
     notes,
     validDays = 15,
-    status
+    status,
+    addonSelected
   } = req.body;
 
-  let targetCustomerId = customerId;
-  if (!targetCustomerId && req.user?.role === 'CUSTOMER') {
-    targetCustomerId = req.user.id;
-  }
+  const isCustomer = req.user?.role === 'CUSTOMER';
+
+  // A CUSTOMER's identity comes only from their verified JWT — body-supplied
+  // customerId/companyId are honoured for staff only.
+  let targetCustomerId = isCustomer ? req.user!.id : customerId;
   
   if (!targetCustomerId) {
     return res.status(400).json({ success: false, message: 'Customer ID is required' });
@@ -242,16 +384,24 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
     });
   }
 
-  let resolvedCompanyId = companyId;
-  if (!resolvedCompanyId && req.user?.role === 'CUSTOMER') {
-    resolvedCompanyId = req.user.companyId || null;
-  }
+  let resolvedCompanyId = isCustomer ? req.user!.companyId || null : companyId;
 
-  // Update customer and company profile if updated contact details are supplied
-  if (targetCustomerId) {
+  // Update customer and company profile if updated contact details are supplied.
+  // Only CUSTOMER records are enriched: staff phones are WhatsApp login identities
+  // and may only be changed by an admin (PUT /agents/:id).
+  const targetRole = targetCustomerId
+    ? (await prisma.user.findUnique({ where: { id: targetCustomerId }, select: { role: true } }))?.role
+    : undefined;
+  if (targetCustomerId && targetRole === 'CUSTOMER') {
     try {
       const userUpdateData: any = {};
       if (customerName) userUpdateData.name = customerName;
+      // Just-in-time profile completion: WhatsApp OTP accounts start without a
+      // name; the quote form's contact name fills it in (never overwrites).
+      if (!customerName && isCustomer && typeof req.body.name === 'string' && req.body.name.trim()) {
+        const current = await prisma.user.findUnique({ where: { id: targetCustomerId }, select: { name: true } });
+        if (current && !current.name.trim()) userUpdateData.name = req.body.name.trim().slice(0, 120);
+      }
       if (phone) userUpdateData.phone = phone;
       if (location) userUpdateData.location = location;
 
@@ -294,22 +444,22 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
     }
   }
 
-  const quoteCount = await prisma.quote.count();
-  const quoteNumber = `ZQB-QT-${new Date().getFullYear()}-${String(quoteCount + 1001).padStart(4, '0')}`;
+  const quoteNumber = await nextQuoteNumber();
 
   let product = null;
   const targetProductId = productId || (items && items[0]?.productId) || productCategory;
 
   if (targetProductId) {
-    product = await prisma.product.findFirst({
-      where: {
-        OR: [
-          { id: targetProductId },
-          { slug: targetProductId },
-          { name: { contains: String(targetProductId), mode: 'insensitive' } },
-        ],
-      },
-    });
+    // Exact id/slug first; the loose name match only serves requests that send a product name.
+    product =
+      (await prisma.product.findFirst({
+        where: { OR: [{ id: targetProductId }, { slug: targetProductId }] },
+        include: { bulkPricing: true },
+      })) ||
+      (await prisma.product.findFirst({
+        where: { ...ORDERABLE_PRODUCT, name: { contains: String(targetProductId), mode: 'insensitive' } },
+        include: { bulkPricing: true },
+      }));
 
     if (!product) {
       return res.status(400).json({
@@ -317,10 +467,17 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
         message: `Product '${targetProductId}' could not be resolved in the catalog. Please select or configure a valid product.`,
       });
     }
+    if (!product.isActive || product.slug.includes('-deleted-')) {
+      return res.status(400).json({
+        success: false,
+        message: `'${product.name}' is not available for new quotes.`,
+      });
+    }
   } else {
     product = await prisma.product.findFirst({
-      where: { isActive: true },
+      where: ORDERABLE_PRODUCT,
       orderBy: { createdAt: 'asc' },
+      include: { bulkPricing: true },
     });
 
     if (!product) {
@@ -329,6 +486,35 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
         message: 'No active products found in the catalog. Please configure products before generating quotes.',
       });
     }
+  }
+
+  const hasCustomizerData = Boolean(
+    (typeof artworkUrl === 'string' && artworkUrl.trim()) ||
+    (typeof previewFrontUrl === 'string' && previewFrontUrl.trim()) ||
+    (typeof previewBackUrl === 'string' && previewBackUrl.trim()) ||
+    (typeof canvasStateJson === 'string' && canvasStateJson.trim()) ||
+    (typeof customizationRequirements === 'string' && customizationRequirements.trim()) ||
+    Boolean(req.body.isCustomized) ||
+    req.body.source === 'customizer' ||
+    Boolean(req.body.collarColor)
+  );
+
+  // Step 14 & 15: Server-side validation
+  // If customizationEnabled = false, reject customizer-specific data for that product.
+  if (product && product.customizationEnabled === false && hasCustomizerData) {
+    return res.status(400).json({
+      success: false,
+      message: `Customization is not enabled for '${product.name}'. Customizer artwork or canvas data cannot be submitted for this product.`,
+    });
+  }
+
+  // Phase 3: Validate feature flags for primary product
+  const primaryFeatureError = validateProductCustomizerFeatures(product, req.body);
+  if (primaryFeatureError) {
+    return res.status(400).json({
+      success: false,
+      message: primaryFeatureError,
+    });
   }
 
   const resolvedPrintType = printType || [printingType, printPosition].filter(Boolean).join(' - ') || 'Not provided';
@@ -348,18 +534,76 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
 
   let subtotal = 0;
   let totalGst = 0;
+  let addonAmount = 0;
+  let addonTitle: string | null = null;
+  let freeGiftTitle: string | null = null;
   const quoteItemsData = [];
 
   for (const item of normalizedItems) {
     let itemProduct = product;
-    if (item.productId && item.productId !== product.id) {
-       const found = await prisma.product.findUnique({ where: { id: item.productId }});
-       if (found) itemProduct = found;
+    if (item.productId && item.productId !== product.id && item.productId !== product.slug) {
+       const found = await prisma.product.findFirst({
+         where: { OR: [{ id: item.productId }, { slug: item.productId }] },
+         include: { bulkPricing: true },
+       });
+       if (!found) {
+         return res.status(400).json({ success: false, message: `Product '${item.productId}' could not be resolved in the catalog.` });
+       }
+       if (!found.isActive || found.slug.includes('-deleted-')) {
+         return res.status(400).json({ success: false, message: `'${found.name}' is not available for new quotes.` });
+       }
+       itemProduct = found;
+    }
+
+    if (itemProduct.customizationEnabled === false) {
+      const itemHasCustomizer = Boolean(
+        (typeof item.artworkUrl === 'string' && item.artworkUrl.trim()) ||
+        (typeof item.canvasStateJson === 'string' && item.canvasStateJson.trim()) ||
+        hasCustomizerData
+      );
+      if (itemHasCustomizer) {
+        return res.status(400).json({
+          success: false,
+          message: `Customization is not enabled for '${itemProduct.name}'. Customizer artwork or canvas data cannot be submitted for this product.`,
+        });
+      }
+    }
+
+    // Phase 3: Validate feature flags for item product
+    const itemFeatureError = validateProductCustomizerFeatures(itemProduct, req.body, item);
+    if (itemFeatureError) {
+      return res.status(400).json({
+        success: false,
+        message: itemFeatureError,
+      });
     }
 
     const itemQty = Number(item.quantity) || 50;
     const itemPrintType = item.printType || resolvedPrintType;
-    const pricing = calculateServerPricing(itemProduct.basePrice, itemQty, itemPrintType, itemProduct.gstRate);
+
+    // Customers must respect the product's configured minimum; staff may quote any quantity.
+    const minAllowedQty = getMinAllowedQty(itemProduct);
+    if (isCustomer && itemQty < minAllowedQty) {
+      return res.status(400).json({
+        success: false,
+        message: `Minimum order quantity for '${itemProduct.name}' is ${minAllowedQty}.`,
+      });
+    }
+
+    // The offer addon and free gift belong to the quote's primary product and are resolved from
+    // the stored product configuration, never from client-supplied amounts.
+    const isPrimary = quoteItemsData.length === 0;
+    const itemAddonAmount = isPrimary ? resolveAddonAmount(itemProduct.offerAddon, Boolean(addonSelected), itemQty) : 0;
+    if (isPrimary) {
+      addonAmount = itemAddonAmount;
+      addonTitle = itemAddonAmount > 0 ? String((itemProduct.offerAddon as any)?.title || 'Offer addon') : null;
+      freeGiftTitle = resolveFreeGiftTitle(itemProduct, itemQty);
+    }
+
+    const pricing = calculateServerPricing(itemProduct.basePrice, itemQty, itemPrintType, itemProduct.gstRate, true, {
+      tiers: itemProduct.bulkPricing,
+      addonAmount: itemAddonAmount,
+    });
 
     subtotal += pricing.subtotal;
     totalGst += pricing.gstTotal;
@@ -382,7 +626,7 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
       size: item.size || resolvedSize,
       quantity: itemQty,
       unitPrice: pricing.unitPrice,
-      totalPrice: pricing.subtotal,
+      totalPrice: pricing.unitPrice * itemQty,
       variants: {
         create: variants.map((v: any) => ({
           color: v.color || null,
@@ -410,6 +654,8 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
   if (address) specs.push(`Delivery Address: ${address}`);
   if (gstin) specs.push(`GSTIN: ${gstin}`);
   if (customizationRequirements) specs.push(`Customization: ${customizationRequirements}`);
+  if (addonTitle) specs.push(`Offer Addon: ${addonTitle} (₹${addonAmount})`);
+  if (freeGiftTitle) specs.push(`Free Gift: ${freeGiftTitle}`);
   if (message) specs.push(`Customer Message: ${message}`);
   if (notes && !specs.some(s => s.includes(notes))) specs.push(`Notes: ${notes}`);
 
@@ -431,6 +677,9 @@ export const createQuote = async (req: AuthRequest, res: Response) => {
       previewFrontUrl: previewFrontUrl || null,
       previewBackUrl: previewBackUrl || null,
       canvasStateJson: canvasStateJson || null,
+      addonTitle,
+      addonAmount,
+      freeGiftTitle,
       items: { create: quoteItemsData },
       activities: {
         create: {
@@ -466,13 +715,16 @@ export const calculateQuotePricing = async (req: AuthRequest, res: Response) => 
     if (!item.productId) continue;
 
     const product = await prisma.product.findUnique({
-      where: { id: item.productId }
+      where: { id: item.productId },
+      include: { bulkPricing: true },
     });
 
     if (!product) continue;
 
     const itemQty = Number(item.quantity) || 1;
-    const pricing = calculateServerPricing(product.basePrice, itemQty, item.printType || 'Not provided', product.gstRate);
+    const pricing = calculateServerPricing(product.basePrice, itemQty, item.printType || 'Not provided', product.gstRate, true, {
+      tiers: product.bulkPricing,
+    });
 
     subtotal += pricing.subtotal;
     totalGst += pricing.gstTotal;
@@ -513,7 +765,7 @@ export const updateQuoteStatus = async (req: AuthRequest, res: Response) => {
   }
 
   if (req.user?.role === 'CUSTOMER') {
-    if (quote.customerId !== req.user.id && quote.companyId !== req.user.companyId) {
+    if (!isCustomerOwner(req.user, quote)) {
       return res.status(403).json({ success: false, message: 'Unauthorized to modify this quote' });
     }
     if (!['APPROVED', 'REJECTED'].includes(status)) {
@@ -570,7 +822,7 @@ export const editQuote = async (req: AuthRequest, res: Response) => {
 
   const quote = await prisma.quote.findUnique({
     where: { id },
-    include: { items: { include: { product: true, variants: true } } },
+    include: { items: { include: { product: { include: { bulkPricing: true } }, variants: true } } },
   });
 
   if (!quote) return res.status(404).json({ success: false, message: 'Quote not found' });
@@ -601,7 +853,12 @@ export const editQuote = async (req: AuthRequest, res: Response) => {
     finalGstRate = product?.gstRate || 5.0;
   }
 
-  const pricing = calculateServerPricing(basePrice, newQty, newPrintType, finalGstRate, finalIsGstApplied);
+  // An addon the customer opted into stays on the quote; a per-piece addon follows the new quantity.
+  const addonAmount = quote.addonAmount > 0 ? resolveAddonAmount(product.offerAddon, true, newQty) || quote.addonAmount : 0;
+  const pricing = calculateServerPricing(basePrice, newQty, newPrintType, finalGstRate, finalIsGstApplied, {
+    tiers: product.bulkPricing,
+    addonAmount,
+  });
 
   const finalVariants = Array.isArray(variants) ? variants : [];
 
@@ -621,7 +878,7 @@ export const editQuote = async (req: AuthRequest, res: Response) => {
         size: newSize,
         printType: newPrintType,
         unitPrice: pricing.unitPrice,
-        totalPrice: pricing.subtotal,
+        totalPrice: pricing.unitPrice * newQty,
         variants: {
           deleteMany: {},
           ...(finalVariants.length > 0 ? {
@@ -640,6 +897,7 @@ export const editQuote = async (req: AuthRequest, res: Response) => {
     where: { id },
     data: {
       subtotal: pricing.subtotal,
+      addonAmount,
       isGstApplied: finalIsGstApplied,
       gstRate: finalGstRate,
       gstTotal: pricing.gstTotal,
@@ -811,6 +1069,15 @@ export const emailQuote = async (req: AuthRequest, res: Response) => {
 
   if (!quote) return res.status(404).json({ success: false, message: 'Quote not found' });
 
+  const customerEmail = quote.customer.email;
+  if (!customerEmail) {
+    // WhatsApp OTP customers may not have shared an email yet
+    return res.status(400).json({
+      success: false,
+      message: 'This customer has no email address on file. Share the quote via WhatsApp instead.',
+    });
+  }
+
   const pdfBuffer = await generateQuotePDFBuffer({
     quoteNumber: quote.quoteNumber,
     customerName: quote.customer.name,
@@ -832,7 +1099,7 @@ export const emailQuote = async (req: AuthRequest, res: Response) => {
     validUntil: quote.validUntil.toLocaleDateString('en-IN'),
   });
 
-  await sendQuoteEmail(quote.customer.email, quote.quoteNumber, pdfBuffer, quote.totalAmount);
+  await sendQuoteEmail(customerEmail, quote.quoteNumber, pdfBuffer, quote.totalAmount);
 
   await prisma.quote.update({
     where: { id },
@@ -842,13 +1109,13 @@ export const emailQuote = async (req: AuthRequest, res: Response) => {
         create: {
           userId: req.user?.id || null,
           type: 'QUOTE_SENT',
-          message: `Official quotation email sent to ${quote.customer.email}`,
+          message: `Official quotation email sent to ${customerEmail}`,
         },
       },
     },
   });
 
-  return res.json({ success: true, message: `Quotation email successfully dispatched to ${quote.customer.email}` });
+  return res.json({ success: true, message: `Quotation email successfully dispatched to ${customerEmail}` });
 };
 
 /**
@@ -869,7 +1136,7 @@ export const applyCoupon = async (req: AuthRequest, res: Response) => {
     if (!quote) return res.status(404).json({ success: false, message: 'Quote not found' });
 
     // Customer security check
-    if (req.user?.role === 'CUSTOMER' && quote.customerId !== req.user.id && quote.companyId !== req.user.companyId) {
+    if (req.user?.role === 'CUSTOMER' && !isCustomerOwner(req.user, quote)) {
        return res.status(403).json({ success: false, message: 'Unauthorized to apply coupon to this quote' });
     }
 
@@ -966,7 +1233,7 @@ export const removeCoupon = async (req: AuthRequest, res: Response) => {
   
       if (!quote) return res.status(404).json({ success: false, message: 'Quote not found' });
   
-      if (req.user?.role === 'CUSTOMER' && quote.customerId !== req.user.id && quote.companyId !== req.user.companyId) {
+      if (req.user?.role === 'CUSTOMER' && !isCustomerOwner(req.user, quote)) {
          return res.status(403).json({ success: false, message: 'Unauthorized' });
       }
   
@@ -1020,7 +1287,7 @@ export const removeCoupon = async (req: AuthRequest, res: Response) => {
  */
 export const pricingPreview = async (req: AuthRequest, res: Response) => {
   try {
-    const { productId, quantity, variants, printType } = req.body;
+    const { productId, quantity, variants, printType, addonSelected } = req.body;
 
     if (!productId || typeof productId !== 'string' || !productId.trim()) {
       return res.status(400).json({ success: false, message: 'productId is required' });
@@ -1052,8 +1319,9 @@ export const pricingPreview = async (req: AuthRequest, res: Response) => {
           { id: productId.trim() },
           { slug: productId.trim() },
         ],
-        isActive: true,
+        ...ORDERABLE_PRODUCT,
       },
+      include: { bulkPricing: true },
     });
 
     if (!product) {
@@ -1063,12 +1331,31 @@ export const pricingPreview = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const minAllowedQty = getMinAllowedQty(product);
+    if (req.user?.role === 'CUSTOMER' && parsedQty < minAllowedQty) {
+      return res.status(400).json({
+        success: false,
+        message: `Minimum order quantity for '${product.name}' is ${minAllowedQty}.`,
+      });
+    }
+
+    if (product.customizationEnabled === false && (req.body.customizationRequirements || req.body.canvasStateJson || req.body.artworkUrl)) {
+      return res.status(400).json({
+        success: false,
+        message: `Customization is not enabled for '${product.name}'.`,
+      });
+    }
+
     const pricing = calculateServerPricing(
       product.basePrice,
       parsedQty,
       printType || 'Front Only',
       product.gstRate,
-      true
+      true,
+      {
+        tiers: product.bulkPricing,
+        addonAmount: resolveAddonAmount(product.offerAddon, Boolean(addonSelected), parsedQty),
+      }
     );
 
     return res.json({
@@ -1077,6 +1364,10 @@ export const pricingPreview = async (req: AuthRequest, res: Response) => {
         productId: product.id,
         productName: product.name,
         unitPrice: pricing.unitPrice,
+        productUnitPrice: pricing.productUnitPrice,
+        printSurcharge: pricing.printSurcharge,
+        addonAmount: pricing.addonAmount,
+        freeGiftTitle: resolveFreeGiftTitle(product, parsedQty),
         subtotal: pricing.subtotal,
         discount: pricing.discount,
         gstRate: pricing.gstRate,

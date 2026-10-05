@@ -11,6 +11,9 @@ coverage
 cypress/videos
 cypress/screenshots
 apps/web/cypress/screenshots
+cypress/downloads
+apps/web/cypress/downloads
+*.crdownload
 .turbo
 backups/
 scratch/

@@ -3,6 +3,7 @@ import app from '../src/app.js';
 import jwt from 'jsonwebtoken';
 import { config } from '../src/config/index.js';
 import { calculateServerPricing } from '../src/modules/quotes/quotes.controller.js';
+import { SECOND_SIDE_SURCHARGE } from '../src/modules/quotes/quote-pricing.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -137,51 +138,57 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
   // SERVER-SIDE PRICING ENGINE UNIT TESTS
   // ============================================================
   describe('Server-Side Pricing Engine (unit)', () => {
-    it('calculates correct unit rates, 5% GST, and total for 100 pcs with Front & Back Print', () => {
-      const pricing = calculateServerPricing(249, 100, 'Front & Back Print', 5.0);
-      expect(pricing.unitPrice).toBe(219 + 40); // volumePrice(249-30) + positionAddon(40) = 259
-      expect(pricing.subtotal).toBe(259 * 100); // 25,900
-      expect(pricing.gstTotal).toBe(1295);       // 5% of 25,900
-      expect(pricing.totalAmount).toBe(27195);
-    });
+    const tiers = [
+      { minQuantity: 50, maxQuantity: 99, pricePerUnit: 229 },
+      { minQuantity: 100, maxQuantity: 249, pricePerUnit: 219 },
+    ];
 
-    it('calculates correct pricing for quantity 50 with Front Only', () => {
-      // qty=50: volumePrice = max(140, 249-10) = 239; positionAddon = 20; unitPrice = 259
-      const pricing = calculateServerPricing(249, 50, 'Front Only', 5.0);
-      expect(pricing.unitPrice).toBe(259);
-      expect(pricing.subtotal).toBe(259 * 50);    // 12,950
-      expect(pricing.gstTotal).toBe(Math.round(12950 * 0.05)); // 648
-      expect(pricing.totalAmount).toBe(pricing.subtotal + pricing.gstTotal);
-    });
-
-    it('calculates correct pricing for quantity 100 with Front Only', () => {
-      // qty=100: volumePrice = max(120, 249-30) = 219; positionAddon = 20; unitPrice = 239
+    it('uses the base price when the product has no quantity ranges (no hidden volume discount)', () => {
       const pricing = calculateServerPricing(249, 100, 'Front Only', 5.0);
-      expect(pricing.unitPrice).toBe(239);
-      expect(pricing.subtotal).toBe(239 * 100);  // 23,900
-      expect(pricing.gstTotal).toBe(Math.round(23900 * 0.05)); // 1,195
+      expect(pricing.unitPrice).toBe(249);
+      expect(pricing.subtotal).toBe(249 * 100);
+      expect(pricing.gstTotal).toBe(Math.round(24900 * 0.05));
       expect(pricing.totalAmount).toBe(pricing.subtotal + pricing.gstTotal);
     });
 
-    it('calculates correct pricing for quantity 500 with Front Only', () => {
-      // qty=500: volumePrice = max(100, 249-60) = 189; positionAddon = 20; unitPrice = 209
-      const pricing = calculateServerPricing(249, 500, 'Front Only', 5.0);
-      expect(pricing.unitPrice).toBe(209);
-      expect(pricing.subtotal).toBe(209 * 500);  // 104,500
-      expect(pricing.gstTotal).toBe(Math.round(104500 * 0.05));
-      expect(pricing.totalAmount).toBe(pricing.subtotal + pricing.gstTotal);
+    it('never raises a cheap product above its admin price (no price floor)', () => {
+      const pricing = calculateServerPricing(80, 500, 'Front Only', 5.0);
+      expect(pricing.unitPrice).toBe(80);
     });
 
-    it('calculates Back Only with 30 INR surcharge', () => {
-      const pricing = calculateServerPricing(249, 100, 'Back Only', 5.0);
-      // volumePrice = 219; positionAddon = 30; unitPrice = 249
+    it('uses the base price below the first quantity range', () => {
+      const pricing = calculateServerPricing(249, 20, 'Front Only', 5.0, true, { tiers });
       expect(pricing.unitPrice).toBe(249);
     });
 
-    it('calculates Front & Back with 40 INR surcharge', () => {
-      const pricing = calculateServerPricing(249, 100, 'Front & Back', 5.0);
-      // volumePrice = 219; positionAddon = 40; unitPrice = 259
-      expect(pricing.unitPrice).toBe(259);
+    it('uses the quantity range price for the ordered quantity', () => {
+      expect(calculateServerPricing(249, 50, 'Front Only', 5.0, true, { tiers }).unitPrice).toBe(229);
+      expect(calculateServerPricing(249, 99, 'Front Only', 5.0, true, { tiers }).unitPrice).toBe(229);
+      expect(calculateServerPricing(249, 100, 'Front Only', 5.0, true, { tiers }).unitPrice).toBe(219);
+    });
+
+    it('keeps the last range price above the highest configured range', () => {
+      expect(calculateServerPricing(249, 5000, 'Front Only', 5.0, true, { tiers }).unitPrice).toBe(219);
+    });
+
+    it('Back Only is a single-side print: no surcharge', () => {
+      const pricing = calculateServerPricing(249, 100, 'Back Only', 5.0, true, { tiers });
+      expect(pricing.unitPrice).toBe(219);
+      expect(pricing.printSurcharge).toBe(0);
+    });
+
+    it('Front & Back adds the documented second-side surcharge per piece', () => {
+      const pricing = calculateServerPricing(249, 100, 'Front & Back', 5.0, true, { tiers });
+      expect(pricing.productUnitPrice).toBe(219);
+      expect(pricing.printSurcharge).toBe(SECOND_SIDE_SURCHARGE);
+      expect(pricing.unitPrice).toBe(219 + SECOND_SIDE_SURCHARGE);
+      expect(pricing.subtotal).toBe((219 + SECOND_SIDE_SURCHARGE) * 100);
+    });
+
+    it('adds an opted-in addon to the subtotal before GST', () => {
+      const pricing = calculateServerPricing(249, 100, 'Front Only', 5.0, true, { tiers, addonAmount: 500 });
+      expect(pricing.subtotal).toBe(219 * 100 + 500);
+      expect(pricing.gstTotal).toBe(Math.round((219 * 100 + 500) * 0.05));
     });
 
     it('returns discount = 0 (no client-side discount)', () => {
@@ -230,7 +237,7 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
         .set('Authorization', `Bearer ${customerAToken}`)
         .send({ productId: 'polo-200gsm', quantity: 50, printType: 'Front Only' });
       expect(res.status).toBe(200);
-      expect(res.body.data.unitPrice).toBe(259); // 239+20 at qty=50
+      expect(res.body.data.unitPrice).toBe(229); // admin range 50-99
     });
 
     it('returns pricing preview for quantity 100', async () => {
@@ -239,7 +246,7 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
         .set('Authorization', `Bearer ${customerAToken}`)
         .send({ productId: 'polo-200gsm', quantity: 100, printType: 'Front Only' });
       expect(res.status).toBe(200);
-      expect(res.body.data.unitPrice).toBe(239);
+      expect(res.body.data.unitPrice).toBe(219); // admin range 100-249
     });
 
     it('returns pricing preview for quantity 500', async () => {
@@ -248,7 +255,7 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
         .set('Authorization', `Bearer ${customerAToken}`)
         .send({ productId: 'polo-200gsm', quantity: 500, printType: 'Front Only' });
       expect(res.status).toBe(200);
-      expect(res.body.data.unitPrice).toBe(209);
+      expect(res.body.data.unitPrice).toBe(219); // last range applies above it
     });
 
     it('returns pricing for Front Only', async () => {
@@ -257,7 +264,7 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
         .set('Authorization', `Bearer ${customerAToken}`)
         .send({ productId: 'polo-200gsm', quantity: 100, printType: 'Front Only' });
       expect(res.status).toBe(200);
-      expect(res.body.data.unitPrice).toBe(239); // positionAddon=20
+      expect(res.body.data.unitPrice).toBe(219); // single side: no surcharge
     });
 
     it('returns pricing for Back Only', async () => {
@@ -266,7 +273,7 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
         .set('Authorization', `Bearer ${customerAToken}`)
         .send({ productId: 'polo-200gsm', quantity: 100, printType: 'Back Only' });
       expect(res.status).toBe(200);
-      expect(res.body.data.unitPrice).toBe(249); // positionAddon=30
+      expect(res.body.data.unitPrice).toBe(219); // single side: no surcharge
     });
 
     it('returns pricing for Front & Back', async () => {
@@ -275,7 +282,7 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
         .set('Authorization', `Bearer ${customerAToken}`)
         .send({ productId: 'polo-200gsm', quantity: 100, printType: 'Front & Back' });
       expect(res.status).toBe(200);
-      expect(res.body.data.unitPrice).toBe(259); // positionAddon=40
+      expect(res.body.data.unitPrice).toBe(219 + SECOND_SIDE_SURCHARGE); // second side
     });
 
     it('returns 400 for invalid product', async () => {
@@ -408,12 +415,35 @@ describe('Quote Management & Server-Side Pricing API Integration', () => {
         });
 
       expect(res.status).toBe(201);
-      // Server must recalculate: qty=50, basePrice=249, Front Only (default)
-      // unitPrice = 239+20 = 259; subtotal = 259*50 = 12,950; gst = 648; total = 13,598
+      // Server must recalculate from the stored product pricing: qty=50 → range 50-99 = ₹229
+      // subtotal = 229*50 = 11,450; gst = 573; total = 12,023
       expect(res.body.quote.totalAmount).toBeGreaterThan(5000);
       expect(res.body.quote.items[0].unitPrice).toBeGreaterThan(5);
       expect(res.body.quote.items[0].unitPrice).not.toBe(1);
       expect(res.body.quote.totalAmount).not.toBe(1);
+    });
+
+    it('POST /api/v1/quotes - customer identity comes from the JWT; body customerId/companyId cannot take over another account', async () => {
+      const res = await request(app)
+        .post('/api/v1/quotes')
+        .set('Authorization', `Bearer ${customerAToken}`)
+        .send({
+          productId: 'polo-200gsm',
+          quantity: 50,
+          customerId: 'cust-202', // another customer
+          companyId: 'comp-202', // another company
+          userId: 'admin-101',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.quote.customerId).toBe('cust-101');
+      expect(res.body.quote.companyId).toBe('comp-101');
+
+      // Customer B does not see it; Customer A does
+      const asB = await request(app).get(`/api/v1/quotes/${res.body.quote.id}`).set('Authorization', `Bearer ${customerBToken}`);
+      expect(asB.status).toBe(403);
+      const asA = await request(app).get(`/api/v1/quotes/${res.body.quote.id}`).set('Authorization', `Bearer ${customerAToken}`);
+      expect(asA.status).toBe(200);
     });
 
     it('GET /api/v1/quotes - returns customer quotes with JWT customer filter', async () => {

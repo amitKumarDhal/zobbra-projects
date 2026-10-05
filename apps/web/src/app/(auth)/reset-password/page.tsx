@@ -57,7 +57,7 @@ function ResetPasswordForm() {
 
       if (res.ok && data.success) {
         alert('Password reset successfully! Please login with your new password.');
-        router.push('/login');
+        router.push('/login?mode=admin');
       } else {
         if (res.status === 404) {
           setError('Password reset endpoint is not configured in this development environment.');
@@ -114,7 +114,7 @@ function ResetPasswordForm() {
         <div className="w-full max-w-md space-y-6 sm:space-y-8 py-6">
           <div>
             <Link
-              href="/login"
+              href="/login?mode=admin"
               className="inline-flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-black transition-colors mb-6 group min-h-[44px]"
             >
               <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />

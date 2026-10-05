@@ -1,5 +1,6 @@
 import { Inquiry, InquiryActivity, InquiryStatus, InquirySource, InquiryActivityType, Prisma } from '@prisma/client';
 import { prisma } from '../../config/index.js';
+import { calculateServerPricing } from '../quotes/quote-pricing.js';
 
 export class InquiryService {
   
@@ -306,7 +307,7 @@ export class InquiryService {
                email: emailToUse,
                name: inquiry.customerName || 'Guest Customer',
                phone: inquiry.phone,
-               passwordHash: 'GENERATED_NO_PASSWORD', // They will have to reset password to login
+               // No password: customers sign in with WhatsApp OTP (bound via this phone)
                role: 'CUSTOMER',
                isActive: true
              }
@@ -372,19 +373,12 @@ export class InquiryService {
         ? `${inquiry.printingType || 'Standard Print'} (${inquiry.printPosition})`
         : (inquiry.printingType || 'Not provided');
       
-      // Volume pricing calculation
-      let volumePrice = basePrice;
-      if (qty >= 500) volumePrice = Math.max(100, basePrice - 60);
-      else if (qty >= 100) volumePrice = Math.max(120, basePrice - 30);
-      else if (qty >= 50) volumePrice = Math.max(140, basePrice - 10);
-      
-      let positionAddon = 20;
-      if (printType.toLowerCase().includes('front') && printType.toLowerCase().includes('back')) positionAddon = 40;
-      else if (printType.toLowerCase().includes('embroidery') || printType.toLowerCase().includes('back')) positionAddon = 30;
-      
-      const unitPrice = volumePrice + positionAddon;
-      const amount = unitPrice * qty;
-      const gst = Math.round(amount * (product.gstRate / 100));
+      // Same server pricing engine as direct quotes: the product's quantity-range prices are authoritative
+      const tiers = await tx.bulkPricing.findMany({ where: { productId: productId! } });
+      const pricing = calculateServerPricing(basePrice, qty, printType, product.gstRate, true, { tiers });
+      const unitPrice = pricing.unitPrice;
+      const amount = pricing.subtotal;
+      const gst = pricing.gstTotal;
 
       const quoteItem = await tx.quoteItem.create({
         data: {

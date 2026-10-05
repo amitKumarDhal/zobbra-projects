@@ -36,6 +36,7 @@ export function PublicHeader() {
     { name: 'Home', href: '/' },
     { name: 'Products', href: '/products' },
     { name: 'About Us', href: '/about' },
+    { name: 'Track Order', href: '/track-order' },
   ];
 
   return (

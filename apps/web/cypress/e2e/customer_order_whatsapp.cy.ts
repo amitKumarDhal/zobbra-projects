@@ -9,7 +9,7 @@ describe('Customer Order WhatsApp Contact Sales Verification', () => {
   let expectedNormalizedPhone = '919876543210';
 
   before(() => {
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.window().then(async (win) => {
       token = win.localStorage.getItem('token') || '';
 
@@ -55,7 +55,7 @@ describe('Customer Order WhatsApp Contact Sales Verification', () => {
   });
 
   it('verifies that CONTACT SALES ON WHATSAPP has a valid, normalized wa.me URL with pre-filled message', () => {
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.visit(`/customer/orders/${orderId}`);
 
     // Verify order page loads

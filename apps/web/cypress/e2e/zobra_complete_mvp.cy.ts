@@ -6,7 +6,7 @@ describe('Zobra Complete MVP End-to-End Real Business Journey', () => {
 
   it('executes full business journey: Customer Login -> Product -> Quote -> PostgreSQL -> Admin Quote -> WhatsApp -> Repricing -> Customer Approval -> Order Conversion -> Payment', () => {
     // 1. CUSTOMER LOGIN
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.location('pathname', { timeout: 10000 }).should('include', '/customer');
 
     // 2. PRODUCT CATALOG & SELECTION
@@ -43,7 +43,7 @@ describe('Zobra Complete MVP End-to-End Real Business Journey', () => {
 
     // 7. CUSTOMER LOGIN & APPROVAL
     cy.clearLocalStorage();
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.location('pathname', { timeout: 10000 }).should('include', '/customer');
     cy.visit('/customer/quotes');
 

@@ -75,25 +75,6 @@ async function main() {
     },
   });
 
-  const salesUser = await prisma.user.create({
-    data: {
-      email: 'sales@zobra.com',
-      passwordHash: passwordHash,
-      name: 'Priya Das (Sales Lead)',
-      phone: '+91 91234 56789',
-      role: 'SALES',
-    },
-  });
-
-  const productionUser = await prisma.user.create({
-    data: {
-      email: 'production@zobra.com',
-      passwordHash: passwordHash,
-      name: 'Amitav Mohanty (Print Manager)',
-      phone: '+91 94370 12345',
-      role: 'PRODUCTION',
-    },
-  });
 
   const customerTest = await prisma.user.create({
     data: {

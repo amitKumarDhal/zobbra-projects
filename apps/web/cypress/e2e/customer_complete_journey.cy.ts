@@ -6,7 +6,7 @@ describe('Phase 18 — Customer Complete Journey', () => {
   });
 
   it('performs real customer login, product catalog navigation, quote creation and PostgreSQL persistence', () => {
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
 
     // 4. Navigate to Product Catalog
     cy.visit('/customer/products');

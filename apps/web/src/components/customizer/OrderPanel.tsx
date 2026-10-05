@@ -9,6 +9,10 @@ export interface PricingData {
   productId: string;
   productName: string;
   unitPrice: number;
+  /** Per-piece second-side print surcharge included in unitPrice (server-calculated). */
+  printSurcharge?: number;
+  /** Offer addon charge included in subtotal (server-calculated). */
+  addonAmount?: number;
   subtotal: number;
   discount: number;
   gstRate: number;

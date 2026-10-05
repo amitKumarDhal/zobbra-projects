@@ -6,7 +6,7 @@ describe('ZOBBRA Admin & Customer — Bag Product Feature Verification', () => {
 
     // Verify Executive Corporate Laptop Backpack appears in the catalog
     cy.contains('Executive Corporate Laptop Backpack').should('be.visible');
-    cy.contains('₹699').should('be.visible');
+    cy.contains('₹499').should('be.visible'); // starting price = lowest quantity-range price
 
     // 2. Filter by "Bags & Backpacks"
     cy.contains('button', 'Bags & Backpacks').click();
@@ -14,26 +14,16 @@ describe('ZOBBRA Admin & Customer — Bag Product Feature Verification', () => {
     cy.url().should('include', 'category=bags');
     cy.contains('Executive Corporate Laptop Backpack').should('be.visible');
 
-    // 3. Click DETAILS button on the bag card
-    cy.contains('button', 'DETAILS').click();
-    cy.url().should('include', '/products/');
-    cy.wait(1500);
-
-    // Verify title, price, and specs description
-    cy.contains('Executive Corporate Laptop Backpack').should('be.visible');
-    cy.contains('28L').should('be.visible');
-    cy.contains('15.6').should('be.visible');
-    cy.contains('900D Heavy-Duty Water-Repellent Ballistic Polyester').should('be.visible');
+    // 3. The card shows the price and opens straight in the customizer (no separate product page)
     cy.contains('₹699').should('be.visible');
+    cy.contains('button', 'CUSTOMIZE').click();
+    cy.url().should('match', /\/products\/[^/]+\/customize/);
+    cy.contains('h1', 'Executive Corporate Laptop Backpack', { timeout: 20000 }).should('be.visible');
   });
 
   it('should render 1-click Bag preset in Admin Add Product page and auto-fill specifications', () => {
-    // Log in as Admin using 1-click dev access
-    cy.visit('/login');
-    cy.wait(1000);
-    cy.contains('button', 'Admin').click();
-    cy.contains('button', 'SIGN IN').click();
-    cy.wait(1500);
+    // Admin session (the login page no longer has the 1-click dev access buttons)
+    cy.login();
 
     // Visit Add Product page
     cy.visit('/dashboard/products/new');

@@ -17,10 +17,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push('/login');
       return;
     }
-    
+
     try {
       const user = JSON.parse(userStr);
-      if (user.role !== 'ADMIN' && user.role !== 'SALES') {
+      // Admin-only area (SALES/PRODUCTION are disabled roles)
+      if (user.role !== 'ADMIN') {
         router.push('/login');
         return;
       }

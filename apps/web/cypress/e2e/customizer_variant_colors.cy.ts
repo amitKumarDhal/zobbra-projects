@@ -4,6 +4,7 @@
  * Regression: changing the main product color must not overwrite variant rows the customer
  * configured. The customizer no longer has a quantity/variant editor, so configured rows arrive
  * through a resumed draft; the pricing preview and the submitted quote payload must carry them.
+ * Colours picked here are the polo's own configured colours: the customizer offers no others.
  */
 const SLUG = 'classic-corporate-polo-tshirt';
 const MOQ = 20; // seeded MOQ for the polo
@@ -43,7 +44,7 @@ describe('Customizer - variant colors survive main color changes', () => {
 
   beforeEach(() => {
     pricingBodies = [];
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.intercept('POST', '**/api/v1/quotes/pricing-preview', (req) => {
       pricingBodies.push(req.body);
     }).as('pricing');
@@ -59,9 +60,9 @@ describe('Customizer - variant colors survive main color changes', () => {
 
     // Change the main product color twice
     cy.get('#tab-tool-colors').click();
-    cy.get('button[title="Royal Blue"]').first().click();
-    cy.get('button[title="Bottle Green"]').first().click();
-    cy.get('button[title="Bottle Green"]').first().should('have.attr', 'aria-pressed', 'true');
+    cy.get('button[title="Navy Blue"]').first().click();
+    cy.get('button[title="Classic White"]').first().click();
+    cy.get('button[title="Classic White"]').first().should('have.attr', 'aria-pressed', 'true');
 
     // Pricing preview (computed in the background, not displayed) carries the configured rows
     cy.wrap(null).should(() => {
@@ -73,8 +74,10 @@ describe('Customizer - variant colors survive main color changes', () => {
 
     // Submit: payload keeps the rows, main color reflects the selector, quantities sum correctly
     cy.get('#customizer-proceed-btn').should('not.be.disabled').click();
+    // Checkout step: confirm quantity/sizes/offers, then the quote is submitted
+    cy.get('#customizer-confirm-btn', { timeout: 15000 }).should('not.be.disabled').click();
     cy.wait('@createQuote').its('request.body').then((body: any) => {
-      expect(body.color).to.eq('Bottle Green');
+      expect(body.color).to.eq('Classic White');
       expect(body.quantity).to.eq(MOQ);
       expect(body.items).to.have.length(1);
       expect(body.items[0].variants).to.deep.eq(EXPECTED_ROWS);
@@ -91,12 +94,14 @@ describe('Customizer - variant colors survive main color changes', () => {
     cy.visit(`/products/${SLUG}/customize`);
     cy.get('#customizer-canvas-wrapper[data-canvas-ready="true"]', { timeout: 20000 }).should('exist');
     cy.get('#tab-tool-colors').click();
-    cy.get('button[title="Maroon"]').first().click();
+    cy.get('button[title="Classic White"]').first().click();
     cy.get('#customizer-proceed-btn').should('not.be.disabled').click();
+    // Checkout step: confirm quantity/sizes/offers, then the quote is submitted
+    cy.get('#customizer-confirm-btn', { timeout: 15000 }).should('not.be.disabled').click();
     cy.wait('@createQuote').its('request.body').then((body: any) => {
-      expect(body.color).to.eq('Maroon');
+      expect(body.color).to.eq('Classic White');
       expect(body.items[0].variants).to.have.length(1);
-      expect(body.items[0].variants[0].color).to.eq('Maroon');
+      expect(body.items[0].variants[0].color).to.eq('Classic White');
       expect(body.items[0].variants[0].quantity).to.eq(MOQ);
     });
   });
@@ -106,7 +111,7 @@ describe('Customizer - variant colors survive main color changes', () => {
     visitWithConfiguredRows();
 
     cy.get('#tab-tool-colors').click();
-    cy.get('button[title="Royal Blue"]').first().click();
+    cy.get('button[title="Navy Blue"]').first().click();
 
     // Rapid side switching on mobile, then the toggle and canvas agree
     cy.window().then((win: any) => win.__getCanvasRef().addText('M-FRONT', { fontFamily: 'Inter', fontSize: 24, fill: '#111111' }));
@@ -124,8 +129,10 @@ describe('Customizer - variant colors survive main color changes', () => {
     });
 
     cy.get('#customizer-proceed-btn').should('not.be.disabled').click();
+    // Checkout step: confirm quantity/sizes/offers, then the quote is submitted
+    cy.get('#customizer-confirm-btn', { timeout: 15000 }).should('not.be.disabled').click();
     cy.wait('@createQuote').its('request.body').then((body: any) => {
-      expect(body.color).to.eq('Royal Blue');
+      expect(body.color).to.eq('Navy Blue');
       expect(body.items[0].variants).to.deep.eq(EXPECTED_ROWS);
     });
   });

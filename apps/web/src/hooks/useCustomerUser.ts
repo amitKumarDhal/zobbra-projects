@@ -7,7 +7,7 @@
  *
  * Returns:
  *   user        – raw user object (or null while loading)
- *   userName    – User.name
+ *   userName    – User.name (falls back to phone for new WhatsApp OTP accounts)
  *   companyName – Company.name
  *   email       – User.email
  *   phone       – User.phone
@@ -21,7 +21,7 @@ import { API_URL } from '@/lib/api';
 export interface CustomerUser {
   id?: string;
   name: string;
-  email: string;
+  email?: string | null;
   phone?: string;
   role?: string;
   company?: {
@@ -29,7 +29,10 @@ export interface CustomerUser {
     name: string;
     gstin?: string;
     address?: string;
+    addressType?: string | null;
     city?: string;
+    state?: string;
+    pincode?: string;
   };
 }
 
@@ -54,8 +57,8 @@ function getCachedUser(): CustomerUser | null {
     const raw = localStorage.getItem('user') || localStorage.getItem('zobra_user');
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    // Basic validity check – must have a name
-    if (!parsed?.name) return null;
+    // Basic validity check – WhatsApp OTP accounts may not have a name yet
+    if (!parsed?.id && !parsed?.name) return null;
     return parsed as CustomerUser;
   } catch {
     return null;
@@ -83,17 +86,17 @@ export function useCustomerUser(): UseCustomerUserResult {
       setUser(cached);
       setLoading(false);
       // Silently refresh from API in the background to keep data fresh
-      refreshFromApi(cancelled);
+      refreshFromApi();
     } else {
       // No cache – fetch from API immediately
-      refreshFromApi(cancelled, true);
+      refreshFromApi(true);
     }
 
-    async function refreshFromApi(isCancelled: boolean, showLoading = false) {
+    async function refreshFromApi(showLoading = false) {
       if (showLoading) setLoading(true);
       const token = getToken();
       if (!token) {
-        if (!isCancelled) setLoading(false);
+        if (!cancelled) setLoading(false);
         return;
       }
       try {
@@ -103,17 +106,19 @@ export function useCustomerUser(): UseCustomerUserResult {
         if (res.ok) {
           const data = await res.json();
           const fresh: CustomerUser | null = data.user || data.data || null;
-          if (fresh?.name && !isCancelled) {
-            setUser(fresh);
+          // The session may have ended (or changed) while this was in flight: never write a
+          // signed-out user back into storage.
+          if ((fresh?.id || fresh?.name) && getToken() === token) {
             // Keep localStorage in sync
             localStorage.setItem('user', JSON.stringify(fresh));
             localStorage.setItem('zobra_user', JSON.stringify(fresh));
+            if (!cancelled) setUser(fresh);
           }
         }
       } catch {
         // Silently swallow – we already showed cached data
       } finally {
-        if (!isCancelled) setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
@@ -122,7 +127,7 @@ export function useCustomerUser(): UseCustomerUserResult {
     };
   }, []);
 
-  const userName = user?.name ?? '';
+  const userName = user?.name || user?.phone || '';
   const companyName = user?.company?.name ?? '';
   const email = user?.email ?? '';
   const phone = user?.phone ?? '';
@@ -134,6 +139,6 @@ export function useCustomerUser(): UseCustomerUserResult {
     email,
     phone,
     loading,
-    initials: userName ? initials(userName) : '?',
+    initials: user?.name ? initials(user.name) : '?',
   };
 }

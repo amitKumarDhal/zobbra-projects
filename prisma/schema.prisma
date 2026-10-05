@@ -137,10 +137,14 @@ enum TaskCategory {
 
 model User {
   id            String          @id @default(uuid())
-  email         String          @unique
-  passwordHash  String
+  // email/passwordHash are null for passwordless (WhatsApp OTP) customers.
+  // Staff (ADMIN/SALES/PRODUCTION) accounts keep email + password login.
+  email         String?         @unique
+  passwordHash  String?
   name          String
   phone         String?
+  // E.164 number proven via WhatsApp OTP; the login identity for OTP customers.
+  verifiedPhone String?         @unique
   role          Role            @default(CUSTOMER)
   companyId     String?
   company       Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -180,6 +184,7 @@ model Company {
   city      String
   state     String
   pincode   String
+  addressType String? // Office | Home | Warehouse | Other (customer-chosen in My Profile)
   logo      String?
   notes     String?
   users     User[]
@@ -223,6 +228,42 @@ model Product {
   requiresColor         Boolean          @default(true)
   requiresSize          Boolean          @default(true)
   supportsVariantMatrix Boolean          @default(true)
+
+  // Pricing & stock (bulkPricing holds the quantity-range prices)
+  minOrderQty           Int?
+  minSampleQty          Int?
+  stockCount            Int              @default(0)
+
+  // Social proof shown on listings; null falls back to published testimonials
+  ratingOverride        Float?
+  reviewCountOverride   Int?
+
+  // Ordering & customizer settings
+  orderMode             String           @default("BOTH") // SINGLE | BULK | BOTH
+  customizationEnabled  Boolean          @default(true)
+  designerEnabled       Boolean          @default(true)
+  customizerTemplateId  String?
+  // Customizer feature switches (Phase 3 architecture)
+  trimColorEnabled      Boolean          @default(false)
+  tapingColorEnabled    Boolean          @default(false)
+  backDesignEnabled     Boolean          @default(true)
+  embroideryEnabled     Boolean          @default(false)
+  zipperEnabled         Boolean          @default(false)
+
+  // Customer-facing options and content
+  sizes                 String[]         @default([])
+  colors                Json             @default("[]") // [{ name, hex }]
+  highlights            String[]         @default([])
+  orderImages           Json             @default("[]") // [{ url, rating }]
+  videos                Json             @default("[]") // [{ url, rating }], admin order
+  freeGift              Json?            // { enabled, title, description, minQuantity }
+  offerAddon            Json?            // { enabled, title, description, price, priceType }
+  // Customizer canvas photos: { front: { image, area }, back: { enabled, image, area } }; null = legacy images[0]/[1]
+  customizerViews       Json?
+
+  // INTERNAL ONLY, never returned to customers: { enabled, pools: [{ stockType, colors, stock }] }
+  stockDeduction        Json?
+
   variants              ProductVariant[]
   bulkPricing BulkPricing[]
   quoteItems  QuoteItem[]
@@ -290,6 +331,11 @@ model Quote {
   previewFrontUrl   String?   // Rendered garment + design, front side (Cloudinary URL)
   previewBackUrl    String?   // Rendered garment + design, back side (Cloudinary URL)
   canvasStateJson   String?   // Full Fabric.js JSON snapshot for both sides
+
+  // Product offer addon the customer opted into (server-calculated, included in subtotal) and free gift
+  addonTitle        String?
+  addonAmount       Float     @default(0.0)
+  freeGiftTitle     String?
 
   assignedToId String?
   assignedTo   User?          @relation("AssignedQuoteUser", fields: [assignedToId], references: [id])
@@ -387,6 +433,16 @@ model Order {
   previewFrontUrl   String?   // Rendered garment + design, front side
   previewBackUrl    String?   // Rendered garment + design, back side
   canvasStateJson   String?   // Full Fabric.js JSON snapshot
+
+  // Preserved from the originating Quote
+  addonTitle        String?
+  addonAmount       Float     @default(0.0)
+  freeGiftTitle     String?
+
+  // Delivery details as they were when the order was placed. Later edits to the
+  // customer's profile never change this: { name, phone, company, address,
+  // addressType, city, state, pincode, gstin }
+  deliveryAddress   Json?
 
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -713,3 +769,39 @@ model SystemActivity {
   @@map("system_activities")
 }
 
+
+// One active WhatsApp OTP challenge per phone. The code itself is never
+// stored — only an HMAC of (phone, code) keyed with a server secret.
+model OtpChallenge {
+  id              String    @id @default(uuid())
+  phone           String    @unique
+  codeHash        String?
+  expiresAt       DateTime
+  attempts        Int       @default(0)
+  sendCount       Int       @default(0)
+  windowStartedAt DateTime  @default(now())
+  lastSentAt      DateTime?
+  consumedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("otp_challenges")
+}
+
+// Reusable Customizer Template asset foundation (Phase 1 & Phase 2 architecture)
+model CustomizerTemplate {
+  id                    String   @id // e.g. "polo-v1", "polo-v2"
+  name                  String
+  description           String?  @default("")
+  version               String   @default("1.0")
+  active                Boolean  @default(true)
+  supportsBack          Boolean  @default(true)
+  categoryCompatibility String[] @default([])
+  colorGroups           Json     @default("[]")
+  layers                Json     @default("[]")
+  printAreas            Json     @default("[]")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("customizer_templates")
+}

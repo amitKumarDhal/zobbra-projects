@@ -1,6 +1,7 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { prisma } from '../../config/index.js';
-import { AuthRequest } from '../../middleware/auth.js';
+import { AuthRequest, customerOwnershipFilter, isCustomerOwner } from '../../middleware/auth.js';
+import { deductStockForOrder } from '../products/stock.js';
 
 // Allowed Order status transitions
 const ALLOWED_ORDER_TRANSITIONS: Record<string, string[]> = {
@@ -12,6 +13,45 @@ const ALLOWED_ORDER_TRANSITIONS: Record<string, string[]> = {
   DELIVERED: [],
   CANCELLED: [],
 };
+
+/**
+ * Delivery details frozen onto the order at creation. An address given with the quote
+ * wins; otherwise the customer's profile as it is right now. Later profile edits must
+ * not rewrite where an existing order was sent.
+ */
+function buildDeliverySnapshot(quote: {
+  notes: string | null;
+  customer: { name: string; phone: string | null };
+  company: {
+    name: string;
+    gstin: string | null;
+    address: string;
+    addressType: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+  } | null;
+}) {
+  const prefix = 'Delivery Address: ';
+  const quoteAddress = quote.notes
+    ?.split(' | ')
+    .find((part) => part.startsWith(prefix))
+    ?.slice(prefix.length)
+    .trim();
+  const company = quote.company;
+
+  return {
+    name: quote.customer.name || null,
+    phone: quote.customer.phone || null,
+    company: company?.name || null,
+    address: quoteAddress || company?.address || null,
+    addressType: company?.addressType || null,
+    city: company?.city || null,
+    state: company?.state || null,
+    pincode: company?.pincode || null,
+    gstin: company?.gstin || null,
+  };
+}
 
 export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
   const quoteId = req.params.quoteId || req.body.quoteId;
@@ -31,7 +71,7 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
   }
 
   // 2. Security Check: Customer ownership
-  if (req.user?.role === 'CUSTOMER' && quote.customerId !== req.user.id && quote.companyId !== req.user.companyId) {
+  if (req.user?.role === 'CUSTOMER' && !isCustomerOwner(req.user, quote)) {
     return res.status(403).json({ success: false, message: 'Unauthorized to convert this quote' });
   }
 
@@ -69,8 +109,25 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
 
   // 5. Execute Atomic Prisma Transaction
   try {
+    // Continue from the highest number already issued: a row count would reuse a number after a deletion.
+    const year = new Date().getFullYear();
     const orderCount = await prisma.order.count();
-    const orderNumber = `ZQB-ORD-${new Date().getFullYear()}-${String(orderCount + 5001).padStart(4, '0')}`;
+    const [lastOrder, lastInvoice] = await Promise.all([
+      prisma.order.findFirst({
+        where: { orderNumber: { startsWith: `ZQB-ORD-${year}-` } },
+        orderBy: { orderNumber: 'desc' },
+        select: { orderNumber: true },
+      }),
+      prisma.invoice.findFirst({
+        where: { invoiceNumber: { startsWith: `INV-${year}-` } },
+        orderBy: { invoiceNumber: 'desc' },
+        select: { invoiceNumber: true },
+      }),
+    ]);
+    const lastSeq = (value?: string) => parseInt(value?.split('-').pop() || '', 10) || 0;
+    const orderSeq = Math.max(orderCount + 5001, lastSeq(lastOrder?.orderNumber) + 1);
+    const invoiceSeq = Math.max(orderCount + 8001, lastSeq(lastInvoice?.invoiceNumber) + 1);
+    const orderNumber = `ZQB-ORD-${year}-${String(orderSeq).padStart(4, '0')}`;
 
     const result = await prisma.$transaction(
       async (tx) => {
@@ -91,6 +148,10 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
           previewFrontUrl: quote.previewFrontUrl || null,
           previewBackUrl: quote.previewBackUrl || null,
           canvasStateJson: quote.canvasStateJson || null,
+          addonTitle: quote.addonTitle,
+          addonAmount: quote.addonAmount,
+          freeGiftTitle: quote.freeGiftTitle,
+          deliveryAddress: buildDeliverySnapshot(quote),
           items: {
             create: quote.items.map((item) => ({
               productId: item.productId,
@@ -118,7 +179,7 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
           },
           invoices: {
             create: {
-              invoiceNumber: `INV-${new Date().getFullYear()}-${String(orderCount + 8001).padStart(4, '0')}`,
+              invoiceNumber: `INV-${year}-${String(invoiceSeq).padStart(4, '0')}`,
               companyId: quote.companyId,
               amount: quote.subtotal,
               gstAmount: quote.gstTotal,
@@ -136,6 +197,9 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
           invoices: true,
         },
       });
+
+        // Internal stock deduction: ordered colours reduce the mapped stock types (same transaction as the order)
+        await deductStockForOrder(tx, quote.items);
 
         // Mark linked inquiry as closed / converted to order
         const linkedInquiry = await tx.inquiry.findFirst({
@@ -194,17 +258,11 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
       if (where.OR) {
         where.AND = [
           {
-            OR: [
-              { customerId: req.user.id },
-              { companyId: req.user.companyId || undefined },
-            ]
+            OR: customerOwnershipFilter(req.user)
           }
         ];
       } else {
-        where.OR = [
-          { customerId: req.user.id },
-          { companyId: req.user.companyId || undefined },
-        ];
+        where.OR = customerOwnershipFilter(req.user);
       }
     }
 
@@ -269,10 +327,7 @@ export const getOrderStats = async (req: AuthRequest, res: Response) => {
   try {
     const baseWhere: any = {};
     if (req.user?.role === 'CUSTOMER') {
-      baseWhere.OR = [
-        { customerId: req.user.id },
-        { companyId: req.user.companyId || undefined },
-      ];
+      baseWhere.OR = customerOwnershipFilter(req.user);
     }
 
     // Not CANCELLED
@@ -339,7 +394,7 @@ export const getOrderById = async (req: AuthRequest, res: Response) => {
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
     // Ownership guard
-    if (req.user?.role === 'CUSTOMER' && order.customerId !== req.user.id && order.companyId !== req.user.companyId) {
+    if (req.user?.role === 'CUSTOMER' && !isCustomerOwner(req.user, order)) {
       return res.status(403).json({ success: false, message: 'Unauthorized to view this order' });
     }
 
@@ -391,4 +446,56 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
   });
 
   return res.json({ success: true, order: updatedOrder });
+};
+
+// Public order tracking by order number. Order numbers are sequential, so this
+// returns progress only — never customer identity, pricing or artwork.
+export const trackOrder = async (req: Request, res: Response) => {
+  const orderNumber = String(req.params.orderNumber || '').trim();
+
+  if (!orderNumber || orderNumber.length > 40) {
+    return res.status(400).json({ success: false, message: 'Please enter a valid order ID.' });
+  }
+
+  const order = await prisma.order.findFirst({
+    where: { orderNumber: { equals: orderNumber, mode: 'insensitive' } },
+    select: {
+      orderNumber: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+      items: { select: { quantity: true, product: { select: { name: true } } } },
+      production: { select: { stage: true } },
+      dispatch: {
+        select: {
+          courierName: true,
+          trackingNumber: true,
+          trackingUrl: true,
+          status: true,
+          dispatchedAt: true,
+          deliveredAt: true,
+        },
+      },
+    },
+  });
+
+  if (!order) {
+    return res.status(404).json({
+      success: false,
+      message: 'No order found with this ID. Please check the order ID and try again.',
+    });
+  }
+
+  return res.json({
+    success: true,
+    order: {
+      orderNumber: order.orderNumber,
+      status: order.status,
+      placedAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      productionStage: order.production?.stage ?? null,
+      items: order.items.map((item) => ({ name: item.product.name, quantity: item.quantity })),
+      shipment: order.dispatch,
+    },
+  });
 };

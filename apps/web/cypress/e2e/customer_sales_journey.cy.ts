@@ -6,7 +6,7 @@ describe('Phase 19 — Admin + Customer Sales Business Journey', () => {
 
   it('executes full customer quote creation, admin review, WhatsApp link generation, and customer approval', () => {
     // 1. Log in as Customer
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.url().should('include', '/customer');
 
     // 2. Open products and create quote
@@ -30,7 +30,7 @@ describe('Phase 19 — Admin + Customer Sales Business Journey', () => {
 
     // 6. Log out admin and log back in as Customer
     cy.clearLocalStorage();
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
 
     // 7. Customer approves quote
     cy.visit('/customer/quotes');

@@ -74,10 +74,8 @@ describe('Customer Order Artwork View & Download End-to-End', () => {
   };
 
   it('1. Login customer', () => {
-    cy.visit('/login');
-    cy.get('[data-cy="email-input"]').clear().type(customerEmail);
-    cy.get('[data-cy="password-input"]').clear().type(customerPassword);
-    cy.get('[data-cy="login-submit-button"]').click();
+    // Customer UI login is WhatsApp OTP now; sign the seeded customer in via the API.
+    cy.login(customerEmail, customerPassword);
     cy.url().should('include', '/customer');
   });
 

@@ -31,6 +31,15 @@ const nextConfig = {
 
   reactStrictMode: true,
 
+  // Customer portal pages that no longer exist: send old links/bookmarks to a page that does.
+  async redirects() {
+    return [
+      { source: '/customer/support', destination: '/customer/products', permanent: false },
+      { source: '/customer/notifications', destination: '/customer/products', permanent: false },
+      { source: '/customer/invoices', destination: '/customer/orders', permanent: false },
+    ];
+  },
+
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

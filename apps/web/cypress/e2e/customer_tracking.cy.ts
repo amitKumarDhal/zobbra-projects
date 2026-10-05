@@ -3,7 +3,7 @@
 describe('Customer Shipment Tracking Coming Soon Experience', () => {
   it('verifies that /customer/tracking renders a professional Coming Soon state without fake courier/AWB data', () => {
     // 1. Login as customer
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
 
     // 2. Open /customer/tracking
     cy.visit('/customer/tracking');

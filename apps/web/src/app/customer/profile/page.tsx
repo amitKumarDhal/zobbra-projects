@@ -1,15 +1,24 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Building2, MapPin, Check } from 'lucide-react';
+import { User, Building2, MapPin, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCustomerUser } from '@/hooks/useCustomerUser';
+import { API_URL } from '@/lib/api';
+
+const ADDRESS_TYPES = ['Office', 'Home', 'Warehouse', 'Other'];
+
+const fieldClass =
+  'w-full px-3.5 py-2.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg text-[#111111] font-medium focus:outline-none focus:border-[#3B6FEB] focus:bg-white';
+const labelClass = 'block font-bold text-[#6B7280] uppercase';
 
 export default function CustomerProfilePage() {
   const { user, loading } = useCustomerUser();
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
   // Controlled form state — populated from auth once loaded
   const [name, setName] = useState('');
@@ -18,6 +27,10 @@ export default function CustomerProfilePage() {
   const [companyName, setCompanyName] = useState('');
   const [gstin, setGstin] = useState('');
   const [address, setAddress] = useState('');
+  const [addressType, setAddressType] = useState('');
+  const [pincode, setPincode] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -27,33 +40,50 @@ export default function CustomerProfilePage() {
       setCompanyName(user.company?.name ?? '');
       setGstin(user.company?.gstin ?? '');
       setAddress(user.company?.address ?? '');
+      setAddressType(user.company?.addressType ?? '');
+      setPincode(user.company?.pincode ?? '');
+      setCity(user.company?.city ?? '');
+      setState(user.company?.state ?? '');
     }
   }, [user]);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaved(true);
-    // Update localStorage with the new name so all components reflect the change instantly
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('user') || localStorage.getItem('zobra_user');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          const updated = {
-            ...parsed,
-            name,
-            email,
-            phone,
-            company: parsed.company ? { ...parsed.company, name: companyName, gstin, address } : undefined,
-          };
-          localStorage.setItem('user', JSON.stringify(updated));
-          localStorage.setItem('zobra_user', JSON.stringify(updated));
-        }
-      } catch {
-        // ignore
+    setSaving(true);
+    setSaved(false);
+    setError('');
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('zobra_token');
+      // The account is identified by the session token; the phone is the login identity and is not sent.
+      const res = await fetch(`${API_URL}/auth/me`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ name, email, companyName, gstin, address, addressType, pincode, city, state }),
+      });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data?.success) {
+        setError(data?.errors?.[0]?.message || data?.message || 'Could not save your profile. Please try again.');
+        return;
       }
+
+      // Keep the cached session in sync so every component reflects the change instantly
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('zobra_user', JSON.stringify(data.user));
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('zobra_token', data.token);
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      setError('Could not reach the server. Please try again.');
+    } finally {
+      setSaving(false);
     }
-    setTimeout(() => setSaved(false), 2000);
   };
 
   if (loading) {
@@ -89,25 +119,27 @@ export default function CustomerProfilePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="space-y-1">
-              <label className="block font-bold text-[#6B7280] uppercase">Company Registered Name</label>
+              <label className={labelClass}>Company Registered Name</label>
               <input
                 type="text"
                 data-cy="profile-company-name"
+                maxLength={160}
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Your company name"
-                className="w-full px-3.5 py-2.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg text-[#111111] font-medium focus:outline-none focus:border-[#3B6FEB] focus:bg-white"
+                className={fieldClass}
               />
             </div>
             <div className="space-y-1">
-              <label className="block font-bold text-[#6B7280] uppercase">GSTIN Number</label>
+              <label className={labelClass}>GSTIN Number</label>
               <input
                 type="text"
                 data-cy="profile-gstin"
+                maxLength={20}
                 value={gstin}
-                onChange={(e) => setGstin(e.target.value)}
+                onChange={(e) => setGstin(e.target.value.toUpperCase())}
                 placeholder="22AAAAA0000A1Z5"
-                className="w-full px-3.5 py-2.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg text-[#111111] font-mono font-bold focus:outline-none focus:border-[#3B6FEB] focus:bg-white"
+                className={`${fieldClass} font-mono font-bold`}
               />
             </div>
           </div>
@@ -121,37 +153,39 @@ export default function CustomerProfilePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
             <div className="space-y-1">
-              <label className="block font-bold text-[#6B7280] uppercase">Full Name</label>
+              <label className={labelClass}>Full Name</label>
               <input
                 type="text"
                 data-cy="profile-name"
+                maxLength={120}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your full name"
-                className="w-full px-3.5 py-2.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg text-[#111111] font-medium focus:outline-none focus:border-[#3B6FEB] focus:bg-white"
+                className={fieldClass}
               />
             </div>
             <div className="space-y-1">
-              <label className="block font-bold text-[#6B7280] uppercase">Work Email</label>
+              <label className={labelClass}>Work Email</label>
               <input
                 type="email"
                 data-cy="profile-email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
-                className="w-full px-3.5 py-2.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg text-[#111111] font-medium focus:outline-none focus:border-[#3B6FEB] focus:bg-white"
+                className={fieldClass}
               />
             </div>
             <div className="space-y-1">
-              <label className="block font-bold text-[#6B7280] uppercase">Phone Number</label>
+              <label className={labelClass}>Phone Number</label>
               <input
                 type="tel"
                 data-cy="profile-phone"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 98765 43210"
-                className="w-full px-3.5 py-2.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg text-[#111111] font-medium focus:outline-none focus:border-[#3B6FEB] focus:bg-white"
+                readOnly
+                title="Your verified WhatsApp number is your login and cannot be changed here."
+                className={`${fieldClass} text-[#6B7280] cursor-not-allowed`}
               />
+              <p className="text-[10px] text-[#9CA3AF]">Verified login number</p>
             </div>
           </div>
         </Card>
@@ -161,21 +195,92 @@ export default function CustomerProfilePage() {
           <h3 className="font-heading font-bold text-lg text-[#111111] flex items-center gap-2">
             <MapPin className="w-5 h-5 text-[#3B6FEB]" /> Default Delivery Address
           </h3>
-          <div>
-            <textarea
-              rows={3}
-              data-cy="profile-address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Your registered delivery address"
-              className="w-full px-3.5 py-2.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg text-xs text-[#111111] font-medium focus:outline-none focus:border-[#3B6FEB] focus:bg-white"
-            />
+          <div className="space-y-4 text-xs">
+            <div className="space-y-1">
+              <label className={labelClass}>Address</label>
+              <textarea
+                rows={3}
+                data-cy="profile-address"
+                maxLength={500}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Your registered delivery address"
+                className={fieldClass}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <label className={labelClass}>Address Type</label>
+                <select
+                  data-cy="profile-address-type"
+                  value={addressType}
+                  onChange={(e) => setAddressType(e.target.value)}
+                  className={fieldClass}
+                >
+                  <option value="">Select type</option>
+                  {ADDRESS_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className={labelClass}>Pincode</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  data-cy="profile-pincode"
+                  maxLength={12}
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value)}
+                  placeholder="751001"
+                  className={fieldClass}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className={labelClass}>City</label>
+                <input
+                  type="text"
+                  data-cy="profile-city"
+                  maxLength={80}
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="City"
+                  className={fieldClass}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className={labelClass}>State</label>
+                <input
+                  type="text"
+                  data-cy="profile-state"
+                  maxLength={80}
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  placeholder="State"
+                  className={fieldClass}
+                />
+              </div>
+            </div>
           </div>
         </Card>
 
+        {error && (
+          <p role="alert" data-cy="profile-error" className="text-sm font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-4 py-3">
+            {error}
+          </p>
+        )}
+
         <div className="flex items-center gap-4">
-          <Button variant="primary" size="lg" className="font-bold px-8" data-cy="profile-save-btn">
-            {saved ? <span className="flex items-center gap-2"><Check className="w-4 h-4" /> SAVED CHANGES</span> : 'SAVE PROFILE'}
+          <Button variant="primary" size="lg" className="font-bold px-8" data-cy="profile-save-btn" disabled={saving}>
+            {saving ? (
+              <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> SAVING...</span>
+            ) : saved ? (
+              <span className="flex items-center gap-2"><Check className="w-4 h-4" /> SAVED CHANGES</span>
+            ) : (
+              'SAVE PROFILE'
+            )}
           </Button>
         </div>
       </form>

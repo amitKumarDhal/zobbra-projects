@@ -90,7 +90,7 @@ describe('ZOBBRA Public Inquiry / Get-Quote Flow', () => {
   });
 
   it('Step 3: Registered customer submits inquiry and is automatically identified as REGISTERED', () => {
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.visit('/get-quote');
 
     const regCompany = `Reg Corp ${Date.now()}`;

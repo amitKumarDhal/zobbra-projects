@@ -31,33 +31,27 @@ describe('Product Management Module', () => {
     });
   });
 
-  it('should open the Add Product drawer and navigate tabs', () => {
-     cy.contains('button', 'Add New Product').click();
-     
-     // Drawer should open and default to Basic Info
-     cy.contains('Add New Product').should('be.visible');
+  it('should open the full Add Product form with every configuration section', () => {
+     cy.get('[data-cy="add-product-btn"]').click();
+     cy.location('pathname').should('eq', '/dashboard/products/new');
+
+     cy.contains('h1', 'Add New Product').should('be.visible');
      cy.contains('label', 'Product Name *').should('be.visible');
-     cy.contains('label', 'SKU / Slug *').should('be.visible');
+     cy.contains('label', 'Slug (URL) *').should('be.visible');
      cy.contains('label', 'Base Price (₹) *').should('be.visible');
 
-     // Navigate to Variants Tab
-     cy.contains('button', 'Variants').click();
-     cy.contains('button', 'Variants').should('have.class', 'border-[#3B6FEB]');
-     cy.contains('button', '+ Add Variant').should('be.visible');
+     for (const section of [
+       'basic', 'pricing', 'social', 'sizes', 'colors', 'stock', 'order-images',
+       'videos', 'gift', 'addon', 'highlights', 'settings', 'designer', 'images',
+     ]) {
+       cy.get(`[data-cy="section-${section}"]`).should('exist');
+     }
+     cy.contains('button', '+ Add Range').should('exist');
+     cy.contains('button', 'Add Color').should('exist');
 
-     // Navigate to Pricing Tab
-     cy.contains('button', 'Pricing').click();
-     cy.contains('button', 'Pricing').should('have.class', 'border-[#3B6FEB]');
-     cy.contains('button', '+ Add Pricing Tier').should('be.visible');
-     
-     // Navigate to Design Studio Tab
-     cy.contains('button', 'Design Studio').click();
-     cy.contains('button', 'Design Studio').should('have.class', 'border-[#3B6FEB]');
-     cy.contains('UI ONLY / FUTURE').should('be.visible');
-
-     // Close drawer
-     cy.get('button').find('svg.lucide-x').parent().click();
-     cy.contains('h2', 'Add New Product').should('not.exist');
+     // Back to the list
+     cy.contains('a', 'Cancel').click();
+     cy.location('pathname').should('eq', '/dashboard/products');
   });
 
   it('should duplicate a product correctly', () => {

@@ -3,7 +3,7 @@
 describe('Customizer — Quote Payload Sanitization & Cloudinary Upload', () => {
   beforeEach(() => {
     cy.viewport(1280, 800);
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
 
     // Intercept GET requests for mock Cloudinary images with CORS headers
     cy.intercept('GET', 'https://res.cloudinary.com/**', (req) => {
@@ -64,6 +64,8 @@ describe('Customizer — Quote Payload Sanitization & Cloudinary Upload', () => 
 
     // 7. Click Proceed
     cy.get('#customizer-proceed-btn').click();
+    // Checkout step: confirm quantity/sizes/offers, then the quote is submitted
+    cy.get('#customizer-confirm-btn', { timeout: 15000 }).should('not.be.disabled').click();
 
     // 8. Intercept and inspect outgoing payload
     cy.wait('@submitQuote').then((interception) => {
@@ -184,9 +186,10 @@ describe('Customizer — Quote Payload Sanitization & Cloudinary Upload', () => 
     cy.get('#btn-switch-front').click();
     cy.wait(300);
 
-    // 4. Configure quantity and submit
-    cy.contains('button', '50').click();
+    // 4. Proceed and confirm in the checkout step
     cy.get('#customizer-proceed-btn').should('not.be.disabled').click();
+    // Checkout step: confirm quantity/sizes/offers, then the quote is submitted
+    cy.get('#customizer-confirm-btn', { timeout: 15000 }).should('not.be.disabled').click();
 
     // 5. Verify no SecurityError / tainted canvas and successful quote creation
     cy.wait('@submitQuoteH').then((interception) => {

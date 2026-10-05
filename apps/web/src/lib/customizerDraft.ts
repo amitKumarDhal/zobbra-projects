@@ -24,6 +24,8 @@ export interface CustomizerDraft {
   originalArtworkUrl?: string;
   quantity: number;
   variants: CustomizerVariant[];
+  /** Whether the customer opted into the product's offer addon. */
+  addonSelected?: boolean;
   printPosition: 'Front' | 'Back' | 'Both' | 'Front Only' | 'Back Only' | 'Front & Back' | string;
   printingType?: string;
   notes?: string;

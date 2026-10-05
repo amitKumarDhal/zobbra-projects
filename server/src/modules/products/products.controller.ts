@@ -2,6 +2,22 @@ import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/index.js';
 import type { AuthRequest } from '../../middleware/auth.js';
+import {
+  ProductValidationError,
+  ReviewStats,
+  normalizePricingRanges,
+  normalizeProductConfig,
+  toAdminProduct,
+  toPublicProduct,
+} from './product-config.js';
+import {
+  listCustomizerTemplates,
+  listCustomizerTemplatesAsync,
+  getCustomizerTemplateByIdAsync,
+  createCustomizerTemplate,
+  updateCustomizerTemplate,
+  setCustomizerTemplateActive,
+} from './customizer-templates.js';
 
 /** Only staff may see hidden (isActive=false) products; guests and customers see active ones only. */
 const canSeeHiddenProducts = (req: Request) => {
@@ -24,6 +40,56 @@ export const resolveProductSlug = (slug: unknown, name: unknown) => {
   const explicit = typeof slug === 'string' ? slug.trim().replace(/\s+/g, '-') : '';
   return explicit || slugFromName(String(name ?? ''));
 };
+
+/** A slug is part of the product URL: letters, digits, dot, underscore and hyphen only. */
+const assertValidSlug = (slug: string) => {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(slug) || slug.includes('-deleted-')) {
+    throw new ProductValidationError('Slug may only contain letters, numbers and hyphens (e.g. classic-cotton-cap).');
+  }
+};
+
+/** Slugs are unique regardless of casing, so "Cap-1" and "cap-1" cannot both exist. */
+const slugTaken = async (slug: string, exceptId?: string) =>
+  Boolean(
+    await prisma.product.findFirst({
+      where: { slug: { equals: slug, mode: 'insensitive' }, ...(exceptId ? { id: { not: exceptId } } : {}) },
+      select: { id: true },
+    })
+  );
+
+const SLUG_CONFLICT_MESSAGE = 'A product with this slug/SKU already exists. Please use a different SKU or name.';
+
+/** One variant per colour (and per size when the product asks for a size), for products configured by colours/sizes. */
+const variantsFromOptions = (colors: any, sizes: any, requiresSize: boolean) => {
+  const colorNames: string[] = (Array.isArray(colors) ? colors : []).map((c: any) => c?.name).filter(Boolean);
+  if (colorNames.length === 0) return undefined;
+  const sizeNames: string[] = requiresSize && Array.isArray(sizes) && sizes.length > 0 ? sizes : ['Free Size'];
+  return colorNames.flatMap((color) => sizeNames.map((size) => ({ color, size, sku: '', stock: 0 })));
+};
+
+/** Average rating and count of PUBLISHED testimonials per product (the "actual reviews"). */
+const loadReviewStats = async (productIds: string[]): Promise<Map<string, ReviewStats>> => {
+  const stats = new Map<string, ReviewStats>();
+  if (productIds.length === 0) return stats;
+  const rows = await prisma.testimonial.groupBy({
+    by: ['productId'],
+    where: { productId: { in: productIds }, status: 'PUBLISHED' },
+    _avg: { rating: true },
+    _count: { _all: true },
+  });
+  for (const row of rows) {
+    if (!row.productId) continue;
+    stats.set(row.productId, {
+      rating: row._avg.rating != null ? Math.round(row._avg.rating * 10) / 10 : null,
+      reviewCount: row._count._all,
+    });
+  }
+  return stats;
+};
+
+/** Staff get the stored record; everyone else gets the customer-facing shape without internal fields. */
+const serializeFor = (req: Request, product: any, reviews?: ReviewStats) =>
+  canSeeHiddenProducts(req) ? toAdminProduct(product, reviews) : toPublicProduct(product, reviews);
 
 /**
  * Variant SKUs are globally unique. A blank SKU is generated from the product slug + color + size,
@@ -50,12 +116,12 @@ export const cleanVariants = (variants: any[] | undefined, productSlug: string) 
 
 /** Maps Prisma write failures to a JSON response instead of leaving the request hanging. */
 const sendProductWriteError = (res: Response, err: unknown, action: string) => {
+  if (err instanceof ProductValidationError) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === 'P2002') {
-      return res.status(409).json({
-        success: false,
-        message: 'A product with this slug/SKU already exists. Please use a different SKU or name.',
-      });
+      return res.status(409).json({ success: false, message: SLUG_CONFLICT_MESSAGE });
     }
     if (err.code === 'P2003') {
       return res.status(400).json({ success: false, message: 'Invalid category selected.' });
@@ -127,10 +193,13 @@ export const getProducts = async (req: Request, res: Response) => {
     prisma.product.count({ where }),
   ]);
 
+  const reviews = await loadReviewStats(products.map((p) => p.id));
+  const data = products.map((p) => serializeFor(req, p, reviews.get(p.id)));
+
   return res.json({
     success: true,
-    data: products,
-    products,
+    data,
+    products: data,
     pagination: {
       page: pageNum,
       pageSize: limitNum,
@@ -168,107 +237,157 @@ export const getProductBySlug = async (req: Request, res: Response) => {
     return res.status(404).json({ success: false, message: 'Product not found' });
   }
 
-  return res.json({ success: true, data: product, product });
+  const reviews = await loadReviewStats([product.id]);
+  const data = serializeFor(req, product, reviews.get(product.id));
+  return res.json({ success: true, data, product: data });
 };
 
 export const createProduct = async (req: Request, res: Response) => {
-  const { name, slug, hsnCode, gstRate, description, basePrice, images, categoryId, bulkPricing, variants, isActive, requiresSize, requiresColor } = req.body;
-
-  const cleanedPricing = bulkPricing && bulkPricing.length > 0 ? bulkPricing.map((p: any) => ({
-    minQuantity: parseInt(p.minQuantity, 10),
-    maxQuantity: parseInt(p.maxQuantity, 10),
-    pricePerUnit: parseFloat(p.pricePerUnit),
-    printType: p.printType || 'Front Only',
-  })) : undefined;
-
-  const price = parseFloat(basePrice);
-  const finalSlug = resolveProductSlug(slug, name);
-  const cleanedVariants = cleanVariants(variants, finalSlug);
-  if (!name || !String(name).trim() || !categoryId || !finalSlug || !Number.isFinite(price)) {
-    return res.status(400).json({
-      success: false,
-      message: 'Product name, category and a valid base price are required.',
-    });
-  }
+  const { name, slug, hsnCode, gstRate, description, basePrice, categoryId, bulkPricing, variants, isActive, requiresSize, requiresColor } = req.body;
 
   try {
+    const price = parseFloat(basePrice);
+    const finalSlug = resolveProductSlug(slug, name);
+    if (!name || !String(name).trim() || !categoryId || !finalSlug || !Number.isFinite(price) || price <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product name, category and a valid base price are required.',
+      });
+    }
+    assertValidSlug(finalSlug);
+    if (await slugTaken(finalSlug)) {
+      return res.status(409).json({ success: false, message: SLUG_CONFLICT_MESSAGE });
+    }
+
+    const config = normalizeProductConfig(req.body);
+    const pricingRanges = normalizePricingRanges(bulkPricing);
+    const needsSize = requiresSize !== undefined ? Boolean(requiresSize) : true;
+    // Explicit variants win; otherwise they are derived from the configured colours and sizes.
+    const cleanedVariants = cleanVariants(
+      Array.isArray(variants) && variants.length > 0 ? variants : variantsFromOptions(config.colors, config.sizes, needsSize),
+      finalSlug
+    );
+
+    // One nested create = one transaction: the product and all its related rows are saved together or not at all.
     const product = await prisma.product.create({
       data: {
-        name,
+        name: String(name).trim(),
         slug: finalSlug,
         hsnCode: hsnCode || '6109',
         gstRate: gstRate ? parseFloat(gstRate) : 5.0,
         description: description ?? '',
         basePrice: price,
-        images: images || [],
         categoryId,
         isActive: isActive !== undefined ? Boolean(isActive) : true,
-        requiresSize: requiresSize !== undefined ? Boolean(requiresSize) : true,
+        requiresSize: needsSize,
         requiresColor: requiresColor !== undefined ? Boolean(requiresColor) : true,
-        bulkPricing: cleanedPricing ? { createMany: { data: cleanedPricing } } : undefined,
+        ...config,
+        freeGift: config.freeGift ?? Prisma.JsonNull,
+        offerAddon: config.offerAddon ?? Prisma.JsonNull,
+        stockDeduction: config.stockDeduction ?? Prisma.JsonNull,
+        customizerViews: config.customizerViews ?? Prisma.JsonNull,
+        bulkPricing: pricingRanges && pricingRanges.length > 0 ? { createMany: { data: pricingRanges } } : undefined,
         variants: cleanedVariants ? { createMany: { data: cleanedVariants } } : undefined,
       },
-      include: { category: true, bulkPricing: true, variants: true },
+      include: { category: true, bulkPricing: { orderBy: { minQuantity: 'asc' } }, variants: true },
     });
 
-    return res.status(201).json({ success: true, product });
+    return res.status(201).json({ success: true, product: toAdminProduct(product) });
   } catch (err) {
     return sendProductWriteError(res, err, 'create');
   }
 };
 
+/** Prisma needs an explicit JsonNull to clear a nullable JSON column. */
+const nullableJson = (config: Record<string, any>, key: string) =>
+  key in config ? { [key]: config[key] ?? Prisma.JsonNull } : {};
+
 export const updateProduct = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, slug, hsnCode, gstRate, description, basePrice, images, categoryId, bulkPricing, variants, isActive, requiresSize, requiresColor } = req.body;
-
-  const cleanedPricing = bulkPricing && bulkPricing.length > 0 ? bulkPricing.map((p: any) => ({
-    minQuantity: parseInt(p.minQuantity, 10),
-    maxQuantity: parseInt(p.maxQuantity, 10),
-    pricePerUnit: parseFloat(p.pricePerUnit),
-    printType: p.printType || 'Front Only',
-  })) : undefined;
+  const { name, slug, hsnCode, gstRate, description, basePrice, categoryId, bulkPricing, variants, isActive, requiresSize, requiresColor } = req.body;
 
   if (slug !== undefined && !String(slug).trim()) {
     return res.status(400).json({ success: false, message: 'Slug/SKU cannot be empty.' });
   }
 
   try {
+    const newSlug = slug !== undefined ? resolveProductSlug(slug, '') : undefined;
+    if (newSlug !== undefined) {
+      assertValidSlug(newSlug);
+      if (await slugTaken(newSlug, id)) {
+        return res.status(409).json({ success: false, message: SLUG_CONFLICT_MESSAGE });
+      }
+    }
+    if (name !== undefined && !String(name).trim()) {
+      return res.status(400).json({ success: false, message: 'Product name cannot be empty.' });
+    }
+    let price: number | undefined;
+    if (basePrice !== undefined && basePrice !== null && basePrice !== '') {
+      price = parseFloat(basePrice);
+      if (!Number.isFinite(price) || price <= 0) {
+        return res.status(400).json({ success: false, message: 'Base price must be above zero.' });
+      }
+    }
+
+    const config = normalizeProductConfig(req.body);
+    const pricingRanges = normalizePricingRanges(bulkPricing);
+
     // Nested lists are replaced (delete + recreate). One transaction, so a failed update
     // (e.g. slug conflict) cannot leave the product without its variants/pricing.
     const product = await prisma.$transaction(async (tx) => {
+      const existing = await tx.product.findUniqueOrThrow({
+        where: { id },
+        select: { slug: true, colors: true, sizes: true, requiresSize: true, minOrderQty: true, minSampleQty: true },
+      });
+
+      const minOrderQty = config.minOrderQty !== undefined ? config.minOrderQty : existing.minOrderQty;
+      const minSampleQty = config.minSampleQty !== undefined ? config.minSampleQty : existing.minSampleQty;
+      if (minOrderQty != null && minSampleQty != null && minSampleQty > minOrderQty) {
+        throw new ProductValidationError('Min. sample qty cannot be more than the min. order qty.');
+      }
+
+      // Variants follow the colour/size configuration unless the request lists them explicitly.
+      const needsSize = requiresSize !== undefined ? Boolean(requiresSize) : existing.requiresSize;
+      const optionsChanged = config.colors !== undefined || config.sizes !== undefined;
+      const nextVariants = Array.isArray(variants)
+        ? variants
+        : optionsChanged
+          ? variantsFromOptions(config.colors ?? existing.colors, config.sizes ?? existing.sizes, needsSize)
+          : undefined;
+
       let cleanedVariants: ReturnType<typeof cleanVariants>;
-      if (variants) {
-        const skuSlug =
-          slug !== undefined
-            ? String(slug).trim()
-            : (await tx.product.findUniqueOrThrow({ where: { id }, select: { slug: true } })).slug;
-        cleanedVariants = cleanVariants(variants, skuSlug);
+      if (nextVariants) {
+        cleanedVariants = cleanVariants(nextVariants, newSlug ?? existing.slug);
         await tx.productVariant.deleteMany({ where: { productId: id } });
       }
-      if (bulkPricing) await tx.bulkPricing.deleteMany({ where: { productId: id } });
+      if (pricingRanges) await tx.bulkPricing.deleteMany({ where: { productId: id } });
 
       return tx.product.update({
         where: { id },
         data: {
-          name,
-          slug: slug !== undefined ? String(slug).trim() : undefined,
+          name: name !== undefined ? String(name).trim() : undefined,
+          slug: newSlug,
           hsnCode,
           description,
-          basePrice: basePrice ? parseFloat(basePrice) : undefined,
+          basePrice: price,
           gstRate: gstRate ? parseFloat(gstRate) : undefined,
-          images,
           categoryId,
           isActive: isActive !== undefined ? Boolean(isActive) : undefined,
           requiresSize: requiresSize !== undefined ? Boolean(requiresSize) : undefined,
           requiresColor: requiresColor !== undefined ? Boolean(requiresColor) : undefined,
-          bulkPricing: cleanedPricing ? { createMany: { data: cleanedPricing } } : undefined,
+          ...config,
+          ...nullableJson(config, 'freeGift'),
+          ...nullableJson(config, 'offerAddon'),
+          ...nullableJson(config, 'stockDeduction'),
+          ...nullableJson(config, 'customizerViews'),
+          bulkPricing: pricingRanges && pricingRanges.length > 0 ? { createMany: { data: pricingRanges } } : undefined,
           variants: cleanedVariants ? { createMany: { data: cleanedVariants } } : undefined,
         },
-        include: { category: true, bulkPricing: true, variants: true }
+        include: { category: true, bulkPricing: { orderBy: { minQuantity: 'asc' } }, variants: true }
       });
     });
 
-    return res.json({ success: true, product });
+    return res.json({ success: true, product: toAdminProduct(product) });
   } catch (err) {
     return sendProductWriteError(res, err, 'update');
   }
@@ -364,6 +483,25 @@ export const duplicateProduct = async (req: Request, res: Response) => {
       images: original.images,
       categoryId: original.categoryId,
       isActive: false, // Default duplicates to draft
+      requiresSize: original.requiresSize,
+      requiresColor: original.requiresColor,
+      minOrderQty: original.minOrderQty,
+      minSampleQty: original.minSampleQty,
+      stockCount: original.stockCount,
+      ratingOverride: original.ratingOverride,
+      reviewCountOverride: original.reviewCountOverride,
+      orderMode: original.orderMode,
+      customizationEnabled: original.customizationEnabled,
+      designerEnabled: original.designerEnabled,
+      sizes: original.sizes,
+      colors: original.colors ?? [],
+      highlights: original.highlights,
+      orderImages: original.orderImages ?? [],
+      videos: original.videos ?? [],
+      freeGift: original.freeGift ?? Prisma.JsonNull,
+      offerAddon: original.offerAddon ?? Prisma.JsonNull,
+      stockDeduction: original.stockDeduction ?? Prisma.JsonNull,
+      customizerViews: original.customizerViews ?? Prisma.JsonNull,
       bulkPricing: original.bulkPricing.length > 0 ? {
         createMany: {
            data: original.bulkPricing.map(bp => ({
@@ -452,3 +590,81 @@ export const bulkDeleteProducts = async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: 'Failed to delete products' });
   }
 };
+
+export const getCustomizerTemplatesHandler = async (req: Request, res: Response) => {
+  const includeInactive = req.query.all === 'true' || canSeeHiddenProducts(req);
+  const templates = await listCustomizerTemplatesAsync({ includeInactive });
+  return res.json({
+    success: true,
+    data: templates,
+  });
+};
+
+export const getCustomizerTemplateByIdHandler = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const template = await getCustomizerTemplateByIdAsync(id);
+  if (!template) {
+    return res.status(404).json({ success: false, message: `Template with ID '${id}' not found.` });
+  }
+  return res.json({
+    success: true,
+    data: template,
+  });
+};
+
+export const createCustomizerTemplateHandler = async (req: Request, res: Response) => {
+  try {
+    const { id, name } = req.body;
+    if (!id || typeof id !== 'string' || !id.trim()) {
+      return res.status(400).json({ success: false, message: 'Template ID is required.' });
+    }
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Template name is required.' });
+    }
+
+    const created = await createCustomizerTemplate(req.body);
+    return res.status(201).json({
+      success: true,
+      message: 'Template created successfully',
+      data: created,
+    });
+  } catch (err: any) {
+    const status = err.message?.includes('already exists') ? 409 : 400;
+    return res.status(status).json({ success: false, message: err.message || 'Failed to create template' });
+  }
+};
+
+export const updateCustomizerTemplateHandler = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updated = await updateCustomizerTemplate(id, req.body);
+    return res.json({
+      success: true,
+      message: 'Template updated successfully',
+      data: updated,
+    });
+  } catch (err: any) {
+    const status = err.message?.includes('not found') ? 404 : 400;
+    return res.status(status).json({ success: false, message: err.message || 'Failed to update template' });
+  }
+};
+
+export const setCustomizerTemplateStatusHandler = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { active } = req.body;
+    if (typeof active !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'Field "active" must be a boolean.' });
+    }
+    const updated = await setCustomizerTemplateActive(id, active);
+    return res.json({
+      success: true,
+      message: `Template ${active ? 'activated' : 'deactivated'} successfully`,
+      data: updated,
+    });
+  } catch (err: any) {
+    const status = err.message?.includes('not found') ? 404 : 400;
+    return res.status(status).json({ success: false, message: err.message || 'Failed to update template status' });
+  }
+};
+

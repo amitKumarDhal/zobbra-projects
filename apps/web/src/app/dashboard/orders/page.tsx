@@ -28,6 +28,10 @@ import { API_URL } from '@/lib/api';
 import { buildWhatsAppUrl, getOrderWhatsAppMessage } from '@/lib/whatsapp';
 import { triggerSidebarCountsRefresh } from '@/hooks/useAdminSidebarCounts';
 import { OrderDesignAssets, AssetPreviewModal, DesignAsset } from '@/components/orders/OrderDesignAssets';
+import {
+  CustomizerSpecificationsCard,
+  extractCustomizerSpecs,
+} from '@/components/customizer/CustomizerSpecificationsCard';
 
 // Types
 type OrderStatus = 'PENDING' | 'CONFIRMED' | 'IN_PRODUCTION' | 'READY_FOR_DISPATCH' | 'DISPATCHED' | 'DELIVERED' | 'CANCELLED';
@@ -749,6 +753,26 @@ export default function OrdersPage() {
                                       </div>
                                     </div>
                                   </div>
+
+                                  {/* Customizer Specifications Card (Phase 7) */}
+                                  {(() => {
+                                    const firstItem = o.items?.find((it: any) => it.customizationDetails) || o.items?.[0];
+                                    const specs = extractCustomizerSpecs({
+                                      notes: firstItem?.customizationDetails,
+                                      templateId: firstItem?.product?.customizerTemplateId,
+                                      itemColor: firstItem?.color,
+                                      printType: firstItem?.printType,
+                                    });
+                                    if (!specs) return null;
+                                    return (
+                                      <div className="md:col-span-2 xl:col-span-4">
+                                        <CustomizerSpecificationsCard
+                                          specs={specs}
+                                          dataCy="order-customizer-specifications"
+                                        />
+                                      </div>
+                                    );
+                                  })()}
 
                                   {/* Card 3: Order Lifecycle Timeline (7 Stages) */}
                                   <div className="bg-white p-4 sm:p-5 rounded-xl border border-[#E5E7EB] shadow-xs">

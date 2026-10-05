@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -9,7 +9,6 @@ import {
   ArrowRight,
   Sparkles,
   AlertCircle,
-  ChevronRight,
   Check,
   UserCheck,
   X,
@@ -25,11 +24,26 @@ import {
   CustomizerDraft 
 } from '@/lib/customizerDraft';
 import { getCustomizerTemplate } from '@/lib/customizerTemplates';
-import { applyMainColorToVariants } from '@/lib/customizerVariants';
+import { applyCustomizerViews, getSideRecolor, isBackSideEnabled } from '@/lib/customizerViews';
+import {
+  canCustomize,
+  getCustomizerFeatures,
+  getDefaultQuantity,
+  getOfferAddon,
+  getProductColors,
+  getProductCollarColors,
+  getProductSizes,
+  getUnitPrice,
+  productRequiresSize,
+} from '@/lib/productConfig';
+import { OrderReviewSheet } from '@/components/customizer/OrderReviewSheet';
+import { WhatsAppOtpLogin, OtpLoginSuccess } from '@/components/auth/WhatsAppOtpLogin';
+import { storeSession } from '@/lib/otpAuth';
 import type { CustomizerCanvasRef, CustomizerCanvasProps } from '@/components/customizer/CustomizerCanvas';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { getColorHex, isLightColor } from '@/components/customizer/GarmentBackdrop';
+import { getColorHex, isLightColor } from '@/lib/colors';
 import { StageScaler } from '@/components/customizer/StageScaler';
+import { getBackdropImage } from '@/components/customizer/GarmentBackdrop';
 import { BottomSheet } from '@/components/customizer/BottomSheet';
 import type { PricingState } from '@/components/customizer/OrderPanel';
 import {
@@ -93,7 +107,10 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   const searchParams = useSearchParams();
   const isResume = searchParams.get('resume') === '1';
 
-  const { user } = useCustomerUser();
+  const { user: cachedUser } = useCustomerUser();
+  // Set when a guest verifies their WhatsApp number in the Proceed step (no page reload happens).
+  const [verifiedUser, setVerifiedUser] = useState<OtpLoginSuccess['user'] | null>(null);
+  const user = verifiedUser ?? cachedUser;
 
   const [product, setProduct] = useState<any>(null);
   const [loadingProduct, setLoadingProduct] = useState<boolean>(true);
@@ -109,6 +126,8 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   // Garment & Order specs (real catalog data)
   const [selectedColor, setSelectedColor] = useState<string>('White');
   const [collarColor, setCollarColor] = useState<string>('Yellow');
+  const [tapingColor, setTapingColor] = useState<string>('White');
+  const [brandingMethod, setBrandingMethod] = useState<'Print' | 'Embroidery'>('Print');
   const [quantity, setQuantity] = useState<number>(50);
   const [variants, setVariants] = useState<VariantData[]>([]);
 
@@ -124,8 +143,12 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   const [textBold, setTextBold] = useState<boolean>(true);
   const [textItalic, setTextItalic] = useState<boolean>(false);
   const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right'>('center');
+  // This product's colours (admin configuration). A colour's own value wins over the name lookup.
+  const productColors = getProductColors(product);
+  const hexOf = (name: string) =>
+    productColors.find((c) => c.name.toLowerCase() === (name || '').toLowerCase())?.hex || getColorHex(name);
   // Default text color contrasts with the product color unless the customer picked one.
-  const textColor = textColorPick ?? (isLightColor(getColorHex(selectedColor)) ? '#111111' : '#FFFFFF');
+  const textColor = textColorPick ?? (isLightColor(hexOf(selectedColor)) ? '#111111' : '#FFFFFF');
 
   // Selected canvas object inspector
   const [selectedCanvasObj, setSelectedCanvasObj] = useState<any>(null);
@@ -142,11 +165,16 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   const [draftRestoredNotice, setDraftRestoredNotice] = useState<boolean>(false);
   const [restoredDraft, setRestoredDraft] = useState<CustomizerDraft | null>(null);
 
-  // Guest → Login/Register modal (replaces direct redirect)
+  // Guest → WhatsApp OTP verification, shown over the checkout step when Request quote is clicked
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
 
-  // Live Server Pricing State. Still computed (pricing-preview), but no longer displayed in the customizer.
-  const [, setPricingState] = useState<PricingState>({ status: 'idle' });
+  // Checkout step: quantity/sizes, free gift, offer addon and the server price, shown on Proceed
+  const [showReview, setShowReview] = useState<boolean>(false);
+  const [addonSelected, setAddonSelected] = useState<boolean>(false);
+
+  // Live server pricing (pricing-preview), displayed in the checkout step
+  const [pricingState, setPricingState] = useState<PricingState>({ status: 'idle' });
 
   const canvasRef = useRef<CustomizerCanvasRef>(null);
 
@@ -177,20 +205,28 @@ function CustomizeProductContent({ productId }: { productId: string }) {
         const prod = data.product || data.data || data;
         setProduct(prod);
 
-        // Derive initial colors and MOQ
-        const moq = prod.bulkPricing?.[0]?.minQuantity || 50;
+        // Initial colour, size and quantity come from the product's own configuration
+        const moq = getDefaultQuantity(prod);
         setQuantity(moq);
 
         const initialTemplate = getCustomizerTemplate(prod);
-        const defaultColor = prod.variants?.[0]?.color || (
+        const configuredColors = getProductColors(prod);
+        const configuredCollarColors = getProductCollarColors(prod);
+        const defaultColor = configuredColors[0]?.name || (
           initialTemplate.type === 'cap' || initialTemplate.type === 'bag' ? 'Charcoal Black' : 'White'
         );
-        const defaultCollar = initialTemplate.type === 'cap' || initialTemplate.type === 'bag' 
-          ? 'Charcoal Black' 
-          : initialTemplate.type === 'mug' 
-          ? 'White' 
-          : 'Yellow';
-        const defaultSize = initialTemplate.requiresSize === false ? 'Free Size' : 'L';
+        // Trim/collar starts in the product's configured collar colour (e.g. Yellow if available, or first collar color)
+        const defaultCollar = configuredCollarColors.find(c => c.name.toLowerCase() === 'yellow')?.name ||
+          configuredCollarColors[0]?.name ||
+          (configuredColors.length > 0
+            ? defaultColor
+            : initialTemplate.type === 'cap' || initialTemplate.type === 'bag'
+            ? 'Charcoal Black'
+            : initialTemplate.type === 'mug'
+            ? 'White'
+            : 'Yellow');
+        const defaultSize = productRequiresSize(prod) ? getProductSizes(prod)[0] || 'L' : 'Free Size';
+        const defaultTaping = defaultColor;
 
         // ONLY restore draft if user is resuming from login/register flow
         if (isResume) {
@@ -200,7 +236,11 @@ function CustomizeProductContent({ productId }: { productId: string }) {
             setSelectedColor(savedDraft.selectedColor || defaultColor);
             if (savedDraft.collarColor) setCollarColor(savedDraft.collarColor);
             else setCollarColor(defaultCollar);
+            if ((savedDraft as any).tapingColor) setTapingColor((savedDraft as any).tapingColor);
+            else setTapingColor(defaultTaping);
+            if ((savedDraft as any).brandingMethod) setBrandingMethod((savedDraft as any).brandingMethod);
             if (savedDraft.quantity) setQuantity(savedDraft.quantity);
+            if (savedDraft.addonSelected) setAddonSelected(true);
             if (savedDraft.variants && savedDraft.variants.length > 0) {
               setVariants(savedDraft.variants);
             } else {
@@ -218,12 +258,14 @@ function CustomizeProductContent({ productId }: { productId: string }) {
           } else {
             setSelectedColor(defaultColor);
             setCollarColor(defaultCollar);
+            setTapingColor(defaultTaping);
             setVariants([{ color: defaultColor, size: defaultSize, quantity: moq }]);
           }
         } else {
           // Fresh, clean start matching design studio reference
           setSelectedColor(defaultColor);
           setCollarColor(defaultCollar);
+          setTapingColor(defaultTaping);
           setVariants([{ color: defaultColor, size: defaultSize, quantity: moq }]);
         }
       } catch (err: any) {
@@ -238,10 +280,11 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     }
   }, [productId, isResume]);
 
-  // Handle body color change: updates the garment silhouette. Only the untouched default variant row
-  // follows the main color; rows the customer configured keep their own colors.
+  // Handle body color change: updates the garment silhouette, and the order lines in that colour follow it.
   const handleColorChange = (col: string) => {
-    setVariants(prev => applyMainColorToVariants(prev, selectedColor, col));
+    setVariants(prev =>
+      prev.map(v => ((v.color || '').toLowerCase() === selectedColor.toLowerCase() ? { ...v, color: col } : v))
+    );
     setSelectedColor(col);
   };
 
@@ -263,9 +306,20 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     }
   });
 
-  // Resolve customizer template for current product
-  const template = getCustomizerTemplate(product);
+  // Resolve customizer template for current product, with the admin's front/back view settings.
+  // Memoized so the canvas only re-applies its geometry when the product changes.
+  const template = useMemo(() => applyCustomizerViews(getCustomizerTemplate(product), product), [product]);
+  const backEnabled = isBackSideEnabled(product);
+  const customizerFeatures = useMemo(() => getCustomizerFeatures(product), [product]);
+  const sides = backEnabled ? (['front', 'back'] as const) : (['front'] as const);
   const isCap = template.type === 'cap';
+
+  // Guard against navigating to back view if back design is disabled
+  useEffect(() => {
+    if (!backEnabled && activeSide === 'back') {
+      setActiveSide('front');
+    }
+  }, [backEnabled, activeSide]);
 
   // Determine active print positions
   const resolvedPrintType = hasFront && hasBack 
@@ -278,9 +332,10 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   const variantSum = variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0);
   const hasVariantMismatch = variants.length > 0 && variantSum !== quantity;
 
-  // Live Server Pricing via POST /api/v1/quotes/pricing-preview with client-side guest fallback
+  // Live server pricing via POST /api/v1/quotes/pricing-preview. Guests (no token) get an estimate
+  // from the product's own quantity pricing; the server recalculates every quote regardless.
   const fetchPricing = useCallback(
-    debounce(async (pid: string, qty: number, pt: string, vars: VariantData[], prodObj: any) => {
+    debounce(async (pid: string, qty: number, pt: string, vars: VariantData[], prodObj: any, withAddon: boolean) => {
       if (!pid || qty <= 0) {
         setPricingState({ status: 'idle' });
         return;
@@ -290,7 +345,6 @@ function CustomizeProductContent({ productId }: { productId: string }) {
       if (vars.length > 0) {
         const sum = vars.reduce((s, v) => s + (Number(v.quantity) || 0), 0);
         if (sum !== qty) {
-          // Invalid: no pricing request!
           setPricingState({ status: 'idle' });
           return;
         }
@@ -298,103 +352,64 @@ function CustomizeProductContent({ productId }: { productId: string }) {
 
       setPricingState({ status: 'loading' });
 
+      const guestEstimate = () => {
+        const unitPrice = getUnitPrice(prodObj, qty);
+        // Mirrors the server's resolveAddonAmount so a guest sees the addon they tick
+        const addon = withAddon ? getOfferAddon(prodObj) : null;
+        const addonAmount = addon ? (addon.priceType === 'PER_PIECE' ? addon.price * qty : addon.price) : 0;
+        const subtotal = unitPrice * qty + addonAmount;
+        const gstRate = prodObj?.gstRate ?? 5;
+        const gstTotal = Math.round(subtotal * (gstRate / 100));
+        setPricingState({
+          status: 'success',
+          data: {
+            productId: pid,
+            productName: prodObj?.name || 'Product',
+            unitPrice,
+            addonAmount,
+            subtotal,
+            discount: 0,
+            gstRate,
+            gstTotal,
+            totalAmount: subtotal + gstTotal,
+          },
+        });
+      };
+
+      const token =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('token') || localStorage.getItem('zobra_token')
+          : null;
+      if (!token) return guestEstimate();
+
       try {
-        const token =
-          typeof window !== 'undefined'
-            ? localStorage.getItem('token') || localStorage.getItem('zobra_token')
-            : null;
-
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const body: { productId: string; quantity: number; printType: string; variants?: VariantData[] } = {
+        const body: { productId: string; quantity: number; printType: string; addonSelected: boolean; variants?: VariantData[] } = {
           productId: pid,
           quantity: qty,
           printType: pt || 'Front Only',
+          addonSelected: withAddon,
         };
         if (vars.length > 0) body.variants = vars;
 
         const res = await fetch(`${API_URL}/quotes/pricing-preview`, {
           method: 'POST',
-          headers,
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(body),
         });
-
         const data = await res.json();
 
         if (res.ok && data.success) {
           setPricingState({ status: 'success', data: data.data });
-        } else {
-          // If token was missing/unauthorized or API refused guest preview, calculate client-side estimate for guest
-          if (!token || res.status === 401 || data.message?.toLowerCase().includes('token') || data.message?.toLowerCase().includes('auth')) {
-            const bulkTiers = prodObj?.bulkPricing || [];
-            let unitPrice = prodObj?.basePrice || 250;
-            if (Array.isArray(bulkTiers) && bulkTiers.length > 0) {
-              const sorted = [...bulkTiers].sort((a, b) => b.minQuantity - a.minQuantity);
-              const matched = sorted.find((t: any) => qty >= t.minQuantity);
-              if (matched && matched.price) unitPrice = matched.price;
-              else if (sorted[sorted.length - 1]?.price) unitPrice = sorted[sorted.length - 1].price;
-            }
-            const subtotal = unitPrice * qty;
-            const gstRate = prodObj?.gstRate ?? 18;
-            const gstTotal = Math.round(subtotal * (gstRate / 100));
-            const totalAmount = subtotal + gstTotal;
-            setPricingState({
-              status: 'success',
-              data: {
-                productId: pid,
-                productName: prodObj?.name || 'Product',
-                unitPrice,
-                subtotal,
-                discount: 0,
-                gstRate,
-                gstTotal,
-                totalAmount,
-              },
-            });
-          } else {
-            setPricingState({
-              status: 'error',
-              message: data.message || 'Unable to calculate estimate. Please try again.',
-            });
-          }
-        }
-      } catch {
-        const token =
-          typeof window !== 'undefined'
-            ? localStorage.getItem('token') || localStorage.getItem('zobra_token')
-            : null;
-        if (!token) {
-          const bulkTiers = prodObj?.bulkPricing || [];
-          let unitPrice = prodObj?.basePrice || 250;
-          if (Array.isArray(bulkTiers) && bulkTiers.length > 0) {
-            const sorted = [...bulkTiers].sort((a, b) => b.minQuantity - a.minQuantity);
-            const matched = sorted.find((t: any) => qty >= t.minQuantity);
-            if (matched && matched.price) unitPrice = matched.price;
-          }
-          const subtotal = unitPrice * qty;
-          const gstRate = prodObj?.gstRate ?? 18;
-          const gstTotal = Math.round(subtotal * (gstRate / 100));
-          const totalAmount = subtotal + gstTotal;
-          setPricingState({
-            status: 'success',
-            data: {
-              productId: pid,
-              productName: prodObj?.name || 'Product',
-              unitPrice,
-              subtotal,
-              discount: 0,
-              gstRate,
-              gstTotal,
-              totalAmount,
-            },
-          });
+        } else if (res.status === 401) {
+          guestEstimate();
         } else {
           setPricingState({
             status: 'error',
-            message: 'Network error calculating pricing preview.',
+            message: data.message || 'Unable to calculate estimate. Please try again.',
           });
         }
+      } catch {
+        setPricingState({ status: 'error', message: 'Network error calculating pricing preview.' });
       }
     }, 300),
     []
@@ -404,14 +419,17 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     if (product?.id && quantity > 0) {
       const varsToSend = variants.length > 0
         ? variants
-        : [{ color: selectedColor, size: isCap ? 'Free Size' : 'L', quantity }];
-      fetchPricing(product.id, quantity, resolvedPrintType, varsToSend, product);
+        : [{ color: selectedColor, size: productRequiresSize(product) ? 'L' : 'Free Size', quantity }];
+      fetchPricing(product.id, quantity, resolvedPrintType, varsToSend, product, addonSelected);
+    } else {
+      setPricingState({ status: 'idle' });
     }
-  }, [product, quantity, resolvedPrintType, variants, selectedColor, isCap, fetchPricing]);
+  }, [product, quantity, resolvedPrintType, variants, selectedColor, addonSelected, verifiedUser, fetchPricing]);
 
   // Handle Side Switcher. The canvas owns the switch and reports the side it actually moved to via
   // onSideChange, so the toggle never runs ahead of a switch that is still loading (or deferred).
   const handleSwitchSide = (side: 'front' | 'back') => {
+    if (side === 'back' && !backEnabled) return;
     if (canvasRef.current) {
       canvasRef.current.switchSide(side);
     } else {
@@ -477,9 +495,67 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     }
   };
 
-  // The Primary "PROCEED" Submission Handler
-  const handleProceed = async () => {
+  /**
+   * Saves the current design to the existing guest draft (localStorage) without uploading anything:
+   * canvas JSON for both sides, the already-uploaded artwork URL, colours, quantity, variants and
+   * the addon choice. The live studio state is untouched; the draft only matters if the tab reloads.
+   */
+  const saveGuestDraft = () => {
+    const state = canvasRef.current?.getCanvasState();
+    saveCustomizerDraft({
+      productId: product.id,
+      productName: product.name,
+      selectedColor,
+      collarColor,
+      frontCanvasJson: state?.frontJson,
+      backCanvasJson: state?.backJson,
+      originalArtworkUrl: canvasRef.current?.getOriginalArtworkUrl() || restoredDraft?.originalArtworkUrl || undefined,
+      quantity,
+      printPosition: resolvedPrintType,
+      variants: variants.length > 0 ? variants : [{ color: selectedColor, size: productRequiresSize(product) ? 'L' : 'Free Size', quantity }],
+      addonSelected,
+    });
+  };
+
+  // A guest verified their WhatsApp number from "Request quote": place the quote they just reviewed.
+  const handleOtpVerified = ({ token, user: signedIn }: OtpLoginSuccess) => {
+    // The OTP endpoint only signs customers in. Anything else is never stored as this browser's session.
+    if (signedIn?.role !== 'CUSTOMER') {
+      setAuthNotice('This number cannot be used to place customer orders. Please use a different number.');
+      return;
+    }
+    storeSession(token, signedIn);
+    setVerifiedUser(signedIn);
+    setAuthNotice(null);
+    setShowAuthModal(false);
+    setShowReview(true);
+    // verifiedUser isn't in this render's closure yet, so the signed-in user is passed along.
+    handleProceed(true, signedIn);
+  };
+
+  // The Primary "PROCEED" Submission Handler. Authentication is only required at "Request quote":
+  //   signed-in customer → checkout step (quantity, sizes, offers) → quote
+  //   guest              → same checkout step → "Request quote" → WhatsApp OTP → quote
+  // (confirmed = true comes from the checkout step's "Request quote" button).
+  const handleProceed = async (confirmed = false, sessionUser: typeof user = user) => {
     setSubmitError(null);
+
+    const sessionToken = typeof window !== 'undefined'
+      ? localStorage.getItem('token') || localStorage.getItem('zobra_token')
+      : null;
+    if (!confirmed) {
+      if (isUploadingArtwork || isUploadingLogo || canvasRef.current?.isUploadingArtwork?.()) {
+        setSubmitError('Uploading artwork… Please wait for upload to complete.');
+        return;
+      }
+      if (sessionToken && sessionUser && sessionUser.role !== 'CUSTOMER') {
+        // Staff preview the studio; their session is never swapped for a customer one.
+        setSubmitError('You are signed in as Admin. Sign out and continue as a customer to place an order.');
+        return;
+      }
+      setShowReview(true);
+      return;
+    }
 
     // Validate variant breakdown sum
     const vSum = variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0);
@@ -488,9 +564,17 @@ function CustomizeProductContent({ productId }: { productId: string }) {
       return;
     }
 
+    // Guest: save the design and verify their number over the checkout step before anything is sent
+    if (!sessionToken || sessionUser?.role !== 'CUSTOMER') {
+      saveGuestDraft();
+      setAuthNotice(null);
+      setShowAuthModal(true);
+      return;
+    }
+
     const finalVariants = variants.length > 0
       ? variants
-      : [{ color: selectedColor, size: isCap ? 'Free Size' : 'L', quantity }];
+      : [{ color: selectedColor, size: productRequiresSize(product) ? 'L' : 'Free Size', quantity }];
 
     if (!canvasRef.current) return;
 
@@ -525,77 +609,78 @@ function CustomizeProductContent({ productId }: { productId: string }) {
         ? localStorage.getItem('token') || localStorage.getItem('zobra_token') 
         : null;
 
-      const isCustomer = user && user.role === 'CUSTOMER';
+      const isCustomer = sessionUser && sessionUser.role === 'CUSTOMER';
       const effectiveArtworkUrl = (originalArtwork && !originalArtwork.startsWith('data:image/'))
         ? originalArtwork
         : (previews.frontCloudinaryUrl || previews.backCloudinaryUrl || undefined);
 
-      // Guest: Save draft to localStorage then show Login/Register modal
+      // Safety net: the session disappeared between Proceed and Confirm → verify again, nothing is lost
       if (!token || !isCustomer) {
-        const draftId = `draft_${Date.now()}`;
-        const draftData: CustomizerDraft = {
-          draftId,
-          productId: product.id,
-          productName: product.name,
-          selectedColor,
-          collarColor,
-          frontCanvasJson: previews.frontCanvasJson,
-          backCanvasJson: previews.backCanvasJson,
-          previewFrontUrl: previews.frontCloudinaryUrl,
-          previewBackUrl: previews.backCloudinaryUrl,
-          originalArtworkUrl: effectiveArtworkUrl,
-          quantity,
-          printPosition: resolvedPrintType,
-          variants: finalVariants,
-          timestamp: Date.now(),
-        };
-
-        saveCustomizerDraft(draftData);
+        saveGuestDraft();
         setSubmitting(false);
+        setShowReview(false);
         setShowAuthModal(true);
         return;
       }
+
+      const effectiveCollarColor = customizerFeatures.trimColor ? collarColor : undefined;
+      const effectiveTapingColor = customizerFeatures.taping ? tapingColor : undefined;
+      const effectiveBranding = customizerFeatures.embroidery ? brandingMethod : 'Print';
+      const isEmbroidery = effectiveBranding === 'Embroidery';
+      const effectivePreviewBack = backEnabled ? (previews.backCloudinaryUrl || undefined) : undefined;
+      const effectivePrintPosition = backEnabled ? resolvedPrintType : 'Front Only';
 
       // Logged-in Customer: Submit official Quote
       const quotePayload = {
         productId: product.id,
         quantity,
         color: selectedColor,
-        printingType: 'Custom Online Design',
-        printPosition: resolvedPrintType,
-        printType: resolvedPrintType,
+        printingType: isEmbroidery ? 'Embroidery' : 'Custom Online Design',
+        printPosition: effectivePrintPosition,
+        printType: isEmbroidery ? 'Embroidery Logo' : effectivePrintPosition,
+        embroidery: isEmbroidery,
+        tapingColor: effectiveTapingColor,
+        // The server reads the addon's price from the product; only the opt-in is sent
+        addonSelected,
         // Cloudinary CDN URLs only, never base64 data URLs
         artworkUrl: effectiveArtworkUrl,
         previewFrontUrl: previews.frontCloudinaryUrl || undefined,
-        previewBackUrl: previews.backCloudinaryUrl || undefined,
+        previewBackUrl: effectivePreviewBack,
         // Fabric canvas state snapshot (sanitized, zero base64)
         canvasStateJson: JSON.stringify({
           front: previews.frontCanvasJson,
-          back: previews.backCanvasJson,
+          back: backEnabled ? previews.backCanvasJson : undefined,
         }),
         // Compact metadata only — NO duplicate base64 or preview strings!
         customizationRequirements: JSON.stringify({
           selectedColor,
-          collarColor,
-          printPosition: resolvedPrintType,
+          collarColor: effectiveCollarColor,
+          tapingColor: effectiveTapingColor,
+          brandingMethod: effectiveBranding,
+          embroidery: isEmbroidery,
+          printPosition: effectivePrintPosition,
           hasFront: previews.hasFront,
-          hasBack: previews.hasBack,
+          hasBack: backEnabled ? previews.hasBack : false,
           variants: finalVariants,
         }),
         items: [
           {
             productId: product.id,
-            printType: resolvedPrintType,
+            printType: isEmbroidery ? 'Embroidery Logo' : effectivePrintPosition,
+            printingType: isEmbroidery ? 'Embroidery' : 'Print',
+            embroidery: isEmbroidery,
             color: selectedColor,
-            collarColor,
-            size: finalVariants[0]?.size || (template.requiresSize === false ? 'Free Size' : 'L'),
+            collarColor: effectiveCollarColor,
+            tapingColor: effectiveTapingColor,
+            brandingMethod: effectiveBranding,
+            size: finalVariants[0]?.size || (productRequiresSize(product) ? 'L' : 'Free Size'),
             quantity,
             variants: finalVariants,
           },
         ],
         notes: isCap 
-          ? `Custom Online Cap Design - ${resolvedPrintType} on ${selectedColor} (Visor: ${collarColor})`
-          : `Custom Online Design - ${resolvedPrintType} on ${selectedColor} (${template.secondaryColorLabel || 'Secondary'}: ${collarColor})`,
+          ? `Custom Online Cap Design - ${effectivePrintPosition} on ${selectedColor}${effectiveCollarColor ? ` (Visor: ${effectiveCollarColor})` : ''}${effectiveTapingColor ? ` (Taping: ${effectiveTapingColor})` : ''} [${effectiveBranding}]`
+          : `Custom Online Design - ${effectivePrintPosition} on ${selectedColor}${effectiveCollarColor ? ` (${template.secondaryColorLabel || 'Secondary'}: ${effectiveCollarColor})` : ''}${effectiveTapingColor ? ` (Taping: ${effectiveTapingColor})` : ''} [${effectiveBranding}]`,
       };
 
       const payloadString = JSON.stringify(quotePayload);
@@ -624,6 +709,14 @@ function CustomizeProductContent({ productId }: { productId: string }) {
       if (res.ok && data.success) {
         clearCustomizerDraft(product.id);
         router.push(`/customer/quotes?created=${data.quote?.id || 'success'}`);
+      } else if (res.status === 401) {
+        // Expired session: keep the design and ask the customer to verify their number again
+        saveGuestDraft();
+        setVerifiedUser(null);
+        setSubmitting(false);
+        setShowReview(false);
+        setAuthNotice('Your session expired. Verify your number to continue — your design is safe.');
+        setShowAuthModal(true);
       } else {
         setSubmitError(data.message || 'Unable to submit quote. Please check your inputs and try again.');
         setSubmitting(false);
@@ -665,6 +758,35 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     );
   }
 
+  // The admin turned customization (or the canvas designer) off for this product: no design studio.
+  if (!canCustomize(product)) {
+    return (
+      <div className="min-h-screen bg-[#FDFDFD] flex items-center justify-center p-6" data-cy="customizer-unavailable">
+        <div className="max-w-md w-full bg-white p-7 rounded-2xl border border-[#E5E7EB] text-center space-y-4 shadow-sm">
+          <AlertCircle className="w-10 h-10 text-gray-400 mx-auto" />
+          <h2 className="text-xl font-black text-[#111111] font-heading">Customization is not available for this product.</h2>
+          <p className="text-xs text-gray-600">{product.name} is not available for online customization.</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+            <Link
+              href={`/products/${product.id}`}
+              data-cy="customizer-back-to-product"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#3B6FEB] text-white text-xs font-bold rounded-xl uppercase tracking-wider hover:bg-[#2F5FD6] transition-colors shadow-sm"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to Product
+            </Link>
+            <Link
+              href={`/get-quote?product=${encodeURIComponent(product.name)}&qty=${getDefaultQuantity(product)}&id=${product.id}`}
+              data-cy="customizer-unavailable-quote"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-[#111111] border border-[#E5E7EB] text-xs font-bold rounded-xl uppercase tracking-wider hover:bg-gray-50 transition-colors"
+            >
+              Request a quote <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Identity state determinations
   const hasToken = typeof window !== 'undefined'
     ? !!(localStorage.getItem('token') || localStorage.getItem('zobra_token'))
@@ -683,9 +805,9 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     <button
       id="customizer-proceed-btn"
       type="button"
-      onClick={handleProceed}
+      onClick={() => handleProceed()}
       disabled={proceedDisabled}
-      className={`shrink-0 bg-[#3B6FEB] hover:bg-[#2F5FD6] disabled:bg-gray-400 text-white rounded-xl font-semibold shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 px-5 text-[15px] ${
+      className={`shrink-0 bg-gradient-to-r from-[#E11D48] to-[#BE185D] hover:from-[#F43F5E] hover:to-[#E11D48] disabled:from-gray-400 disabled:to-gray-400 disabled:shadow-none text-white rounded-xl font-semibold shadow-[0_8px_18px_-8px_rgba(225,29,72,0.6)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 px-5 text-[15px] ${
         fullWidth ? 'w-full h-11' : 'h-11'
       }`}
     >
@@ -737,10 +859,21 @@ function CustomizeProductContent({ productId }: { productId: string }) {
         return (
           <ColorPanel
             template={template}
+            productColors={productColors}
+            productCollarColors={getProductCollarColors(product)}
             selectedColor={selectedColor}
             collarColor={collarColor}
+            tapingColor={tapingColor}
+            photoPreview={Boolean(getBackdropImage(product, activeSide))}
+            photoRecolor={Boolean(getSideRecolor(product, activeSide))}
+            showTrimColor={customizerFeatures.trimColor && Boolean(template.secondaryColorLabel)}
+            showTapingColor={customizerFeatures.taping}
             onBodyColor={handleColorChange}
             onCollarColor={handleCollarColorChange}
+            onTapingColor={setTapingColor}
+            brandingMethod={brandingMethod}
+            onBrandingMethodChange={setBrandingMethod}
+            showBrandingMethod={customizerFeatures.embroidery}
           />
         );
       case 'layers':
@@ -758,12 +891,12 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   };
 
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden bg-[#EDEEF2] text-[#111111] font-sans [&_button]:min-h-0 [&_a]:min-h-0">
+    <div className="h-[100dvh] flex flex-col overflow-hidden bg-gradient-to-br from-[#F8F9FC] via-[#EEF1F8] to-[#E2E8F8] text-[#111111] font-sans [&_button]:min-h-0 [&_a]:min-h-0">
       {/* Header: back + product, one Front/Back toggle, one Proceed (desktop/tablet) */}
-      <header className="shrink-0 h-14 md:h-16 z-30 bg-white border-b border-[#E5E7EB] px-2 sm:px-4 md:px-6 flex items-center gap-2 sm:gap-4">
+      <header className="shrink-0 h-14 md:h-16 z-30 bg-gradient-to-r from-white via-white to-[#EEF2FF] border-b border-[#E5E7EB] shadow-[0_1px_0_0_rgba(59,111,235,0.08)] px-2 sm:px-4 md:px-6 flex items-center gap-2 sm:gap-4">
         <Link
-          href={`/products/${product.id}`}
-          aria-label="Back to product"
+          href="/products"
+          aria-label="Back to catalog"
           className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-700 hover:text-black hover:bg-gray-100 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -779,8 +912,8 @@ function CustomizeProductContent({ productId }: { productId: string }) {
           </span>
         )}
 
-        <div className="shrink-0 flex items-center gap-0.5 p-1 bg-[#F1F3F7] rounded-xl">
-          {(['front', 'back'] as const).map((side) => {
+        <div className="shrink-0 flex items-center gap-1 p-1 bg-[#F1F3F7] rounded-xl" data-cy="customizer-side-switcher">
+          {sides.map((side) => {
             const placed = side === 'front' ? hasFront : hasBack;
             return (
               <button
@@ -789,13 +922,30 @@ function CustomizeProductContent({ productId }: { productId: string }) {
                 type="button"
                 aria-pressed={activeSide === side}
                 onClick={() => handleSwitchSide(side)}
-                className={`relative px-3 sm:px-4 h-8 sm:h-9 rounded-lg text-sm font-medium transition-all ${
-                  activeSide === side ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-500 hover:text-black'
+                className={`relative flex items-center justify-center gap-1.5 h-8 sm:h-9 px-3 sm:px-3.5 rounded-lg text-sm font-medium transition-all ${
+                  activeSide === side
+                    ? 'bg-white text-[#111111] shadow-sm font-semibold'
+                    : 'text-gray-500 hover:text-black'
                 }`}
               >
-                {side === 'front' ? 'Front' : 'Back'}
+                {/* Visual color indicator showing currently selected body and collar/trim colors */}
+                <span className="flex items-center -space-x-1 shrink-0" data-cy={`switcher-color-indicator-${side}`}>
+                  <span
+                    className="w-2.5 h-2.5 rounded-full border border-black/20"
+                    style={{ backgroundColor: hexOf(selectedColor) }}
+                    title={`Body: ${selectedColor}`}
+                  />
+                  {customizerFeatures.trimColor && Boolean(template.secondaryColorLabel) && (
+                    <span
+                      className="w-2.5 h-2.5 rounded-full border border-black/20"
+                      style={{ backgroundColor: hexOf(collarColor) }}
+                      title={`Collar: ${collarColor}`}
+                    />
+                  )}
+                </span>
+                <span>{side === 'front' ? 'Front' : 'Back'}</span>
                 {placed && (
-                  <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#3B6FEB]" aria-label="has design" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48] shrink-0" aria-label="has design" />
                 )}
               </button>
             );
@@ -835,7 +985,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
         )}
 
         {/* Canvas stage */}
-        <div className="relative flex-1 min-w-0 min-h-0 p-2 md:p-6">
+        <div className="relative flex-1 min-w-0 min-h-0 p-2 md:p-6 bg-[radial-gradient(ellipse_at_50%_40%,rgba(255,255,255,0.95),rgba(255,255,255,0)_65%)]">
           {(draftRestoredNotice || submitError) && (
             <div className="absolute top-2 inset-x-2 z-20 flex flex-col items-center gap-1.5 pointer-events-none">
               {draftRestoredNotice && (
@@ -859,11 +1009,12 @@ function CustomizeProductContent({ productId }: { productId: string }) {
           <StageScaler baseWidth={STAGE_WIDTH} baseHeight={STAGE_HEIGHT} maxScale={1.35}>
             <CustomizerCanvas
               ref={canvasRef}
-              selectedColor={selectedColor}
-              collarColor={collarColor}
+              selectedColor={hexOf(selectedColor)}
+              collarColor={hexOf(collarColor)}
               category={product?.category?.slug || product?.category?.name || (isCap ? 'caps' : 't-shirts')}
               template={template}
               product={product}
+              backEnabled={backEnabled}
               activeSide={activeSide}
               onSideChange={setActiveSide}
               onSelectionChange={setSelectedCanvasObj}
@@ -909,24 +1060,73 @@ function CustomizeProductContent({ productId }: { productId: string }) {
         </div>
       )}
 
-      {/* Guest → Login / Register Auth Modal */}
+      {/* Checkout step (guests verify their number on "Request quote") */}
+      {showReview && (
+        <OrderReviewSheet
+          product={product}
+          selectedColor={selectedColor}
+          colorHex={hexOf(selectedColor)}
+          printType={resolvedPrintType}
+          quantity={quantity}
+          variants={variants}
+          onOrderChange={(qty, vars) => {
+            setQuantity(qty);
+            setVariants(vars);
+          }}
+          addonSelected={addonSelected}
+          onAddonChange={setAddonSelected}
+          pricingState={pricingState}
+          submitting={submitting || isPreparingPreview}
+          error={submitError}
+          collarColor={collarColor}
+          collarColorHex={hexOf(collarColor)}
+          showCollarColor={customizerFeatures.trimColor && Boolean(template.secondaryColorLabel)}
+          tapingColor={tapingColor}
+          tapingColorHex={hexOf(tapingColor)}
+          showTapingColor={customizerFeatures.taping}
+          brandingMethod={customizerFeatures.embroidery ? brandingMethod : 'Print'}
+          showBrandingMethod={customizerFeatures.embroidery}
+          onConfirm={() => handleProceed(true)}
+          onClose={() => {
+            if (!submitting) setShowReview(false);
+          }}
+        />
+      )}
+
+      {/* Guest → WhatsApp OTP verification (customers only; no email/password, no role choice) */}
       {showAuthModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAuthModal(false)}>
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4"
+          onClick={() => setShowAuthModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="customizer-auth-title"
+        >
           <div
-            className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl border border-gray-100"
+            id="customizer-auth-modal"
+            className="bg-white w-full sm:max-w-sm max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl p-6 space-y-4 shadow-2xl border border-gray-100"
             onClick={e => e.stopPropagation()}
           >
-            {/* Icon */}
-            <div className="w-10 h-10 bg-[#3B6FEB]/10 rounded-xl flex items-center justify-center mx-auto">
-              <UserCheck className="w-5 h-5 text-[#3B6FEB]" />
-            </div>
-
-            {/* Copy */}
-            <div className="text-center space-y-1">
-              <h3 className="text-base font-black text-[#111111] font-heading">Almost There!</h3>
-              <p className="text-xs text-gray-500 leading-relaxed">
-                Your design has been saved. Create a free account or log in to place your order — you&apos;ll be counted as a regular customer.
-              </p>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-[#3B6FEB]/10 rounded-xl flex items-center justify-center shrink-0">
+                <UserCheck className="w-5 h-5 text-[#3B6FEB]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 id="customizer-auth-title" className="text-base font-black text-[#111111] font-heading">
+                  Verify your mobile number to continue
+                </h3>
+                <p className="text-xs text-gray-500 leading-relaxed mt-0.5">
+                  Your design is saved. Log in or sign up with a WhatsApp OTP to place your order.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAuthModal(false)}
+                aria-label="Close and keep editing"
+                className="p-1 text-gray-400 hover:text-[#111111] shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             {/* Design preview chip */}
@@ -940,24 +1140,13 @@ function CustomizeProductContent({ productId }: { productId: string }) {
               </div>
             </div>
 
-            {/* Auth CTAs */}
-            <div className="space-y-2">
-              <Link
-                href={`/register?returnUrl=${encodeURIComponent(`/products/${product.id}/customize?resume=1`)}`}
-                className="flex items-center justify-center gap-2 w-full py-2.5 bg-[#3B6FEB] hover:bg-[#2563EB] text-white font-black text-xs rounded-xl transition-all shadow-sm"
-                onClick={() => setShowAuthModal(false)}
-              >
-                <span>Create Free Account</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-              <Link
-                href={`/login?returnUrl=${encodeURIComponent(`/products/${product.id}/customize?resume=1`)}`}
-                className="flex items-center justify-center gap-2 w-full py-2.5 bg-[#111111] hover:bg-[#222222] text-white font-bold text-xs rounded-xl transition-all"
-                onClick={() => setShowAuthModal(false)}
-              >
-                Log In to My Account
-              </Link>
-            </div>
+            {authNotice && (
+              <p role="alert" data-cy="customizer-auth-notice" className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                {authNotice}
+              </p>
+            )}
+
+            <WhatsAppOtpLogin onSuccess={handleOtpVerified} verifyLabel="Verify & Continue" />
 
             <button
               type="button"

@@ -8,15 +8,12 @@
  * 3. After logout and re-login as a different user, the first user's name is gone.
  */
 
-const CUSTOMER_EMAIL = 'customer@zobra.test';
-const CUSTOMER_PASSWORD = 'customer123';
+import { E2E_CUSTOMER } from '../support/e2eCustomer';
 
-// Helper: login as a customer and navigate to the portal
-function loginAsCustomer(email = CUSTOMER_EMAIL, pass = CUSTOMER_PASSWORD) {
-  cy.visit('/login');
-  cy.get('[data-cy="email-input"]').clear().type(email);
-  cy.get('[data-cy="password-input"]').clear().type(pass);
-  cy.get('[data-cy="login-submit-button"]').click();
+// Helper: sign the shared E2E customer in and open the portal
+// (Customer UI login is WhatsApp OTP; see cy.loginAsCustomer in support/commands.ts.)
+function loginAsCustomer() {
+  cy.loginAsCustomer();
   cy.url().should('include', '/customer');
 }
 
@@ -30,6 +27,7 @@ function logout() {
 
 describe('ZOBBRA — Customer Real Identity Tests', () => {
   beforeEach(() => {
+    cy.viewport(1280, 800); // desktop sidebar is hidden below the lg breakpoint
     cy.clearLocalStorage();
     cy.clearCookies();
   });
@@ -37,10 +35,11 @@ describe('ZOBBRA — Customer Real Identity Tests', () => {
   it('Customer dashboard shows authenticated user name and NOT "Rahul M." or demo names', () => {
     loginAsCustomer();
 
-    // Wait for identity to load
-    cy.get('[data-cy="customer-dashboard-welcome-name"]', { timeout: 10000 }).should('not.be.empty');
+    // The portal lands on the products page; identity is shown in the navbar and sidebar
+    cy.location('pathname').should('eq', '/customer/products');
+    cy.get('[data-cy="customer-navbar-name"]', { timeout: 10000 }).should('have.text', E2E_CUSTOMER.name);
 
-    // The welcome message must NOT contain any of the known demo names
+    // No known demo names anywhere on the page
     cy.get('body').should('not.contain', 'Rahul M.');
     cy.get('body').should('not.contain', 'Rahul Sharma');
     cy.get('body').should('not.contain', 'Rahul Mishra');
@@ -48,15 +47,12 @@ describe('ZOBBRA — Customer Real Identity Tests', () => {
     // Navbar must show a real name (not empty)
     cy.get('[data-cy="customer-navbar-name"]', { timeout: 10000 })
       .should('be.visible')
-      .and('not.be.empty')
-      .and('not.have.text', 'Rahul M.')
-      .and('not.have.text', 'Rahul Sharma');
+      .and('have.text', E2E_CUSTOMER.name);
 
-    // Sidebar must show a real name
-    cy.get('[data-cy="customer-sidebar-name"]', { timeout: 10000 })
+    // Sidebar must show the same name
+    cy.get('[data-cy="customer-sidebar-name"]:visible', { timeout: 10000 })
       .should('be.visible')
-      .and('not.be.empty')
-      .and('not.have.text', 'Rahul Sharma');
+      .and('have.text', E2E_CUSTOMER.name);
   });
 
   it('Customer navbar shows correct user identity from authenticated session', () => {
@@ -64,13 +60,13 @@ describe('ZOBBRA — Customer Real Identity Tests', () => {
 
     cy.get('[data-cy="customer-navbar-name"]', { timeout: 10000 })
       .should('be.visible')
-      .and('not.be.empty');
+      .and('have.text', E2E_CUSTOMER.name);
 
     // Open profile dropdown
     cy.get('[data-cy="customer-profile-menu-btn"]').click();
     cy.get('[data-cy="customer-profile-dropdown-name"]')
       .should('be.visible')
-      .and('not.be.empty')
+      .and('have.text', E2E_CUSTOMER.name)
       .and('not.have.text', 'Rahul M.')
       .and('not.have.text', 'Rahul Mishra');
   });
@@ -78,13 +74,13 @@ describe('ZOBBRA — Customer Real Identity Tests', () => {
   it('Customer sidebar shows real user name and company', () => {
     loginAsCustomer();
 
-    cy.get('[data-cy="customer-sidebar-name"]', { timeout: 10000 })
+    cy.get('[data-cy="customer-sidebar-name"]:visible', { timeout: 10000 })
       .should('be.visible')
-      .and('not.be.empty')
-      .and('not.have.text', 'Rahul Sharma');
+      .and('have.text', E2E_CUSTOMER.name);
 
-    cy.get('[data-cy="customer-sidebar-company"]')
+    cy.get('[data-cy="customer-sidebar-company"]:visible')
       .should('be.visible')
+      .and('have.text', E2E_CUSTOMER.companyName)
       .and('not.contain', 'ZOBBRA Demo Technologies');
   });
 
@@ -92,13 +88,12 @@ describe('ZOBBRA — Customer Real Identity Tests', () => {
     loginAsCustomer();
     cy.visit('/customer/profile');
 
-    // Name field must NOT have "Rahul Mishra"
-    cy.get('[data-cy="profile-name"]', { timeout: 10000 })
-      .should('not.have.value', 'Rahul Mishra');
-
-    // Email field must NOT have demo email
+    // Fields hold the signed-in customer's saved profile, not demo data
+    cy.get('[data-cy="profile-name"]', { timeout: 10000 }).should('have.value', E2E_CUSTOMER.name);
+    cy.get('[data-cy="profile-company-name"]').should('have.value', E2E_CUSTOMER.companyName);
     cy.get('[data-cy="profile-email"]')
-      .should('not.have.value', 'rahul@acme.com');
+      .should('have.value', E2E_CUSTOMER.email)
+      .and('not.have.value', 'rahul@acme.com');
 
     // The page body must not contain the hardcoded demo names
     cy.get('body').should('not.contain', 'Rahul Mishra');
@@ -109,29 +104,31 @@ describe('ZOBBRA — Customer Real Identity Tests', () => {
     loginAsCustomer();
     cy.visit('/customer/create-quote');
 
-    // Customer name field must NOT be pre-filled with "Rahul Sharma"
-    cy.get('[data-cy="quote-customer-name"]', { timeout: 10000 })
-      .should('not.have.value', 'Rahul Sharma')
+    // Name, email and phone come from the signed-in customer, not demo data
+    cy.get('#quote-name', { timeout: 10000 })
+      .should('have.value', E2E_CUSTOMER.name)
+      .and('not.have.value', 'Rahul Sharma')
       .and('not.have.value', 'Rahul Mishra');
-
-    // Company name field must NOT be "ZOBBRA Demo Technologies"
-    cy.get('[data-cy="quote-company-name"]')
-      .should('not.have.value', 'ZOBBRA Demo Technologies');
+    cy.get('#quote-email').should('have.value', E2E_CUSTOMER.email);
+    cy.get('#quote-phone').should('have.value', E2E_CUSTOMER.phone.slice(3));
 
     // Body must not contain demo names
     cy.get('body').should('not.contain', 'Rahul M.');
     cy.get('body').should('not.contain', 'Rahul Sharma');
   });
 
-  it('Dashboard welcome message shows correct name from API', () => {
+  it('Navbar name matches the name the API returns for this session', () => {
     loginAsCustomer();
 
-    cy.get('[data-cy="customer-dashboard-welcome-name"]', { timeout: 10000 })
-      .should('be.visible')
-      .invoke('text')
-      .should('not.be.empty')
-      .and('not.eq', 'Rahul Sharma')
-      .and('not.eq', 'Rahul Mishra');
+    cy.window().then((win) => {
+      const token = win.localStorage.getItem('token');
+      cy.request({ url: 'http://localhost:5000/api/v1/auth/me', headers: { Authorization: `Bearer ${token}` } })
+        .its('body.user.name')
+        .then((apiName) => {
+          expect(apiName).to.eq(E2E_CUSTOMER.name);
+          cy.get('[data-cy="customer-navbar-name"]', { timeout: 10000 }).should('have.text', apiName);
+        });
+    });
   });
 
   it('After logout, customer identity is cleared — no stale name remains on next visit', () => {
@@ -154,40 +151,58 @@ describe('ZOBBRA — Customer Real Identity Tests', () => {
 });
 
 describe('Phase 3 — ZOBBRA B2B Customer Portal E2E', () => {
-  it('tests Customer Portal Dashboard section', () => {
+  it('lands on the products page and has no Overview, Support, Invoices or Notifications tabs', () => {
+    cy.viewport(1280, 800); // desktop sidebar is hidden below the lg breakpoint
     cy.visit('/customer');
-    cy.url().should('include', '/customer');
+    cy.location('pathname').should('eq', '/customer/products');
     cy.contains('CLIENT PORTAL').should('be.visible');
-
-    // Verify metric cards
-    cy.contains('Active Quotes').should('be.visible');
-    cy.contains('Approved Quotes').should('be.visible');
-    cy.contains('Total Approved Spend').should('be.visible');
+    cy.get('nav[aria-label="Customer portal navigation"]:visible').within(() => {
+      ['Browse Products', 'My Orders', 'Profile'].forEach((name) => cy.contains(name).should('exist'));
+      ['Overview', 'Support', 'Invoices', 'Notifications'].forEach((name) => cy.contains(name).should('not.exist'));
+    });
+    cy.get('[data-cy="customer-bell-btn"]').should('not.exist');
   });
 
   it('tests Customer Products section', () => {
+    cy.viewport(1280, 800);
+    cy.loginAsCustomer();
     cy.visit('/customer/products');
     cy.url().should('include', '/customer/products');
-    cy.contains('Merchandise Catalog').should('be.visible');
+    cy.get('[data-cy="page-header-title"]').should('be.visible').and('have.text', 'BROWSE PRODUCTS');
+    cy.contains('Choose products for your next corporate order.').should('be.visible');
+    cy.get('[data-cy="search-products-input"]').should('be.visible');
   });
 
   it('tests Customer Create Quote Wizard link', () => {
+    cy.viewport(1280, 800);
+    cy.loginAsCustomer();
     cy.visit('/customer/create-quote');
     cy.url().should('include', '/customer/create-quote');
-    cy.contains('Create Your Merchandise Quote').should('be.visible');
+    cy.contains('h1', 'Create New Quote').should('be.visible');
+    cy.contains('h2', 'Get Quote').should('be.visible');
+    cy.get('#customer-quote-form').within(() => {
+      ['#quote-name', '#quote-phone', '#quote-product', '#quote-quantity', '#quote-message'].forEach((id) =>
+        cy.get(id).should('be.visible')
+      );
+      cy.get('#submit-quote-btn').should('contain', 'Get a Quote');
+    });
   });
 
   it('tests Customer Quotes section', () => {
+    cy.viewport(1280, 800);
+    cy.loginAsCustomer();
     cy.visit('/customer/quotes');
     cy.url().should('include', '/customer/quotes');
-    cy.contains('My Quotations').should('be.visible');
-    cy.contains('QUOTATION RECORDS').should('be.visible');
+    cy.contains('h1', 'My Quotes & Requests').should('be.visible');
+    cy.contains('QUOTATIONS & REQUESTS').should('be.visible');
   });
 
   it('tests Customer Orders section', () => {
+    cy.viewport(1280, 800);
+    cy.loginAsCustomer();
     cy.visit('/customer/orders');
     cy.url().should('include', '/customer/orders');
-    cy.contains('My Orders').should('be.visible');
+    cy.contains('h1', 'My Orders').should('be.visible');
     cy.contains('PURCHASE ORDERS').should('be.visible');
   });
 
@@ -197,26 +212,6 @@ describe('Phase 3 — ZOBBRA B2B Customer Portal E2E', () => {
     cy.contains('Shipment Tracking').should('be.visible');
     cy.contains('COMING SOON').should('be.visible');
     cy.contains('Real-Time Courier Tracking').should('be.visible');
-  });
-
-  it('tests Customer Invoices section', () => {
-    cy.visit('/customer/invoices');
-    cy.url().should('include', '/customer/invoices');
-    cy.contains('Tax Invoices').should('be.visible');
-    cy.contains('GST BILLING').should('be.visible');
-  });
-
-  it('tests Customer Notifications section', () => {
-    cy.visit('/customer/notifications');
-    cy.url().should('include', '/customer/notifications');
-    cy.contains('Notification Center').should('be.visible');
-  });
-
-  it('tests Customer Support section', () => {
-    cy.visit('/customer/support');
-    cy.url().should('include', '/customer/support');
-    cy.contains('Customer Support').should('be.visible');
-    cy.contains('Dedicated Account Manager').should('be.visible');
   });
 
   it('tests Customer Profile section', () => {

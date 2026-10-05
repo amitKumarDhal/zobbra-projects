@@ -1,7 +1,7 @@
 describe('Phase 2 — Interactive Quote Builder E2E', () => {
   it('navigates through the multi-step merchandise quote builder wizard', () => {
     // 1. Login and Visit Customer Create Quote Wizard
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.visit('/customer/create-quote');
     cy.url().should('include', '/customer/create-quote');
     cy.contains('Create Your Merchandise Quote').should('be.visible');

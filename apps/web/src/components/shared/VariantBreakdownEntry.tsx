@@ -16,6 +16,9 @@ interface VariantBreakdownEntryProps {
   supportsMatrix?: boolean;
   /** Tighter spacing for embedded panels (customizer). Default layout is unchanged. */
   compact?: boolean;
+  /** The product's configured colours/sizes. When given, the customer picks from them instead of typing. */
+  colorOptions?: string[];
+  sizeOptions?: string[];
   variants: VariantData[];
   onChange: (variants: VariantData[]) => void;
 }
@@ -26,6 +29,8 @@ export default function VariantBreakdownEntry({
   requiresSize = true,
   supportsMatrix: _supportsMatrix = true,
   compact = false,
+  colorOptions,
+  sizeOptions,
   variants,
   onChange
 }: VariantBreakdownEntryProps) {
@@ -129,6 +134,17 @@ export default function VariantBreakdownEntry({
           {requiresColor && (
             <div className="flex-1 min-w-[120px]">
               <label className="block text-xs font-bold text-[#4B5563] mb-1">Color <span className="text-red-500">*</span></label>
+{colorOptions && colorOptions.length > 0 ? (
+                <select
+                  id="variant-color-input"
+                  value={color}
+                  onChange={e => setColor(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-[#D1D5DB] rounded-lg text-sm outline-none focus:border-[#3B6FEB] transition-all"
+                >
+                  <option value="">Select color</option>
+                  {colorOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                </select>
+              ) : (
               <input 
                 id="variant-color-input"
                 type="text" 
@@ -137,12 +153,24 @@ export default function VariantBreakdownEntry({
                 placeholder="e.g. Navy Blue" 
                 className="w-full px-3 py-2 bg-white border border-[#D1D5DB] rounded-lg text-sm outline-none focus:border-[#3B6FEB] transition-all"
               />
+              )}
             </div>
           )}
           
           {requiresSize && (
             <div className="w-[100px]">
               <label className="block text-xs font-bold text-[#4B5563] mb-1">Size <span className="text-red-500">*</span></label>
+{sizeOptions && sizeOptions.length > 0 ? (
+                <select
+                  id="variant-size-input"
+                  value={size}
+                  onChange={e => setSize(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-[#D1D5DB] rounded-lg text-sm outline-none focus:border-[#3B6FEB] transition-all"
+                >
+                  <option value="">Size</option>
+                  {sizeOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                </select>
+              ) : (
               <input 
                 id="variant-size-input"
                 type="text" 
@@ -151,6 +179,7 @@ export default function VariantBreakdownEntry({
                 placeholder="e.g. XL" 
                 className="w-full px-3 py-2 bg-white border border-[#D1D5DB] rounded-lg text-sm outline-none focus:border-[#3B6FEB] transition-all uppercase"
               />
+              )}
             </div>
           )}
 

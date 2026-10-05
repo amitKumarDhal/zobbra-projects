@@ -1,7 +1,7 @@
 describe('Sales Conversation & WhatsApp MVP Real E2E Journey', () => {
   it('executes full quote submission, admin quote detail view, WhatsApp action trigger, sales note creation, quote editing with server repricing, approval, and order conversion', () => {
     // 1. Customer submits quote via 8-step wizard
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.visit('/customer/create-quote');
     cy.contains('8-Step Merchandise Configurator').should('be.visible');
 

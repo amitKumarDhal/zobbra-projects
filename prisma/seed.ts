@@ -64,7 +64,7 @@ async function main() {
     },
   });
 
-  // 2. Create Users (Roles: ADMIN, SALES, PRODUCTION, CUSTOMER)
+  // 2. Create Users (active roles: ADMIN, CUSTOMER — SALES/PRODUCTION are disabled)
   const testDevAdmin = await prisma.user.create({
     data: {
       email: 'admin@zobra.test',
@@ -96,25 +96,6 @@ async function main() {
     },
   });
 
-  const salesUser = await prisma.user.create({
-    data: {
-      email: 'sales@zobra.com',
-      passwordHash,
-      name: 'Priya Das (Sales Lead)',
-      phone: '+91 91234 56789',
-      role: 'SALES',
-    },
-  });
-
-  const productionUser = await prisma.user.create({
-    data: {
-      email: 'production@zobra.com',
-      passwordHash,
-      name: 'Amitav Mohanty (Print Manager)',
-      phone: '+91 94370 12345',
-      role: 'PRODUCTION',
-    },
-  });
 
   const customerUser = await prisma.user.create({
     data: {
@@ -495,7 +476,6 @@ async function main() {
       production: {
         create: {
           stage: 'PRINTING',
-          assignedToId: productionUser.id,
           notes: 'Batch 1 DTF heat press printing in progress.',
           startedAt: new Date(),
         },

@@ -116,7 +116,7 @@ export default function ForgotPasswordPage() {
         className="flex flex-col justify-between p-4 sm:p-8 lg:p-16 bg-white overflow-y-auto"
       >
         <div className="flex justify-between items-center">
-          <Link href="/login" className="inline-flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#050505] font-bold transition-colors min-h-[44px]">
+          <Link href="/login?mode=admin" className="inline-flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#050505] font-bold transition-colors min-h-[44px]">
             <ArrowLeft className="w-4 h-4" /> Back to Login
           </Link>
           <div className="lg:hidden">
@@ -136,7 +136,7 @@ export default function ForgotPasswordPage() {
                 <span className="text-[#050505] font-bold">{email}</span>
               </p>
               
-              <Link href="/login" className="inline-flex items-center justify-center w-full py-3.5 mt-8 bg-[#3B6FEB] hover:bg-[#2563EB] text-white rounded-xl text-[15px] font-bold shadow-[0_4px_14px_rgba(59,111,235,0.3)] hover:shadow-[0_6px_20px_rgba(59,111,235,0.4)] transition-all active:scale-[0.98]">
+              <Link href="/login?mode=admin" className="inline-flex items-center justify-center w-full py-3.5 mt-8 bg-[#3B6FEB] hover:bg-[#2563EB] text-white rounded-xl text-[15px] font-bold shadow-[0_4px_14px_rgba(59,111,235,0.3)] hover:shadow-[0_6px_20px_rgba(59,111,235,0.4)] transition-all active:scale-[0.98]">
                 RETURN TO LOGIN
               </Link>
             </motion.div>
@@ -145,6 +145,13 @@ export default function ForgotPasswordPage() {
               <div className="space-y-2">
                 <h2 className="text-3xl font-black tracking-tight text-[#050505] font-heading">Reset Password</h2>
                 <p className="text-[#6B7280] font-medium">Enter your email and we'll send you instructions to reset your password.</p>
+                <p className="text-sm text-[#6B7280] font-medium">
+                  Passwords are for admin accounts only. Customers{' '}
+                  <Link href="/login" className="font-bold text-[#050505] hover:underline">
+                    sign in with WhatsApp OTP
+                  </Link>{' '}
+                  — no password needed.
+                </p>
               </div>
 
               {error && (

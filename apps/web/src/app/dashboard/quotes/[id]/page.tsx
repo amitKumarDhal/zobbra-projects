@@ -21,6 +21,10 @@ import {
   Package,
   Sparkles,
 } from 'lucide-react';
+import {
+  CustomizerSpecificationsCard,
+  extractCustomizerSpecs,
+} from '@/components/customizer/CustomizerSpecificationsCard';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import VariantBreakdownEntry, { VariantData } from '@/components/shared/VariantBreakdownEntry';
@@ -48,15 +52,19 @@ interface QuoteDetail {
   previewFrontUrl?: string;
   previewBackUrl?: string;
   canvasStateJson?: string;
+  printingType?: string;
+  color?: string;
   createdAt: string;
   customer?: { id: string; name: string; email: string; phone?: string };
   company?: { id: string; name: string; gstin?: string; address?: string; city?: string; state?: string; pincode?: string };
   items?: Array<{
     id: string;
     productId: string;
-    product?: { name: string; hsnCode: string; gstRate: number };
+    product?: { name: string; hsnCode: string; gstRate: number; customizerTemplateId?: string | null };
     printType: string;
     color: string;
+    collarColor?: string;
+    tapingColor?: string;
     size: string;
     quantity: number;
     unitPrice: number;
@@ -537,6 +545,26 @@ export default function AdminQuoteDetailPage() {
             );
           })()}
 
+          {/* Structured Customizer Specifications Card (Phase 7 shared component) */}
+          {(() => {
+            const item = quote.items?.[0];
+            const specs = extractCustomizerSpecs({
+              notes: quote.notes,
+              templateId: item?.product?.customizerTemplateId,
+              itemColor: item?.color || quote.color,
+              itemCollarColor: item?.collarColor,
+              itemTapingColor: item?.tapingColor,
+              printType: item?.printType || quote.printingType,
+            });
+            if (!specs) return null;
+            return (
+              <CustomizerSpecificationsCard
+                specs={specs}
+                dataCy="quote-customizer-specifications"
+              />
+            );
+          })()}
+
           {/* Specifications & Customization Requirements Card */}
           {quote.notes && (
             <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-sm p-6 space-y-4" data-cy="quote-specifications-card">
@@ -546,7 +574,7 @@ export default function AdminQuoteDetailPage() {
               <div className="bg-[#F9FAFB] border border-[#E5E7EB] p-4 rounded-xl space-y-2 text-xs font-medium">
                 {quote.notes.includes('|') ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {quote.notes.split('|').map((part, idx) => {
+                    {quote.notes.split('|').filter(part => !part.trim().startsWith('Customization:')).map((part, idx) => {
                       const [label, ...val] = part.split(':');
                       return (
                         <div key={idx} className="bg-white p-3 rounded-lg border border-[#E5E7EB] shadow-[0_1px_2px_rgba(0,0,0,0.02)]">

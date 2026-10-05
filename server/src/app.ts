@@ -3,6 +3,7 @@ import cors from 'cors';
 import { config, prisma } from './config/index.js';
 import { ensureDatabaseSchema } from './config/autoMigrate.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { isDevConsoleOtpEnabled } from './utils/whatsappCloud.js';
 
 import authRoutes from './modules/auth/auth.routes.js';
 import productRoutes from './modules/products/products.routes.js';
@@ -24,6 +25,12 @@ import invoiceRoutes from './modules/invoices/invoices.routes.js';
 import mediaRoutes from './modules/media/media.routes.js';
 
 const app = express();
+
+// Railway terminates TLS at one proxy hop; needed so req.ip (used by rate limiting)
+// is the real client address. Not enabled locally, where X-Forwarded-For is spoofable.
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 // CORS configuration - explicit origins only
 const allowedOrigins = [
@@ -103,6 +110,9 @@ app.use('/api/v1/admin', reportRoutes);
 app.use(errorHandler);
 
 if (process.env.NODE_ENV !== 'test') {
+  if (isDevConsoleOtpEnabled()) {
+    console.warn('⚠️  DEV_AUTH_OTP_MODE=console: login OTPs are printed to this console, not sent via WhatsApp (development only).');
+  }
   ensureDatabaseSchema().catch((err) => console.warn('Database auto-sync error:', err));
   app.listen(config.port, '0.0.0.0', () => {
     console.log(`🚀 ZOBBRA B2B Server listening on http://0.0.0.0:${config.port}`);

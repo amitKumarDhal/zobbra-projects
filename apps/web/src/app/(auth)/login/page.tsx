@@ -4,16 +4,27 @@ import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Lock, Mail, AlertCircle, Eye, EyeOff, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, Lock, Mail, AlertCircle, Eye, EyeOff, ShieldCheck, Sparkles, Briefcase } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 import { ZobbraLogo } from '@/components/shared/ZobbraLogo';
 import { sanitizeReturnUrl } from '@/lib/customizerDraft';
+import { WhatsAppOtpLogin, OtpLoginSuccess } from '@/components/auth/WhatsAppOtpLogin';
+import {
+  customerLoginHref,
+  postLoginDestination,
+  adminLoginHref,
+  storeSession,
+} from '@/lib/otpAuth';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = sanitizeReturnUrl(searchParams.get('returnUrl'));
   const isFromCustomizer = returnUrl && returnUrl.includes('/customize');
+  // Customers sign in with WhatsApp OTP; ADMIN keeps email + password.
+  // (?mode=staff is the pre-OTP link and is kept as an alias.)
+  const mode = searchParams.get('mode');
+  const isAdminMode = mode === 'admin' || mode === 'staff';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,20 +53,8 @@ function LoginForm() {
       const data = await res.json();
 
       if (res.ok && data.success && data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('zobra_token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('zobra_user', JSON.stringify(data.user));
-
-        if (returnUrl) {
-          router.push(returnUrl);
-        } else if (data.user?.role === 'CUSTOMER') {
-          router.push('/customer');
-        } else if (data.user?.role === 'ADMIN') {
-          router.push('/dashboard/orders');
-        } else {
-          router.push('/dashboard');
-        }
+        storeSession(data.token, data.user);
+        router.push(postLoginDestination(data.user?.role, returnUrl));
       } else {
         // Use the API error message if available, otherwise provide status-based message
         if (res.status === 401) {
@@ -91,6 +90,11 @@ function LoginForm() {
   const setTestUser = (testEmail: string, testPass: string) => {
     setEmail(testEmail);
     setPassword(testPass);
+  };
+
+  const handleOtpSuccess = ({ token, user }: OtpLoginSuccess) => {
+    storeSession(token, user);
+    router.push(postLoginDestination(user.role, returnUrl));
   };
 
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -155,11 +159,17 @@ function LoginForm() {
 
         <div className="max-w-[420px] w-full mx-auto space-y-6 sm:space-y-8 py-6 sm:py-12">
           <div className="space-y-2">
-            <h2 className="text-3xl font-black tracking-tight text-[#050505] font-heading">Welcome back</h2>
-            <p className="text-[#6B7280] font-medium">Sign in to manage your Zobra account.</p>
+            <h2 className="text-3xl font-black tracking-tight text-[#050505] font-heading">
+              {isAdminMode ? 'Admin sign in' : 'Welcome to ZOBBRA'}
+            </h2>
+            <p className="text-[#6B7280] font-medium">
+              {isAdminMode
+                ? 'Administrator access with email and password.'
+                : 'Sign in with your WhatsApp number.'}
+            </p>
           </div>
 
-          {isDevelopment && (
+          {isAdminMode && isDevelopment && (
             <div className="bg-[#F8F9FC] p-4 rounded-xl border border-[#E5E7EB] space-y-3">
               <p className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">Development Access</p>
               <div className="flex gap-2">
@@ -170,21 +180,6 @@ function LoginForm() {
                   className="flex-1 py-1.5 bg-white border border-[#E5E7EB] text-[#050505] rounded-lg text-xs font-bold hover:border-[#3B6FEB] hover:text-[#3B6FEB] transition-all shadow-sm"
                 >
                   Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTestUser('sales@zobra.test', 'sales123')}
-                  className="flex-1 py-1.5 bg-white border border-[#E5E7EB] text-[#050505] rounded-lg text-xs font-bold hover:border-[#3B6FEB] hover:text-[#3B6FEB] transition-all shadow-sm"
-                >
-                  Sales
-                </button>
-                <button
-                  type="button"
-                  data-cy="login-autofill-customer"
-                  onClick={() => setTestUser('customer@zobra.test', 'customer123')}
-                  className="flex-1 py-1.5 bg-white border border-[#E5E7EB] text-[#050505] rounded-lg text-xs font-bold hover:border-[#3B6FEB] hover:text-[#3B6FEB] transition-all shadow-sm"
-                >
-                  Customer
                 </button>
               </div>
             </div>
@@ -197,13 +192,32 @@ function LoginForm() {
             </div>
           )}
 
-          {error && (
+          {!isAdminMode && (
+            <div className="space-y-6">
+              <WhatsAppOtpLogin onSuccess={handleOtpSuccess} />
+              <p className="text-center text-xs font-medium text-[#9CA3AF]">
+                New customers get an account automatically after verification.
+              </p>
+              <div className="pt-2 border-t border-[#F3F4F6] text-center">
+                <Link
+                  href={adminLoginHref(returnUrl)}
+                  data-cy="admin-login-link"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#6B7280] hover:text-[#050505] min-h-[44px]"
+                >
+                  <Briefcase className="w-3.5 h-3.5" /> Admin Login
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {isAdminMode && error && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-sm font-medium flex items-center gap-3">
               <AlertCircle className="w-5 h-5 shrink-0" />
               <span>{error}</span>
             </motion.div>
           )}
 
+          {isAdminMode && (
           <form className="space-y-5" onSubmit={handleLogin}>
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-[#050505]">Email Address</label>
@@ -268,13 +282,15 @@ function LoginForm() {
               {loading ? 'SIGNING IN...' : 'SIGN IN'}
             </button>
             
-            <Link 
-              href={returnUrl ? `/register?returnUrl=${encodeURIComponent(returnUrl)}` : '/register'} 
+            <Link
+              href={customerLoginHref(returnUrl)}
+              data-cy="customer-login-link"
               className="flex items-center justify-center w-full py-3.5 mt-3 bg-white border-2 border-[#050505] text-[#050505] hover:bg-[#050505] hover:text-white rounded-xl text-[15px] font-bold transition-all active:scale-[0.98] tracking-wide shadow-sm"
             >
-              Create an account
+              Not an admin? Sign in with WhatsApp
             </Link>
           </form>
+          )}
         </div>
 
         <div className="text-center text-xs font-medium text-[#9CA3AF]">

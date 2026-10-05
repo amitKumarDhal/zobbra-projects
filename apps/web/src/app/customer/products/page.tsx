@@ -19,12 +19,22 @@ import {
   AlertCircle,
   RefreshCw,
   Sparkles,
+  Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Modal } from '@/components/ui/modal';
 import { API_URL } from '@/lib/api';
 import { useCustomerUser } from '@/hooks/useCustomerUser';
+import {
+  canCustomize,
+  getHighlights,
+  getMoq,
+  getProductColors,
+  getProductSizes,
+  getSocialProof,
+  getStartingPrice as getProductStartingPrice,
+} from '@/lib/productConfig';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -70,62 +80,45 @@ interface Product {
   requiresSize?: boolean;
   supportsVariantMatrix?: boolean;
   createdAt?: string;
+  // Admin product configuration (see lib/productConfig)
+  availableColors?: Array<{ name: string; hex: string | null }>;
+  availableSizes?: string[];
+  moq?: number;
+  startingPrice?: number;
+  rating?: number | null;
+  reviewCount?: number;
+  highlights?: string[];
+  customizable?: boolean;
+  orderMode?: string;
+  inStock?: boolean;
 }
 
-// ─── Color Palette Helper ────────────────────────────────────────────────────
+// ─── Price & MOQ (from the product's admin configuration) ────────────────────
 
-const COLOR_MAP: Record<string, string> = {
-  'charcoal black': '#171717',
-  'black': '#171717',
-  'matte black': '#1C1C1E',
-  'navy blue': '#1E293B',
-  'navy': '#1E293B',
-  'classic white': '#F9FAFB',
-  'pure white': '#FFFFFF',
-  'white': '#F9FAFB',
-  'royal blue': '#1D4ED8',
-  'blue': '#2563EB',
-  'red': '#DC2626',
-  'crimson red': '#DC2626',
-  'bottle green': '#064E3B',
-  'olive green': '#4D5D3A',
-  'green': '#16A34A',
-  'grey': '#6B7280',
-  'gray': '#6B7280',
-  'heather grey': '#9CA3AF',
-  'royal maroon': '#800000',
-  'maroon': '#800000',
-  'yellow': '#EAB308',
-  'orange': '#F97316',
-};
+const getStartingPrice = (product: Product): number => getProductStartingPrice(product);
+const getMOQ = (product: Product): number => getMoq(product);
 
-function getColorHex(colorName: string): string {
-  const clean = colorName.trim().toLowerCase();
-  return COLOR_MAP[clean] || '#94A3B8';
-}
-
-// ─── Price & MOQ Computation ─────────────────────────────────────────────────
-
-function getStartingPrice(product: Product): number {
-  const tiers = (product.bulkPricing || [])
-    .map((b) => b.pricePerUnit)
-    .filter((p) => typeof p === 'number' && p > 0);
-  if (tiers.length > 0) {
-    return Math.min(...tiers, product.basePrice || 249);
-  }
-  return product.basePrice || 249;
-}
-
-function getMOQ(product: Product): number {
-  if (product.bulkPricing && product.bulkPricing.length > 0) {
-    const minQ = product.bulkPricing[0].minQuantity;
-    if (typeof minQ === 'number' && minQ > 0) return minQ;
-  }
-  return 20;
+/** Hex for a colour name, using the colour values configured on the loaded products. */
+function buildColorLookup(products: Product[]): (name: string) => string {
+  const lookup = new Map<string, string>();
+  products.forEach((p) => getProductColors(p).forEach((c) => lookup.set(c.name.toLowerCase(), c.hex)));
+  return (name: string) => lookup.get(name.trim().toLowerCase()) || '#94A3B8';
 }
 
 function formatINR(val: number): string {
   return '₹' + Number(val || 0).toLocaleString('en-IN');
+}
+
+function RatingBadge({ product }: { product: Product }) {
+  const proof = getSocialProof(product);
+  if (!proof) return null;
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#111111]" data-cy={`product-rating-${product.id}`}>
+      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+      {proof.rating.toFixed(1)}
+      {proof.reviewCount > 0 && <span className="font-medium text-[#6B7280]">({proof.reviewCount})</span>}
+    </span>
+  );
 }
 
 // ─── Main Catalog Content ─────────────────────────────────────────────────────
@@ -258,24 +251,18 @@ function CustomerProductsCatalog() {
   }, [fetchProducts]);
 
   // Extract Real Available Filter Options from DB products
+  const getColorHex = useMemo(() => buildColorLookup(products), [products]);
+
   const availableColors = useMemo(() => {
     const colorSet = new Set<string>();
-    products.forEach((p) => {
-      (p.variants || []).forEach((v) => {
-        if (v.color?.trim()) colorSet.add(v.color.trim());
-      });
-    });
+    products.forEach((p) => getProductColors(p).forEach((c) => colorSet.add(c.name)));
     return Array.from(colorSet).sort();
   }, [products]);
 
   const availableSizes = useMemo(() => {
     const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'Free Size'];
     const sizeSet = new Set<string>();
-    products.forEach((p) => {
-      (p.variants || []).forEach((v) => {
-        if (v.size?.trim()) sizeSet.add(v.size.trim());
-      });
-    });
+    products.forEach((p) => getProductSizes(p).forEach((size) => sizeSet.add(size)));
     return Array.from(sizeSet).sort((a, b) => {
       const idxA = sizeOrder.indexOf(a);
       const idxB = sizeOrder.indexOf(b);
@@ -291,16 +278,16 @@ function CustomerProductsCatalog() {
     return products.filter((p) => {
       // 1. Color filter
       if (selectedColor) {
-        const hasColor = (p.variants || []).some(
-          (v) => v.color?.toLowerCase() === selectedColor.toLowerCase()
+        const hasColor = getProductColors(p).some(
+          (c) => c.name.toLowerCase() === selectedColor.toLowerCase()
         );
         if (!hasColor) return false;
       }
 
       // 2. Size filter
       if (selectedSize) {
-        const hasSize = (p.variants || []).some(
-          (v) => v.size?.toLowerCase() === selectedSize.toLowerCase()
+        const hasSize = getProductSizes(p).some(
+          (size) => size.toLowerCase() === selectedSize.toLowerCase()
         );
         if (!hasSize) return false;
       }
@@ -797,12 +784,10 @@ function CustomerProductsCatalog() {
             const thumbnail = item.images && item.images.length > 0 ? item.images[0] : null;
             const startPrice = getStartingPrice(item);
             const moq = getMOQ(item);
-            const itemColors = Array.from(
-              new Set((item.variants || []).map((v) => v.color).filter(Boolean))
-            ) as string[];
-            const itemSizes = Array.from(
-              new Set((item.variants || []).map((v) => v.size).filter(Boolean))
-            ) as string[];
+            const itemColors = getProductColors(item).map((c) => c.name);
+            const itemSizes = getProductSizes(item);
+            const customizable = canCustomize(item);
+            const keyHighlight = getHighlights(item)[0];
             const hasBulkPricing = Array.isArray(item.bulkPricing) && item.bulkPricing.length > 0;
 
             return (
@@ -854,10 +839,13 @@ function CustomerProductsCatalog() {
                 {/* Product Details Content */}
                 <CardContent className="p-4 sm:p-5 space-y-3 flex-1 flex flex-col justify-between">
                   <div className="space-y-1.5">
-                    {/* Category Label */}
-                    <span className="text-[10px] font-bold text-[#3B6FEB] uppercase tracking-wider block">
-                      {item.category?.name || 'Apparel'}
-                    </span>
+                    {/* Category Label + rating (shown only when the product has one) */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold text-[#3B6FEB] uppercase tracking-wider block">
+                        {item.category?.name || 'Apparel'}
+                      </span>
+                      <RatingBadge product={item} />
+                    </div>
 
                     {/* Product Title */}
                     <h3
@@ -868,7 +856,13 @@ function CustomerProductsCatalog() {
                       {item.name}
                     </h3>
 
-                    {/* Colors & Sizes if present in real DB variants */}
+                    {keyHighlight && (
+                      <p className="text-[11px] text-[#6B7280] line-clamp-1" data-cy={`product-highlight-${item.id}`}>
+                        {keyHighlight}
+                      </p>
+                    )}
+
+                    {/* Colors & Sizes configured for this product */}
                     <div className="flex items-center justify-between gap-2 pt-1">
                       {/* Real Color Dots */}
                       {itemColors.length > 0 ? (
@@ -929,27 +923,18 @@ function CustomerProductsCatalog() {
 
                   {/* Actions Area */}
                   <div className="pt-3 border-t border-[#F3F4F6] space-y-2">
-                    {/* Primary CTA: DESIGN YOUR OWN */}
-                    <Link
-                      href={`/products/${item.id}/customize`}
-                      className="block w-full"
-                      data-cy={`design-btn-${item.id}`}
-                    >
-                      <Button variant="primary" size="sm" className="w-full font-bold text-xs gap-1.5">
-                        <Palette className="w-3.5 h-3.5" /> DESIGN YOUR OWN
-                      </Button>
-                    </Link>
-
-                    {/* Secondary CTA: VIEW DETAILS */}
-                    <Link
-                      href={`/products/${item.id}`}
-                      className="block w-full"
-                      data-cy={`details-btn-${item.id}`}
-                    >
-                      <Button variant="secondary" size="sm" className="w-full font-bold text-xs">
-                        VIEW DETAILS
-                      </Button>
-                    </Link>
+                    {/* Primary CTA: DESIGN YOUR OWN (only when the admin enabled customization) */}
+                    {customizable && (
+                      <Link
+                        href={`/products/${item.id}/customize`}
+                        className="block w-full"
+                        data-cy={`design-btn-${item.id}`}
+                      >
+                        <Button variant="primary" size="sm" className="w-full font-bold text-xs gap-1.5">
+                          <Palette className="w-3.5 h-3.5" /> DESIGN YOUR OWN
+                        </Button>
+                      </Link>
+                    )}
 
                     {/* Small Link: GET QUICK QUOTE */}
                     <div className="text-center pt-0.5">
@@ -1026,9 +1011,7 @@ function CustomerProductsCatalog() {
 
                 {/* Available Colors */}
                 {(() => {
-                  const colors = Array.from(
-                    new Set((quickViewProduct.variants || []).map((v) => v.color).filter(Boolean))
-                  ) as string[];
+                  const colors = getProductColors(quickViewProduct).map((c) => c.name);
                   if (colors.length === 0) return null;
                   return (
                     <div className="space-y-1">
@@ -1055,9 +1038,7 @@ function CustomerProductsCatalog() {
 
                 {/* Available Sizes */}
                 {(() => {
-                  const sizes = Array.from(
-                    new Set((quickViewProduct.variants || []).map((v) => v.size).filter(Boolean))
-                  ) as string[];
+                  const sizes = getProductSizes(quickViewProduct);
                   if (sizes.length === 0) return null;
                   return (
                     <div className="space-y-1">
@@ -1125,24 +1106,17 @@ function CustomerProductsCatalog() {
                 Get Quick Quote for this item →
               </Link>
               <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                <Link
-                  href={`/products/${quickViewProduct.id}`}
-                  className="flex-1 sm:flex-initial"
-                  onClick={() => setQuickViewProduct(null)}
-                >
-                  <Button variant="secondary" size="sm" className="w-full font-bold">
-                    VIEW DETAILS
-                  </Button>
-                </Link>
-                <Link
-                  href={`/products/${quickViewProduct.id}/customize`}
-                  className="flex-1 sm:flex-initial"
-                  onClick={() => setQuickViewProduct(null)}
-                >
-                  <Button variant="primary" size="sm" className="w-full font-bold gap-1.5">
-                    <Palette className="w-3.5 h-3.5" /> DESIGN YOUR OWN
-                  </Button>
-                </Link>
+                {canCustomize(quickViewProduct) && (
+                  <Link
+                    href={`/products/${quickViewProduct.id}/customize`}
+                    className="flex-1 sm:flex-initial"
+                    onClick={() => setQuickViewProduct(null)}
+                  >
+                    <Button variant="primary" size="sm" className="w-full font-bold gap-1.5">
+                      <Palette className="w-3.5 h-3.5" /> DESIGN YOUR OWN
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>

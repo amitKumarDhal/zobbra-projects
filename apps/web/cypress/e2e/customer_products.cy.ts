@@ -1,25 +1,24 @@
 /// <reference types="cypress" />
 
 describe('Customer Product Discovery Catalog UX (/customer/products)', () => {
-  const customerEmail = 'ajay@gmail.com';
-  const customerPassword = '123456';
+  // Isolated throwaway customer (OTP-equivalent session via the e2e task), removed in after().
+  // The spec no longer depends on a pre-existing account in the local database.
+  const customerEmail = `catalog-e2e-${Date.now()}@zobra.test`;
+  const customerPassword = 'unused-otp-login';
   let customerToken = '';
   let customerUser: any = null;
 
   before(() => {
-    // 1. Authenticate customer via API to obtain valid JWT & profile
-    cy.request({
-      method: 'POST',
-      url: 'http://localhost:5000/api/v1/auth/login',
-      body: {
-        email: customerEmail,
-        password: customerPassword,
-      },
-    }).then((res) => {
-      expect(res.status).to.eq(200);
+    // 1. Create the customer and obtain a valid JWT & profile
+    cy.task('e2eCreateCustomer', { name: 'Catalog E2E Customer', email: customerEmail }).then((res: any) => {
+      expect(res.status).to.eq(201);
       customerToken = res.body.token;
       customerUser = res.body.user;
     });
+  });
+
+  after(() => {
+    cy.task('e2eDeleteCustomer', { email: customerEmail });
   });
 
   const visitProducts = (path = '/customer/products') => {
@@ -34,12 +33,8 @@ describe('Customer Product Discovery Catalog UX (/customer/products)', () => {
   };
 
   it('1. Login via UI & 2. Open /customer/products & 3. Products load', () => {
-    // UI Login journey
-    cy.visit('/login');
-    cy.get('[data-cy="email-input"]').should('be.visible').clear().type(customerEmail);
-    cy.get('[data-cy="password-input"]').should('be.visible').clear().type(customerPassword);
-    cy.wait(500);
-    cy.get('[data-cy="login-submit-button"]').click();
+    // Customer UI login is WhatsApp OTP now; sign the seeded customer in via the API.
+    cy.login(customerEmail, customerPassword);
     cy.url({ timeout: 10000 }).should('include', '/customer');
 
     // Open /customer/products
@@ -132,16 +127,11 @@ describe('Customer Product Discovery Catalog UX (/customer/products)', () => {
     cy.get('[data-cy^="product-card-"]').should('have.length.at.least', 1);
   });
 
-  it('8. Open product details', () => {
+  it('8. Cards no longer link to a separate product details page', () => {
     visitProducts('/customer/products');
     cy.get('[data-cy="product-grid"]', { timeout: 12000 }).should('be.visible');
-
-    cy.get('[data-cy^="product-card-"]').first().within(() => {
-      cy.get('[data-cy^="details-btn-"]').click();
-    });
-
-    // Should navigate to product detail page /products/:id
-    cy.url({ timeout: 10000 }).should('match', /\/products\/[a-zA-Z0-9_-]+/);
+    cy.get('[data-cy^="product-card-"]').should('have.length.at.least', 1);
+    cy.get('[data-cy^="details-btn-"]').should('not.exist');
   });
 
   it('9. Design Your Own button navigates to customizer', () => {

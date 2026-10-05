@@ -1,7 +1,7 @@
 describe('Approved Quote to Order MVP E2E Journey', () => {
   it('executes full quote submission, admin approval, quote-to-order conversion, order persistence, and customer-admin synchronization', () => {
     // 1. Customer: Create quote in 8-step wizard
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.visit('/customer/create-quote');
     cy.contains('8-Step Merchandise Configurator').should('be.visible');
 
@@ -41,7 +41,7 @@ describe('Approved Quote to Order MVP E2E Journey', () => {
 
     // 6. Customer: Open Client Workspace My Orders page
     cy.clearLocalStorage();
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.visit('/customer/orders');
     cy.contains('My Orders').should('be.visible');
     cy.contains('ORD-').should('be.visible');

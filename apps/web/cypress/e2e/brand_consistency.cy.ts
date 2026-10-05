@@ -40,7 +40,7 @@ describe('Brand Consistency E2E', () => {
   });
 
   it('should verify brand on customer dashboard', () => {
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.visit('/customer');
     cy.get('body').contains(brandName, { matchCase: false }).should('exist');
   });

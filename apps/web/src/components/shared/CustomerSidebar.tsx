@@ -4,15 +4,11 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  LayoutDashboard,
   Package,
   PlusCircle,
   FileText,
   ShoppingBag,
   Truck,
-  Receipt,
-  Bell,
-  HelpCircle,
   User,
   ChevronLeft,
   ChevronRight,
@@ -42,15 +38,11 @@ export function CustomerSidebar({ isOpen = false, onClose }: CustomerSidebarProp
   };
 
   const navItems = [
-    { name: 'Overview', href: '/customer', icon: LayoutDashboard },
     { name: 'Browse Products', href: '/customer/products', icon: Package },
     { name: 'Request Quote', href: '/customer/create-quote', icon: PlusCircle },
     { name: 'My Quotes', href: '/customer/quotes', icon: FileText },
     { name: 'My Orders', href: '/customer/orders', icon: ShoppingBag },
     { name: 'Track Shipments', href: '/customer/tracking', icon: Truck },
-    { name: 'Invoices', href: '/customer/invoices', icon: Receipt },
-    { name: 'Notifications', href: '/customer/notifications', icon: Bell },
-    { name: 'Support', href: '/customer/support', icon: HelpCircle },
     { name: 'Profile', href: '/customer/profile', icon: User },
   ];
 
@@ -65,11 +57,11 @@ export function CustomerSidebar({ isOpen = false, onClose }: CustomerSidebarProp
         <div className="flex items-center justify-between px-3 py-4 mb-3 border-b border-slate-800/80">
           {!collapsed ? (
             <div className="flex flex-col gap-1">
-              <ZobbraLogo variant="white" href="/customer" width={125} height={42} priority={true} />
+              <ZobbraLogo variant="white" href="/customer/products" width={125} height={42} priority={true} />
               <span className="text-[9px] font-bold text-[#3B6FEB] uppercase tracking-wider pl-1">CLIENT PORTAL</span>
             </div>
           ) : (
-            <ZobbraLogo variant="mark-only" href="/customer" />
+            <ZobbraLogo variant="mark-only" href="/customer/products" />
           )}
 
           {/* Desktop collapse button */}
@@ -97,7 +89,7 @@ export function CustomerSidebar({ isOpen = false, onClose }: CustomerSidebarProp
         <nav className="space-y-1" aria-label="Customer portal navigation">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || (item.href !== '/customer' && pathname.startsWith(item.href));
+            const isActive = pathname === item.href || pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}

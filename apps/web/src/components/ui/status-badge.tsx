@@ -58,6 +58,11 @@ const STATUS_MAP: Record<string, { variant: SemanticVariant; label: string }> = 
   ACTIVE:             { variant: 'success',  label: 'Active'             },
   INACTIVE:           { variant: 'neutral',  label: 'Inactive'           },
 
+  // ── Customer lifecycle ─────────────────────────────────────────
+  ABANDONED_CART:     { variant: 'neutral',  label: 'Abandoned Cart'     },
+  ABANDONED_CHECKOUT: { variant: 'warning',  label: 'Abandoned Checkout' },
+  PURCHASED:          { variant: 'success',  label: 'Purchased'          },
+
   // ── Testimonials ───────────────────────────────────────────────
   PUBLISHED:          { variant: 'success',  label: 'Published'          },
 

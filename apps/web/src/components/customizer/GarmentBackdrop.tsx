@@ -1,8 +1,11 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
-import { getCustomizerTemplate, CustomizerTemplate } from '../../lib/customizerTemplates';
+import { getCustomizerTemplate, CustomizerTemplate, getReusableTemplateById } from '../../lib/customizerTemplates';
+import { COLOR_HEX_MAP, getColorHex, isLightColor } from '../../lib/colors';
+import { getCustomizerSideImage, getSideRecolor } from '../../lib/customizerViews';
+import { getProductColors, getProductCollarColors } from '../../lib/productConfig';
+import { RecoloredPhoto } from './RecoloredPhoto';
 
 export interface GarmentBackdropProps {
   color: string;
@@ -13,58 +16,11 @@ export interface GarmentBackdropProps {
   product?: any;
 }
 
-// Map color names to nice hex values matching the studio palette
-export const COLOR_HEX_MAP: Record<string, string> = {
-  white: '#FFFFFF',
-  'classic white': '#F9FAFB',
-  red: '#FF0000',
-  'crimson red': '#DC2626',
-  'charcoal black': '#2B2B2B',
-  black: '#171717',
-  'matte black': '#1C1C1E',
-  yellow: '#FFD700',
-  orange: '#FF7A00',
-  green: '#00C853',
-  gold: '#E5A100',
-  'royal blue': '#0038FF',
-  blue: '#0038FF',
-  purple: '#5B0082',
-  'sky blue': '#29B6F6',
-  'hot pink': '#E91E63',
-  pink: '#E91E63',
-  maroon: '#7B1113',
-  lime: '#AEEA00',
-  'lime green': '#AEEA00',
-  'navy blue': '#0D1333',
-  navy: '#0D1333',
-  'heather grey': '#9E9E9E',
-  'heather gray': '#9E9E9E',
-  grey: '#9E9E9E',
-  gray: '#9E9E9E',
-  'bottle green': '#0B3B24',
-  'forest green': '#0B3B24',
-  cream: '#FDF5E6',
-  beige: '#FDF5E6',
-};
+// Colour helpers live in lib/colors; re-exported here for existing imports.
+export { COLOR_HEX_MAP, getColorHex, isLightColor };
 
-export function getColorHex(colorName: string): string {
-  if (!colorName) return '#2B2B2B';
-  const clean = colorName.trim().toLowerCase();
-  if (clean.startsWith('#') || clean.startsWith('rgb')) return clean;
-  return COLOR_HEX_MAP[clean] || '#262626';
-}
-
-export function isLightColor(hex: string): boolean {
-  const c = hex.replace('#', '');
-  if (c.length !== 6) return false;
-  const r = parseInt(c.substring(0, 2), 16);
-  const g = parseInt(c.substring(2, 4), 16);
-  const b = parseInt(c.substring(4, 6), 16);
-  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-  return yiq >= 160;
-}
-
-export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
+// Drawn silhouette: only used when the product has no photo (or its photo fails to load).
+const SilhouetteBackdrop: React.FC<GarmentBackdropProps> = ({
   color,
   collarColor,
   side,
@@ -633,13 +589,11 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
       return (
         <div className="relative w-full h-full flex items-center justify-center p-6 select-none">
           <div className="relative w-full max-w-[380px] aspect-square rounded-2xl overflow-hidden shadow-xl border border-gray-200 bg-white">
-            <Image
+            {/* Plain <img>: admin image URLs can be on any host */}
+            <img
               src={fallbackImg}
               alt={product?.name || "Product Mockup"}
-              fill
-              className="object-contain p-4"
-              sizes="(max-width: 768px) 100vw, 400px"
-              priority
+              className="absolute inset-0 w-full h-full object-contain p-4"
             />
           </div>
         </div>
@@ -816,6 +770,65 @@ export const GarmentBackdrop: React.FC<GarmentBackdropProps> = ({
         />
 
       </svg>
+    </div>
+  );
+};
+
+/**
+ * The product photo to show behind the design for one side: the admin's chosen front/back photo,
+ * or (older products without a view configuration) the first/second catalog photo.
+ */
+export function getBackdropImage(product: any, side: "front" | "back"): string | null {
+  return getCustomizerSideImage(product, side);
+}
+
+export const GarmentBackdrop: React.FC<GarmentBackdropProps> = (props) => {
+  const url = getBackdropImage(props.product, props.side);
+  const [failedUrl, setFailedUrl] = React.useState<string | null>(null);
+
+  if (!url || failedUrl === url) return <SilhouetteBackdrop {...props} />;
+
+  const alt = props.product?.name ? `${props.product.name} - ${props.side} view` : "Product";
+  const templateId = props.product?.customizerTemplateId || props.product?.customizerTemplate?.id;
+  const template = (templateId ? getReusableTemplateById(templateId) : null) || props.product?.customizerTemplate;
+  const isTemplate = Boolean(template && template.active !== false);
+  const photoClass = isTemplate ? "w-full h-full object-contain" : "w-full h-full object-contain mix-blend-multiply";
+  // Masks configured for this side: the body/collar colours recolour the photo itself.
+  const recolor = getSideRecolor(props.product, props.side);
+
+  const productColors = getProductColors(props.product);
+  const productCollarColors = getProductCollarColors(props.product);
+  const bodyHex =
+    productColors.find((c) => c.name.toLowerCase() === (props.color || '').toLowerCase())?.hex ||
+    getColorHex(props.color);
+  const trimHex =
+    props.collarColor
+      ? productCollarColors.find((c) => c.name.toLowerCase() === props.collarColor!.toLowerCase())?.hex ||
+        getColorHex(props.collarColor)
+      : bodyHex;
+
+  return (
+    <div className="relative w-full h-full flex items-center justify-center pointer-events-none select-none">
+      {recolor ? (
+        <RecoloredPhoto
+          source={recolor}
+          bodyHex={bodyHex}
+          trimHex={trimHex}
+          alt={alt}
+          className={photoClass}
+          imgDataCy="customizer-product-photo"
+          onError={() => setFailedUrl(url)}
+        />
+      ) : (
+        <img
+          src={url}
+          alt={alt}
+          data-cy="customizer-product-photo"
+          draggable={false}
+          onError={() => setFailedUrl(url)}
+          className={photoClass}
+        />
+      )}
     </div>
   );
 };

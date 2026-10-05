@@ -1,5 +1,20 @@
 import { Router } from 'express';
-import { getProducts, getProductBySlug, createProduct, updateProduct, deleteProduct, getCategories, getProductStats, duplicateProduct, bulkDeleteProducts } from './products.controller.js';
+import {
+  getProducts,
+  getProductBySlug,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getCategories,
+  getProductStats,
+  duplicateProduct,
+  bulkDeleteProducts,
+  getCustomizerTemplatesHandler,
+  getCustomizerTemplateByIdHandler,
+  createCustomizerTemplateHandler,
+  updateCustomizerTemplateHandler,
+  setCustomizerTemplateStatusHandler,
+} from './products.controller.js';
 import { authenticateJWT, authorizeRoles, optionalAuth } from '../../middleware/auth.js';
 
 const router = Router();
@@ -9,6 +24,11 @@ const router = Router();
 router.get('/', optionalAuth, getProducts);
 router.get('/stats', getProductStats);
 router.get('/categories', getCategories);
+router.get('/customizer-templates', optionalAuth, getCustomizerTemplatesHandler);
+router.get('/customizer-templates/:id', getCustomizerTemplateByIdHandler);
+router.post('/customizer-templates', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), createCustomizerTemplateHandler);
+router.put('/customizer-templates/:id', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), updateCustomizerTemplateHandler);
+router.patch('/customizer-templates/:id/status', authenticateJWT, authorizeRoles('ADMIN'), setCustomizerTemplateStatusHandler);
 router.get('/:slug', optionalAuth, getProductBySlug);
 router.post('/', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), createProduct);
 router.put('/:id', authenticateJWT, authorizeRoles('ADMIN', 'SALES'), updateProduct);

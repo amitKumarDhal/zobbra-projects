@@ -202,11 +202,18 @@ export const updateAgent = async (req: Request, res: Response) => {
    try {
       const data: any = {};
       if (name !== undefined) data.name = name;
-      if (phone !== undefined) data.phone = phone;
+      if (phone !== undefined) {
+         data.phone = phone;
+         // The WhatsApp OTP login binding follows the admin-set phone: a changed
+         // number must stop signing in, and the new one binds on its first OTP.
+         const current = await prisma.user.findUnique({ where: { id: req.params.id }, select: { phone: true } });
+         if (current && current.phone !== phone) data.verifiedPhone = null;
+      }
       if (department !== undefined) data.department = department;
       if (location !== undefined) data.location = location;
       if (isActive !== undefined) data.isActive = isActive;
-      if (role !== undefined && ['ADMIN', 'SALES'].includes(role)) data.role = role;
+      // SALES/PRODUCTION are disabled roles and can no longer be assigned
+      if (role !== undefined && role === 'ADMIN') data.role = role;
 
       const agent = await prisma.user.update({
          where: { id: req.params.id },

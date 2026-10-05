@@ -32,7 +32,7 @@ export function CommandPalette({ isOpen, onClose, onToggle }: CommandPaletteProp
     { name: 'Product Catalog', href: '/dashboard/products', icon: Package, category: 'Inventory' },
     { name: 'Payments & Revenue', href: '/dashboard/payments', icon: CreditCard, category: 'Finance' },
     { name: 'System Settings', href: '/dashboard/settings', icon: Settings, category: 'Admin' },
-    { name: 'Client Portal', href: '/customer', icon: LayoutDashboard, category: 'Customer' },
+    { name: 'Client Portal', href: '/customer/products', icon: LayoutDashboard, category: 'Customer' },
     { name: 'Create New Quote', href: '/dashboard/quotes/new', icon: FileText, category: 'Actions' },
   ];
 

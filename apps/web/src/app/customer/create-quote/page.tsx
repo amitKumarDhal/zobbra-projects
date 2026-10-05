@@ -19,12 +19,11 @@ function CustomerCreateQuoteContent() {
         </h1>
       </div>
 
-      {/* Use a wider container to allow the two-column desktop layout */}
-      <div className="bg-white border border-[#E5E7EB] p-6 sm:p-10 shadow-sm rounded-2xl">
+      <div className="max-w-3xl bg-white border border-[#E5E7EB] p-6 sm:p-10 shadow-sm rounded-2xl">
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-[#111111]">Quote Requirements</h2>
+          <h2 className="text-xl font-bold text-[#111111]">Get Quote</h2>
           <p className="text-sm text-[#6B7280]">
-            Fill in your requirements below. Live pricing will appear on the right as you configure your quote.
+            Tell us what you need. Our team will review your requirements and share a quote.
           </p>
         </div>
 
@@ -32,6 +31,7 @@ function CustomerCreateQuoteContent() {
           isCustomer={true}
           initialData={{
             name: user?.name,
+            email: user?.email || undefined,
             phone: user?.phone,
           }}
           onSuccess={() => {

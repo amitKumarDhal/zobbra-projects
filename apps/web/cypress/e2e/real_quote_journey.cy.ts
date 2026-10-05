@@ -1,7 +1,7 @@
 describe('Real Backend Quote Persistence Journey E2E', () => {
   it('executes full quote creation, backend persistence, customer retrieval, admin management, and status updates', () => {
     // 1. Visit 8-step quote configurator as Customer
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.visit('/customer/create-quote');
     cy.contains('8-Step Merchandise Configurator').should('be.visible');
 
@@ -60,7 +60,7 @@ describe('Real Backend Quote Persistence Journey E2E', () => {
 
     // 7. Verify status change persists back to Customer Portal
     cy.clearLocalStorage();
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.visit('/customer/quotes');
     cy.contains(/approved/i).should('be.visible');
   });

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { clearSession } from '@/lib/otpAuth';
 import { usePathname } from 'next/navigation';
 import {
   MessageSquare,
@@ -16,6 +17,7 @@ import {
   Star,
   Image as ImageIcon,
   Settings,
+  Layers,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -37,7 +39,8 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
   const { user } = useCustomerUser();
 
   const userName = user?.name || 'ZOBBRA Admin';
-  const userEmail = user?.email || 'admin@zobbra.com';
+  // WhatsApp OTP staff may have no email on file
+  const userEmail = user?.email || user?.phone || '';
 
   const navItems = [
     { name: 'Inquiry', href: '/dashboard/inquiries', icon: MessageSquare, badge: counts.inquiries, hasBadge: true },
@@ -45,6 +48,7 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
     { name: 'Report', href: '/dashboard/reports', icon: BarChart3 },
     { name: 'Customers', href: '/dashboard/customers', icon: Users },
     { name: 'Products', href: '/dashboard/products', icon: Package },
+    { name: 'Templates', href: '/dashboard/customizer-templates', icon: Layers },
     { name: 'To Do', href: '/dashboard/todo', icon: CheckSquare, badge: counts.todo, hasBadge: true },
     { name: 'Agents', href: '/dashboard/agents', icon: UserCircle },
     { name: 'Payments', href: '/dashboard/payments', icon: CreditCard },
@@ -59,6 +63,7 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
     '/dashboard/inquiries',
     '/dashboard/orders',
     '/dashboard/products',
+    '/dashboard/customizer-templates',
     '/dashboard/customers',
     '/dashboard/payments',
     '/dashboard/settings'
@@ -235,6 +240,7 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
             </div>
             <Link
               href="/login"
+              onClick={clearSession}
               className="p-1.5 rounded-lg transition-colors flex-shrink-0 cursor-pointer"
               style={{ color: 'var(--color-sidebar-icon)' }}
               onMouseEnter={e => (e.currentTarget.style.color = '#FB7185')}
@@ -247,6 +253,7 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
         ) : (
           <Link
             href="/login"
+            onClick={clearSession}
             className="flex justify-center p-2 rounded-lg transition-colors cursor-pointer"
             style={{ color: 'var(--color-sidebar-icon)' }}
             onMouseEnter={e => (e.currentTarget.style.color = '#FB7185')}

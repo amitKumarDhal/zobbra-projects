@@ -6,7 +6,7 @@ describe('Razorpay Test Mode Payment MVP End-to-End Journey', () => {
 
   it('executes full quote creation, quote to order conversion, Razorpay test payment, and server verification', () => {
     // 1. Log in as Customer
-    cy.login('customer@zobra.test', 'customer123');
+    cy.loginAsCustomer();
     cy.location('pathname', { timeout: 10000 }).should('include', '/customer');
 
     // 2. Customer creates quote for Premium Polo T-Shirt
