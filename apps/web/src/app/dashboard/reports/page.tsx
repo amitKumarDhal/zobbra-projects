@@ -112,10 +112,7 @@ export default function ReportsPage() {
             {/* Bars */}
             {[
               { label: 'T-Shirts', val: 80, col: 'bg-[#3B6FEB]' },
-              { label: 'Hoodies', val: 45, col: 'bg-[#8B5CF6]' },
               { label: 'Caps', val: 60, col: 'bg-[#10B981]' },
-              { label: 'Mugs', val: 30, col: 'bg-[#F59E0B]' },
-              { label: 'Bags', val: 55, col: 'bg-[#EC4899]' },
             ].map((bar, i) => (
               <div key={i} className="relative z-10 w-12 flex flex-col items-center group cursor-pointer">
                 <div className={`w-full rounded-t-md ${bar.col} transition-all duration-300 group-hover:opacity-80`} style={{ height: `${bar.val}%` }}></div>

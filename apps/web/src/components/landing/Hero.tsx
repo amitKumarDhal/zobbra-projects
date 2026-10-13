@@ -4,7 +4,7 @@ import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, Award, Clock, Truck, Sparkles } from 'lucide-react';
+import { ArrowRight, Award, Clock, Truck } from 'lucide-react';
 
 export function Hero() {
   const prefersReducedMotion = useReducedMotion();
@@ -42,20 +42,7 @@ export function Hero() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 xl:gap-10 items-center">
           {/* Left Column: Staggered Content (6 / 12 cols) */}
           <div className="lg:col-span-6 space-y-3.5 sm:space-y-4">
-            {/* 1. Eyebrow */}
-            <motion.div
-              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1, ease: 'easeOut' }}
-              className="inline-block"
-            >
-              <span className="inline-flex items-center gap-1.5 text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#3B6FEB] bg-white border border-[#D9E2FF] px-2.5 py-1 rounded-full shadow-sm">
-                <Sparkles className="w-2.5 h-2.5 text-[#333333]" />
-                CUSTOM MERCHANDISE
-              </span>
-            </motion.div>
-
-            {/* 2. Main Headline */}
+            {/* Main Headline */}
             <motion.h1
               initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

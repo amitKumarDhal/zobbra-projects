@@ -128,46 +128,12 @@ describe('Phase 3: Product-Specific Customizer Features', () => {
       expect(off.embroideryEnabled).toBe(false);
     });
 
-    it('5. Product can enable/disable zipper on compatible templates', () => {
-      const on = normalizeProductConfig({
-        customizationEnabled: true,
-        customizerTemplateId: 'bag-v1',
-        zipperEnabled: true,
-      });
-      expect(on.zipperEnabled).toBe(true);
-
-      const off = normalizeProductConfig({
-        customizationEnabled: true,
-        customizerTemplateId: 'bag-v1',
-        zipperEnabled: false,
-      });
-      expect(off.zipperEnabled).toBe(false);
-    });
-
     it('6. Template capability limits product options (impossible combinations rejected)', () => {
-      // Polo does NOT support zipper -> must reject
+      // Cap does NOT support taping -> must reject
       expect(() => {
         normalizeProductConfig({
           customizationEnabled: true,
-          customizerTemplateId: 'polo-v1',
-          zipperEnabled: true,
-        });
-      }).toThrow(/does not support zipper option/i);
-
-      // Ceramic Mug does NOT support embroidery -> must reject
-      expect(() => {
-        normalizeProductConfig({
-          customizationEnabled: true,
-          customizerTemplateId: 'mug-v1',
-          embroideryEnabled: true,
-        });
-      }).toThrow(/does not support embroidery/i);
-
-      // Ceramic Mug does NOT support taping -> must reject
-      expect(() => {
-        normalizeProductConfig({
-          customizationEnabled: true,
-          customizerTemplateId: 'mug-v1',
+          customizerTemplateId: 'cap-v1',
           tapingColorEnabled: true,
         });
       }).toThrow(/does not support taping color customization/i);
@@ -189,7 +155,6 @@ describe('Phase 3: Product-Specific Customizer Features', () => {
         tapingColorEnabled: false,
         backDesignEnabled: true,
         embroideryEnabled: false,
-        zipperEnabled: false,
       };
 
       const publicProd = toPublicProduct(product);
@@ -199,7 +164,6 @@ describe('Phase 3: Product-Specific Customizer Features', () => {
       expect(publicProd.customizer.taping).toBe(false);
       expect(publicProd.customizer.back).toBe(true);
       expect(publicProd.customizer.embroidery).toBe(false);
-      expect(publicProd.customizer.zipper).toBe(false);
     });
 
     it('customer customizer is disabled when customizationEnabled is false', () => {
@@ -233,7 +197,6 @@ describe('Phase 3: Product-Specific Customizer Features', () => {
       tapingColorEnabled: false,
       backDesignEnabled: false,
       embroideryEnabled: false,
-      zipperEnabled: false,
     };
 
     it('10. Disabled back cannot be submitted', () => {
@@ -264,13 +227,6 @@ describe('Phase 3: Product-Specific Customizer Features', () => {
       expect(error).toContain("Embroidery option is disabled for 'Custom Polo Shirt'");
     });
 
-    it('14. Disabled zipper cannot be submitted', () => {
-      const error = validateProductCustomizerFeatures(poloProduct, {
-        zipper: true,
-      });
-      expect(error).toContain("Zipper option is disabled for 'Custom Polo Shirt'");
-    });
-
     it('accepts submission when all requested features are enabled', () => {
       const enabledProduct = {
         id: 'polo-test-2',
@@ -281,7 +237,6 @@ describe('Phase 3: Product-Specific Customizer Features', () => {
         tapingColorEnabled: true,
         backDesignEnabled: true,
         embroideryEnabled: true,
-        zipperEnabled: false,
       };
 
       const error = validateProductCustomizerFeatures(enabledProduct, {
@@ -328,7 +283,6 @@ describe('Phase 3: Product-Specific Customizer Features', () => {
           tapingColorEnabled: false,
           backDesignEnabled: true,
           embroideryEnabled: false,
-          zipperEnabled: false,
         });
 
       expect(res.status).toBe(201);
@@ -341,7 +295,6 @@ describe('Phase 3: Product-Specific Customizer Features', () => {
       expect(prod.tapingColorEnabled).toBe(false);
       expect(prod.backDesignEnabled).toBe(true);
       expect(prod.embroideryEnabled).toBe(false);
-      expect(prod.zipperEnabled).toBe(false);
     });
 
     it('8. Admin edits product and values persist (turn Trim OFF)', async () => {

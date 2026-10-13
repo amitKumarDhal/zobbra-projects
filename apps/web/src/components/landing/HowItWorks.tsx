@@ -36,7 +36,7 @@ export function HowItWorks() {
   ];
 
   return (
-    <section className="bg-[#111111] text-white py-10 sm:py-12 lg:py-14 border-b border-[#111111]" id="how-it-works">
+    <section className="bg-[#111111] text-white py-6 sm:py-7 lg:py-8 border-b border-[#111111]" id="how-it-works">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           {/* Left Column: Heading & CTA (4 / 12 cols) */}
@@ -51,7 +51,7 @@ export function HowItWorks() {
               HOW IT WORKS
             </span>
 
-            <h2 className="text-2xl sm:text-3xl lg:text-[32px] font-heading font-black text-white tracking-[-0.03em] leading-tight">
+            <h2 className="text-2xl sm:text-3xl lg:text-[28px] font-heading font-black text-white tracking-[-0.03em] leading-tight">
               Simple Process.<br />
               Amazing Results.
             </h2>
@@ -74,38 +74,59 @@ export function HowItWorks() {
           {/* Right Column: 4 Process Steps (8 / 12 cols) */}
           <div className="lg:col-span-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-3.5 relative">
-              {/* Desktop Connecting Dotted Line */}
-              <div className="hidden lg:block absolute top-4.5 left-6 right-6 h-[2px] border-t border-dashed border-[#4B5563] z-0" />
+              {/* Desktop zigzag connector: runs between badges, clear of all text */}
+              <svg
+                className="hidden lg:block absolute top-[92px] left-[16px] w-[calc(75%+10.5px)] h-6 z-0 pointer-events-none"
+                viewBox="0 0 100 24"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <polyline
+                  points="0,0 33.33,24 66.67,0 100,24"
+                  fill="none"
+                  stroke="#4B5563"
+                  strokeWidth="1.5"
+                  strokeDasharray="5 5"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
 
-              {steps.map((step, idx) => (
-                <motion.div
-                  key={step.num}
-                  initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 25 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: '-30px' }}
-                  transition={{
-                    duration: 0.55,
-                    delay: idx * 0.12,
-                    ease: [0.16, 1, 0.3, 1],
-                  }}
-                  className="relative z-10 bg-[#1B1B1B] sm:bg-transparent p-3.5 sm:p-1.5 rounded-xl sm:rounded-none border sm:border-0 border-[#2B2B2B] space-y-2 group hover:-translate-y-1 transition-transform duration-300"
-                >
-                  {/* Circle Icon Badge */}
-                  <div className="w-9 h-9 rounded-full bg-[#3B6FEB] text-white flex items-center justify-center font-heading font-black text-xs shadow-md group-hover:scale-110 group-hover:bg-[#5B84F1] transition-all duration-300">
-                    <span className="font-mono text-xs">{step.num}</span>
-                  </div>
+              {steps.map((step, idx) => {
+                const up = idx % 2 === 0; // text above badge, badge sits high
+                return (
+                  <motion.div
+                    key={step.num}
+                    initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 25 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: '-30px' }}
+                    transition={{ duration: 0.55, delay: idx * 0.12, ease: [0.16, 1, 0.3, 1] }}
+                    className="relative z-10 bg-[#1B1B1B] lg:bg-transparent p-3.5 lg:p-0 rounded-xl lg:rounded-none border lg:border-0 border-[#2B2B2B] space-y-2 lg:space-y-0 lg:h-[212px] group"
+                  >
+                    {/* Circle Badge */}
+                    <div
+                      className={`w-8 h-8 rounded-full bg-[#3B6FEB] text-white flex items-center justify-center shadow-md group-hover:scale-110 group-hover:bg-[#5B84F1] transition-all duration-300 lg:absolute lg:left-0 ${
+                        up ? 'lg:top-[76px]' : 'lg:top-[100px]'
+                      }`}
+                    >
+                      <span className="font-mono text-xs font-black">{step.num}</span>
+                    </div>
 
-                  {/* Step Content */}
-                  <div className="space-y-1">
-                    <h3 className="text-[13px] font-heading font-black text-white tracking-tight">
-                      {step.title}
-                    </h3>
-                    <p className="text-[11.5px] text-[#A1A1AA] leading-snug">
-                      {step.desc}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
+                    {/* Step Content */}
+                    <div
+                      className={`space-y-1 lg:absolute lg:left-0 lg:right-0 lg:space-y-1 ${
+                        up
+                          ? 'lg:top-0 lg:h-[72px] lg:flex lg:flex-col lg:justify-end'
+                          : 'lg:top-[140px]'
+                      }`}
+                    >
+                      <h3 className="text-[13px] font-heading font-black text-white tracking-tight">
+                        {step.title}
+                      </h3>
+                      <p className="text-[11.5px] text-[#A1A1AA] leading-snug">{step.desc}</p>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         </div>

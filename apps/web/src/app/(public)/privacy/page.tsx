@@ -205,8 +205,8 @@ export default function PrivacyPage() {
                   }}
                 />
                 <img
-                  src="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=400&q=80"
-                  alt="Custom backpack"
+                  src="/images/products/classic-black-polo.jpg"
+                  alt="Custom polo t-shirt"
                   className="absolute bottom-0 left-8 w-28 h-36 object-cover rounded-xl shadow-lg"
                 />
                 <img

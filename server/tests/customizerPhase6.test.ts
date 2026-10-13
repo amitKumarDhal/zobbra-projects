@@ -15,7 +15,6 @@ describe('Phase 6 Server: Branding Method, Taping Color & Feature Enforcement', 
     tapingColorEnabled: true,
     backDesignEnabled: true,
     embroideryEnabled: true,
-    zipperEnabled: false,
   };
 
   const poloRestricted = {
@@ -26,13 +25,13 @@ describe('Phase 6 Server: Branding Method, Taping Color & Feature Enforcement', 
     tapingColorEnabled: false,
   };
 
-  const mugProduct = {
-    id: 'prod-server-mug',
-    name: 'Ceramic Mug',
+  const capProduct = {
+    id: 'prod-server-cap',
+    name: 'Classic Cap',
     customizationEnabled: true,
-    customizerTemplateId: 'mug-v1',
-    embroideryEnabled: true, // Product tries to enable, but template does not support
-    tapingColorEnabled: true,
+    customizerTemplateId: 'cap-v1',
+    embroideryEnabled: true,
+    tapingColorEnabled: true, // Product tries to enable, but template does not support
   };
 
   // =========================================================================
@@ -112,17 +111,16 @@ describe('Phase 6 Server: Branding Method, Taping Color & Feature Enforcement', 
     expect(err2).toBe("Embroidery option is disabled for 'Restricted Polo'.");
   });
 
-  it('5. blocks embroidery submission when template does not support embroidery (e.g. Mug)', () => {
-    const caps = getTemplateCapabilities(getCustomizerTemplateById('mug-v1'), mugProduct);
-    expect(caps.supportsEmbroidery).toBe(false);
+  it('5. accepts embroidery on a cap (the cap template supports embroidery)', () => {
+    const caps = getTemplateCapabilities(getCustomizerTemplateById('cap-v1'), capProduct);
+    expect(caps.supportsEmbroidery).toBe(true);
 
     const payload = {
       embroidery: true,
       printingType: 'Embroidery',
     };
 
-    const err = validateProductCustomizerFeatures(mugProduct, payload);
-    expect(err).toBe("Embroidery option is disabled for 'Ceramic Mug'.");
+    expect(validateProductCustomizerFeatures(capProduct, payload)).toBeNull();
   });
 
   // =========================================================================
@@ -146,16 +144,16 @@ describe('Phase 6 Server: Branding Method, Taping Color & Feature Enforcement', 
     expect(err).toBe("Taping color customization is disabled for 'Restricted Polo'.");
   });
 
-  it('8. blocks taping color submission when template does not support taping (e.g. Mug or Cap)', () => {
-    const caps = getTemplateCapabilities(getCustomizerTemplateById('mug-v1'), mugProduct);
+  it('8. blocks taping color submission when template does not support taping (e.g. Cap)', () => {
+    const caps = getTemplateCapabilities(getCustomizerTemplateById('cap-v1'), capProduct);
     expect(caps.supportsTapingColor).toBe(false);
 
     const payload = {
       tapingColor: 'White',
     };
 
-    const err = validateProductCustomizerFeatures(mugProduct, payload);
-    expect(err).toBe("Taping color customization is disabled for 'Ceramic Mug'.");
+    const err = validateProductCustomizerFeatures(capProduct, payload);
+    expect(err).toBe("Taping color customization is disabled for 'Classic Cap'.");
   });
 
   // =========================================================================

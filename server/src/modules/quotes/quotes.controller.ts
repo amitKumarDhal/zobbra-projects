@@ -219,7 +219,6 @@ export function validateProductCustomizerFeatures(itemProduct: any, payload: any
   const tapingEnabled = (itemProduct.tapingColorEnabled ?? false) && capabilities.supportsTapingColor;
   const backEnabled = (itemProduct.backDesignEnabled ?? capabilities.supportsBack) && capabilities.supportsBack;
   const embroideryEnabled = (itemProduct.embroideryEnabled ?? false) && capabilities.supportsEmbroidery;
-  const zipperEnabled = (itemProduct.zipperEnabled ?? false) && capabilities.supportsZipper;
 
   // 1. Trim / Collar / Rib color
   const sendsTrim = Boolean(
@@ -276,20 +275,6 @@ export function validateProductCustomizerFeatures(itemProduct: any, payload: any
     return `Embroidery option is disabled for '${itemProduct.name}'.`;
   }
 
-  // 5. Zipper option
-  const sendsZipper = Boolean(
-    payload.zipper === true ||
-    payload.zipperOption === true ||
-    payload.hasZipper === true ||
-    item.zipper === true ||
-    item.zipperOption === true ||
-    (typeof payload.zipperColor === 'string' && payload.zipperColor.trim()) ||
-    (typeof item.zipperColor === 'string' && item.zipperColor.trim())
-  );
-  if (!zipperEnabled && sendsZipper) {
-    return `Zipper option is disabled for '${itemProduct.name}'.`;
-  }
-
   // Check structured customizationRequirements metadata if sent as JSON
   const rawReqs = item.customizationRequirements || payload.customizationRequirements;
   if (typeof rawReqs === 'string' && rawReqs.trim()) {
@@ -306,9 +291,6 @@ export function validateProductCustomizerFeatures(itemProduct: any, payload: any
       }
       if (!embroideryEnabled && reqs.embroidery === true) {
         return `Embroidery option is disabled for '${itemProduct.name}'.`;
-      }
-      if (!zipperEnabled && reqs.zipper === true) {
-        return `Zipper option is disabled for '${itemProduct.name}'.`;
       }
     } catch {}
   }

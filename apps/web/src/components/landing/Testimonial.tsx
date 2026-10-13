@@ -18,7 +18,7 @@ export function Testimonial() {
     {
       id: 2,
       quote:
-        'Exceptional turnaround time and premium fabric finish. The custom embroidery was flawless across 500+ hoodies.',
+        'Exceptional turnaround time and premium fabric finish. The custom embroidery was flawless across 500+ polos.',
       author: '— Priya Sharma, Brand Director',
       company: 'Innovate Labs',
     },

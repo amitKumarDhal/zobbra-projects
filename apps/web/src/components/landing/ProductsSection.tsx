@@ -33,14 +33,6 @@ const INITIAL_PRODUCTS: ProductItem[] = [
     image: '/images/landing/cap.jpg',
     href: '/products?category=caps',
   },
-  {
-    id: 'bags',
-    title: 'Bags',
-    desc: 'Durable. Practical. Perfect for everyday.',
-    price: 'From ₹699',
-    image: '/images/landing/backpack.jpg',
-    href: '/products?category=bags',
-  },
 ];
 
 export function ProductsSection() {
@@ -58,22 +50,11 @@ export function ProductsSection() {
         if (json.success && Array.isArray(json.data) && isMounted) {
           setProducts((prev) =>
             prev.map((item) => {
-              if (item.id === 'bags') {
-                const bag = json.data.find(
-                  (p: any) =>
-                    p.category?.slug === 'bags' ||
-                    p.slug === 'executive-corporate-laptop-backpack' ||
-                    p.slug?.includes('bag') ||
-                    p.slug?.includes('backpack')
-                );
-                if (bag?.basePrice) {
-                  return {
-                    ...item,
-                    price: `From ₹${bag.basePrice}`,
-                  };
-                }
-              }
-              return item;
+              // Lowest live base price in the card's category (e.g. all caps).
+              const prices = json.data
+                .filter((p: any) => p.category?.slug === item.id && Number(p.basePrice) > 0)
+                .map((p: any) => Number(p.basePrice));
+              return prices.length > 0 ? { ...item, price: `From ₹${Math.min(...prices)}` } : item;
             })
           );
         }
@@ -90,7 +71,7 @@ export function ProductsSection() {
   }, []);
 
   return (
-    <section className="bg-[#F7F6F2] py-8 sm:py-10 lg:py-12 border-b border-[#DDDCD5]" id="products">
+    <section className="bg-[#F7F6F2] py-6 sm:py-7 lg:py-8 border-b border-[#DDDCD5]" id="products">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <motion.div
@@ -98,18 +79,20 @@ export function ProductsSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-40px' }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="text-left mb-5 sm:mb-6 lg:mb-7 max-w-xl mr-auto"
+          className="text-left mb-3 sm:mb-4 max-w-xl mr-auto"
         >
           <span className="text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.12em] text-[#666666] font-heading block mb-1 sm:mb-1.5">
             THE COLLECTION
           </span>
-          <h2 className="text-[26px] sm:text-[30px] lg:text-[36px] font-heading font-black text-[#111111] tracking-[-0.03em] leading-[1.12]">
+          <h2 className="text-[22px] sm:text-[26px] lg:text-[28px] font-heading font-black text-[#111111] tracking-[-0.03em] leading-[1.12]">
             Premium Merchandise. Perfectly Customized.
           </h2>
         </motion.div>
 
-        {/* 3 Product Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
+        {/* Product Cards Grid */}
+        <div
+          className={`grid grid-cols-1 ${products.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-3 sm:gap-4`}
+        >
           {products.map((product, idx) => (
             <motion.div
               key={product.id}
@@ -129,15 +112,15 @@ export function ProductsSection() {
                       transition: { duration: 0.2, ease: 'easeOut' },
                     }
               }
-              className="group bg-white rounded-2xl border border-[#E5E7EB] hover:border-[#D1D5DB] p-3.5 sm:p-4 flex flex-col justify-between h-full transition-all duration-300 hover:shadow-[0_10px_24px_-6px_rgba(17,17,17,0.08)]"
+              className="group bg-white rounded-2xl border border-[#E5E7EB] hover:border-[#D1D5DB] p-3 flex flex-col justify-between h-full transition-all duration-300 hover:shadow-[0_10px_24px_-6px_rgba(17,17,17,0.08)]"
             >
               {/* Product Image Area */}
-              <div className="relative w-full h-[165px] sm:h-[175px] lg:h-[180px] bg-[#F2F1EC] rounded-xl overflow-hidden mb-3 flex items-center justify-center p-3 border border-[#E9E7DF]">
+              <div className="relative w-full h-[120px] sm:h-[125px] bg-[#F2F1EC] rounded-xl overflow-hidden mb-2.5 flex items-center justify-center p-2 border border-[#E9E7DF]">
                 {/* Subtle soft ambient light glow */}
                 <div className="absolute inset-0 bg-radial from-white/70 to-transparent pointer-events-none" />
 
                 {/* Visual Size Product Wrapper with 3D shadow */}
-                <div className="relative w-[105px] h-[105px] sm:w-[115px] sm:h-[115px] lg:w-[120px] lg:h-[120px] flex items-center justify-center">
+                <div className="relative w-[85px] h-[85px] sm:w-[90px] sm:h-[90px] flex items-center justify-center">
                   <Image
                     src={product.image}
                     alt={`ZOBBRA Custom ${product.title}`}
@@ -156,12 +139,12 @@ export function ProductsSection() {
                 <h3 className="text-[16px] sm:text-[17px] font-heading font-bold text-[#111111] group-hover:text-black transition-colors leading-tight">
                   {product.title}
                 </h3>
-                <p className="text-[13px] sm:text-[13.5px] text-[#666666] leading-[1.4] line-clamp-2 min-h-[38px] mt-1">
+                <p className="text-[13px] sm:text-[13.5px] text-[#666666] leading-[1.4] line-clamp-2 mt-0.5">
                   {product.desc}
                 </p>
 
                 {/* Price */}
-                <div className="flex items-baseline gap-1 mt-2.5 mb-3">
+                <div className="flex items-baseline gap-1 mt-1.5 mb-2.5">
                   <span className="text-[12px] sm:text-[12.5px] font-medium text-[#666666]">
                     From
                   </span>
@@ -173,7 +156,7 @@ export function ProductsSection() {
                 {/* View Collection Button */}
                 <Link
                   href={product.href}
-                  className="w-full inline-flex items-center justify-center gap-1.5 h-10 px-4 bg-[#111111] hover:bg-[#262626] text-white text-[12px] sm:text-[12.5px] font-bold tracking-wider uppercase rounded-full transition-colors duration-200 shadow-sm active:scale-[0.99] group/btn mt-auto"
+                  className="w-full inline-flex items-center justify-center gap-1.5 h-9 px-4 bg-[#111111] hover:bg-[#262626] text-white text-[12px] sm:text-[12.5px] font-bold tracking-wider uppercase rounded-full transition-colors duration-200 shadow-sm active:scale-[0.99] group/btn mt-auto"
                 >
                   <span>VIEW COLLECTION</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform duration-200" />
@@ -189,7 +172,7 @@ export function ProductsSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.4, delay: 0.2 }}
-          className="text-center mt-6 sm:mt-7 lg:mt-8"
+          className="text-center mt-4 sm:mt-5"
         >
           <Link
             href="/products"

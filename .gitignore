@@ -17,3 +17,4 @@ apps/web/cypress/downloads
 .turbo
 backups/
 scratch/
+*.tsbuildinfo

@@ -42,6 +42,7 @@ import { storeSession } from '@/lib/otpAuth';
 import type { CustomizerCanvasRef, CustomizerCanvasProps } from '@/components/customizer/CustomizerCanvas';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { getColorHex, isLightColor } from '@/lib/colors';
+import { isTextObject } from '@/lib/customizerFonts';
 import { StageScaler } from '@/components/customizer/StageScaler';
 import { getBackdropImage } from '@/components/customizer/GarmentBackdrop';
 import { BottomSheet } from '@/components/customizer/BottomSheet';
@@ -150,8 +151,15 @@ function CustomizeProductContent({ productId }: { productId: string }) {
   // Default text color contrasts with the product color unless the customer picked one.
   const textColor = textColorPick ?? (isLightColor(hexOf(selectedColor)) ? '#111111' : '#FFFFFF');
 
-  // Selected canvas object inspector
+  // Selected canvas object inspector. The canvas reports the same object again after it is resized,
+  // so a counter makes the panel re-read it.
   const [selectedCanvasObj, setSelectedCanvasObj] = useState<any>(null);
+  const [selectionVersion, setSelectionVersion] = useState<number>(0);
+  const handleSelectionChange = useCallback((obj: any) => {
+    setSelectedCanvasObj(obj);
+    setSelectionVersion((v) => v + 1);
+  }, []);
+  const selectedText = isTextObject(selectedCanvasObj) ? selectedCanvasObj : null;
 
   // Logo upload state
   const [isUploadingLogo, setIsUploadingLogo] = useState<boolean>(false);
@@ -213,17 +221,15 @@ function CustomizeProductContent({ productId }: { productId: string }) {
         const configuredColors = getProductColors(prod);
         const configuredCollarColors = getProductCollarColors(prod);
         const defaultColor = configuredColors[0]?.name || (
-          initialTemplate.type === 'cap' || initialTemplate.type === 'bag' ? 'Charcoal Black' : 'White'
+          initialTemplate.type === 'cap' ? 'Charcoal Black' : 'White'
         );
         // Trim/collar starts in the product's configured collar colour (e.g. Yellow if available, or first collar color)
         const defaultCollar = configuredCollarColors.find(c => c.name.toLowerCase() === 'yellow')?.name ||
           configuredCollarColors[0]?.name ||
           (configuredColors.length > 0
             ? defaultColor
-            : initialTemplate.type === 'cap' || initialTemplate.type === 'bag'
+            : initialTemplate.type === 'cap'
             ? 'Charcoal Black'
-            : initialTemplate.type === 'mug'
-            ? 'White'
             : 'Yellow');
         const defaultSize = productRequiresSize(prod) ? getProductSizes(prod)[0] || 'L' : 'Free Size';
         const defaultTaping = defaultColor;
@@ -453,7 +459,38 @@ function CustomizeProductContent({ productId }: { productId: string }) {
     setTextInput('');
   };
 
+  // Selecting a text on the product loads its settings into the Text panel, so the controls edit it.
+  const wasEditingTextRef = useRef(false);
+  useEffect(() => {
+    if (selectedText) {
+      wasEditingTextRef.current = true;
+      setTextInput(selectedText.text || '');
+      setTextFont(selectedText.fontFamily || 'Outfit');
+      setTextFontSize(Math.round((selectedText.fontSize || 24) * (selectedText.scaleY || 1)));
+      if (typeof selectedText.fill === 'string') setTextColorPick(selectedText.fill);
+      setTextBold(String(selectedText.fontWeight) === 'bold' || Number(selectedText.fontWeight) >= 600);
+      setTextItalic(selectedText.fontStyle === 'italic');
+      setTextAlign((selectedText.textAlign as 'left' | 'center' | 'right') || 'center');
+    } else if (wasEditingTextRef.current) {
+      // Leaving edit mode: the field is for the next new text again.
+      wasEditingTextRef.current = false;
+      setTextInput('');
+    }
+  }, [selectedText, selectionVersion]);
+
   const handleTextChange = (patch: Partial<TextValue>) => {
+    if (selectedText && canvasRef.current) {
+      const updates: Record<string, unknown> = {};
+      if (patch.text !== undefined && patch.text.trim()) updates.text = patch.text;
+      if (patch.font !== undefined) updates.fontFamily = patch.font;
+      // The panel shows the on-screen size, so a resized text keeps its scale.
+      if (patch.size !== undefined) updates.fontSize = patch.size / (selectedText.scaleY || 1);
+      if (patch.color !== undefined) updates.fill = patch.color;
+      if (patch.bold !== undefined) updates.fontWeight = patch.bold ? 'bold' : 'normal';
+      if (patch.italic !== undefined) updates.fontStyle = patch.italic ? 'italic' : 'normal';
+      if (patch.align !== undefined) updates.textAlign = patch.align;
+      if (Object.keys(updates).length > 0) canvasRef.current.updateActiveObject(updates);
+    }
     if (patch.text !== undefined) setTextInput(patch.text);
     if (patch.font !== undefined) setTextFont(patch.font);
     if (patch.size !== undefined) setTextFontSize(patch.size);
@@ -851,8 +888,9 @@ function CustomizeProductContent({ productId }: { productId: string }) {
               align: textAlign,
             }}
             onChange={handleTextChange}
-            onSubmit={handleCreateText}
+            onSubmit={selectedText ? () => canvasRef.current?.clearSelection() : handleCreateText}
             addLabel={template.addTextButtonLabel}
+            editing={Boolean(selectedText)}
           />
         );
       case 'colors':
@@ -970,7 +1008,9 @@ function CustomizeProductContent({ productId }: { productId: string }) {
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
               {PANEL_SECTION_TITLES[activeToolTab] && (
-                <h2 className={`${PANEL_HEADING} mb-3`}>{PANEL_SECTION_TITLES[activeToolTab]}</h2>
+                <h2 className={`${PANEL_HEADING} mb-3`}>
+                  {activeToolTab === 'text' && selectedText ? 'Edit text' : PANEL_SECTION_TITLES[activeToolTab]}
+                </h2>
               )}
               {renderToolContent(activeToolTab)}
 
@@ -1017,7 +1057,7 @@ function CustomizeProductContent({ productId }: { productId: string }) {
               backEnabled={backEnabled}
               activeSide={activeSide}
               onSideChange={setActiveSide}
-              onSelectionChange={setSelectedCanvasObj}
+              onSelectionChange={handleSelectionChange}
               onDesignChange={({ hasFront: hf, hasBack: hb }: { hasFront: boolean; hasBack: boolean }) => {
                 setHasFront(hf);
                 setHasBack(hb);

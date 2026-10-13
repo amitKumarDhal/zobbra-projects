@@ -15,7 +15,7 @@ import {
 
 describe('Phase 3: Product-Specific Customizer Features (Web)', () => {
   describe('Template Capabilities', () => {
-    it('polo-v1 supports trim, taping, back, embroidery, but NOT zipper', () => {
+    it('polo-v1 supports trim, taping, back and embroidery', () => {
       const polo = getReusableTemplateById('polo-v1');
       expect(polo).not.toBeNull();
       const caps = getTemplateCapabilities(polo);
@@ -23,26 +23,14 @@ describe('Phase 3: Product-Specific Customizer Features (Web)', () => {
       expect(caps.supportsTapingColor).toBe(true);
       expect(caps.supportsBack).toBe(true);
       expect(caps.supportsEmbroidery).toBe(true);
-      expect(caps.supportsZipper).toBe(false);
     });
 
-    it('bag-v1 supports zipper and embroidery', () => {
-      const bag = getReusableTemplateById('bag-v1');
-      expect(bag).not.toBeNull();
-      const caps = getTemplateCapabilities(bag);
-      expect(caps.supportsTrimColor).toBe(true);
-      expect(caps.supportsZipper).toBe(true);
+    it('cap-v1 supports embroidery but not taping', () => {
+      const cap = getReusableTemplateById('cap-v1');
+      expect(cap).not.toBeNull();
+      const caps = getTemplateCapabilities(cap);
       expect(caps.supportsEmbroidery).toBe(true);
       expect(caps.supportsTapingColor).toBe(false);
-    });
-
-    it('mug-v1 does NOT support embroidery or taping', () => {
-      const mug = getReusableTemplateById('mug-v1');
-      expect(mug).not.toBeNull();
-      const caps = getTemplateCapabilities(mug);
-      expect(caps.supportsEmbroidery).toBe(false);
-      expect(caps.supportsTapingColor).toBe(false);
-      expect(caps.supportsZipper).toBe(false);
     });
 
     it('preserves capabilities for legacy products without a template', () => {
@@ -68,7 +56,6 @@ describe('Phase 3: Product-Specific Customizer Features (Web)', () => {
       expect(features.trimColor).toBe(false);
       expect(features.back).toBe(false);
       expect(features.embroidery).toBe(false);
-      expect(features.zipper).toBe(false);
     });
 
     it('returns product-specific enabled features when customization is enabled', () => {
@@ -81,7 +68,6 @@ describe('Phase 3: Product-Specific Customizer Features (Web)', () => {
         tapingColorEnabled: false,
         backDesignEnabled: true,
         embroideryEnabled: false,
-        zipperEnabled: false,
       };
       const features = getCustomizerFeatures(product);
       expect(features.enabled).toBe(true);
@@ -89,19 +75,6 @@ describe('Phase 3: Product-Specific Customizer Features (Web)', () => {
       expect(features.taping).toBe(false);
       expect(features.back).toBe(true);
       expect(features.embroidery).toBe(false);
-      expect(features.zipper).toBe(false);
-    });
-
-    it('disables feature if product enabled it but template does not support it (e.g. zipper on Polo)', () => {
-      const product = {
-        id: 'p-polo-invalid',
-        name: 'Polo with illegal zipper',
-        customizationEnabled: true,
-        customizerTemplateId: 'polo-v1',
-        zipperEnabled: true, // template does not support zipper!
-      };
-      const features = getCustomizerFeatures(product);
-      expect(features.zipper).toBe(false);
     });
 
     it('honors pre-resolved customizer object from server API response', () => {
@@ -114,7 +87,6 @@ describe('Phase 3: Product-Specific Customizer Features (Web)', () => {
           taping: true,
           back: false,
           embroidery: true,
-          zipper: false,
         },
       };
       const features = getCustomizerFeatures(product);

@@ -112,10 +112,9 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
     // Continue from the highest number already issued: a row count would reuse a number after a deletion.
     const year = new Date().getFullYear();
     const orderCount = await prisma.order.count();
-    const [lastOrder, lastInvoice] = await Promise.all([
-      prisma.order.findFirst({
-        where: { orderNumber: { startsWith: `ZQB-ORD-${year}-` } },
-        orderBy: { orderNumber: 'desc' },
+    const [existingZbOrders, lastInvoice] = await Promise.all([
+      prisma.order.findMany({
+        where: { orderNumber: { startsWith: 'ZB' } },
         select: { orderNumber: true },
       }),
       prisma.invoice.findFirst({
@@ -124,10 +123,19 @@ export const convertQuoteToOrder = async (req: AuthRequest, res: Response) => {
         select: { invoiceNumber: true },
       }),
     ]);
+
+    let maxSeq = 0;
+    for (const ord of existingZbOrders) {
+      const match = ord.orderNumber.match(/^ZB(\d+)$/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxSeq) maxSeq = num;
+      }
+    }
+    const orderNumber = `ZB${String(maxSeq + 1).padStart(3, '0')}`;
+
     const lastSeq = (value?: string) => parseInt(value?.split('-').pop() || '', 10) || 0;
-    const orderSeq = Math.max(orderCount + 5001, lastSeq(lastOrder?.orderNumber) + 1);
     const invoiceSeq = Math.max(orderCount + 8001, lastSeq(lastInvoice?.invoiceNumber) + 1);
-    const orderNumber = `ZQB-ORD-${year}-${String(orderSeq).padStart(4, '0')}`;
 
     const result = await prisma.$transaction(
       async (tx) => {

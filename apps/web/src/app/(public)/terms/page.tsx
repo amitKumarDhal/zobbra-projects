@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ChevronDown,
@@ -120,6 +120,25 @@ const sections = [
 export default function TermsPage() {
   const [openSection, setOpenSection] = useState<number | null>(1);
 
+  // Deep links like /terms#section-5 (used by the footer) open and scroll to that section.
+  useEffect(() => {
+    const openFromHash = () => {
+      const match = window.location.hash.match(/^#section-(\d+)$/);
+      if (!match) return;
+      const id = Number(match[1]);
+      if (!sections.some((sec) => sec.id === id)) return;
+      setOpenSection(id);
+      requestAnimationFrame(() => {
+        document
+          .getElementById(`section-${id}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    };
+    openFromHash();
+    window.addEventListener('hashchange', openFromHash);
+    return () => window.removeEventListener('hashchange', openFromHash);
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#F8F9FC]">
       {/* ── Page Hero ── */}
@@ -149,13 +168,13 @@ export default function TermsPage() {
                   }}
                 />
                 <img
-                  src="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=400&q=80"
-                  alt="Custom backpack"
+                  src="/images/products/classic-black-polo.jpg"
+                  alt="Custom polo t-shirt"
                   className="absolute bottom-0 left-8 w-28 h-36 object-cover rounded-xl shadow-lg"
                 />
                 <img
-                  src="https://images.unsplash.com/photo-1578587018452-892bacefd3f2?auto=format&fit=crop&w=400&q=80"
-                  alt="Custom hoodie"
+                  src="https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=400&q=80"
+                  alt="Custom t-shirt"
                   className="absolute top-2 right-3 w-28 h-32 object-cover rounded-xl shadow-lg border-2 border-white"
                 />
                 <img

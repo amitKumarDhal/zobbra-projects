@@ -42,6 +42,7 @@ export function ZobbraLogo({
     if (variant === 'white') {
       return (
         <div className={`inline-flex flex-col items-start ${className}`}>
+          <span className="sr-only">ZOBBRA</span>
           <Image
             src="/brand/zobbra-logo-white.png"
             alt={alt}
@@ -63,6 +64,7 @@ export function ZobbraLogo({
     if (variant === 'dark-badge') {
       return (
         <div className={`bg-[#050505] px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-[4px] flex items-center justify-center shadow-sm border border-black/10 hover:bg-[#111111] transition-colors ${className}`}>
+          <span className="sr-only">ZOBBRA</span>
           <Image
             src="/brand/zobbra-logo-white.png"
             alt={alt}

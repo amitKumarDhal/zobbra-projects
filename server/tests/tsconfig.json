@@ -8,5 +8,9 @@
   "include": [
     "**/*.ts",
     "../src/**/*.ts"
+  ],
+  "exclude": [
+    "../dist",
+    "../node_modules"
   ]
 }

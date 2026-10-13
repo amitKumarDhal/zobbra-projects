@@ -45,7 +45,6 @@ describe('Phase 5: Template-Based Customer Canvas & Design Integration', () => {
       taping: false,
       back: true,
       embroidery: true,
-      zipper: false,
     },
   };
 
@@ -369,13 +368,6 @@ describe('Phase 5: Template-Based Customer Canvas & Design Integration', () => {
       const capTemplate = getReusableTemplateById('cap-v1');
       const capCaps = getTemplateCapabilities(capTemplate);
       expect(capCaps.supportsTapingColor).toBe(false);
-      expect(capCaps.supportsZipper).toBe(false);
-
-      const mugTemplate = getReusableTemplateById('mug-v1');
-      const mugCaps = getTemplateCapabilities(mugTemplate);
-      expect(mugCaps.supportsEmbroidery).toBe(false);
-      expect(mugCaps.supportsTapingColor).toBe(false);
-      expect(mugCaps.supportsZipper).toBe(false);
     });
 
     it('returns legacy fallback capabilities when template is inactive (active: false)', () => {

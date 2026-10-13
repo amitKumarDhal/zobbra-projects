@@ -5,7 +5,7 @@ describe('Product-Level Customizer System (Server)', () => {
   describe('Customizer Template Registry', () => {
     it('lists all active reusable customizer templates', () => {
       const templates = listCustomizerTemplates();
-      expect(templates.length).toBeGreaterThanOrEqual(4);
+      expect(templates.length).toBeGreaterThanOrEqual(3); // polo, t-shirt, cap
       const polo = templates.find((t) => t.id === 'polo-v1');
       expect(polo).toBeDefined();
       expect(polo?.name).toBe('Polo T-Shirt');

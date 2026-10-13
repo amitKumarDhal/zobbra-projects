@@ -14,7 +14,6 @@ describe('Phase 5 Server: Customizer Validation & Security', () => {
     trimColorEnabled: true,
     backDesignEnabled: true,
     embroideryEnabled: true,
-    zipperEnabled: false,
   };
 
   it('1. allows valid customizer quote submission with enabled template features', () => {
@@ -110,15 +109,6 @@ describe('Phase 5 Server: Customizer Validation & Security', () => {
     expect(err).toBe("Embroidery option is disabled for 'Executive Polo Shirt'.");
   });
 
-  it('6. blocks zipper submission when zipperEnabled is false', () => {
-    const payload = {
-      zipper: true,
-    };
-
-    const err = validateProductCustomizerFeatures(poloProduct, payload);
-    expect(err).toBe("Zipper option is disabled for 'Executive Polo Shirt'.");
-  });
-
   it('7. safely checks JSON customizationRequirements metadata to prevent hidden payloads', () => {
     const productNoTrim = {
       ...poloProduct,
@@ -176,6 +166,5 @@ describe('Phase 5 Server: Customizer Validation & Security', () => {
     // Inactive template falls back to legacy default safely
     expect(caps).toBeDefined();
     expect(caps.supportsTapingColor).toBe(false);
-    expect(caps.supportsZipper).toBe(false);
   });
 });

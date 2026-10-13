@@ -8,9 +8,9 @@ import { Card } from '@/components/ui/card';
 export default function IndustriesPage() {
   const list = [
     { title: 'Corporate Tech & IT', icon: Building2, desc: 'Employee welcome kits, onboarding boxes & Polo t-shirts for corporate teams.' },
-    { title: 'Colleges & Universities', icon: GraduationCap, desc: 'Fest hoodies, batch t-shirts, snapback caps & club merchandise.' },
-    { title: 'Retail & Startups', icon: Briefcase, desc: 'Promotional giveaways, uniform shirts & custom printed tote bags.' },
-    { title: 'Hospitality & Events', icon: Utensils, desc: 'Staff aprons, embroidered uniforms & event thermal drinkware.' },
+    { title: 'Colleges & Universities', icon: GraduationCap, desc: 'Fest t-shirts, batch polos, snapback caps & club merchandise.' },
+    { title: 'Retail & Startups', icon: Briefcase, desc: 'Promotional giveaways, uniform shirts & custom printed caps.' },
+    { title: 'Hospitality & Events', icon: Utensils, desc: 'Embroidered staff polos, uniform tees & event caps.' },
   ];
 
   return (

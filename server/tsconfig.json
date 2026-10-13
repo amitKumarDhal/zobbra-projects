@@ -10,5 +10,17 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "tests",
+    "tests/**/*",
+    "scripts",
+    "scripts/**/*",
+    "src/db_audit.ts",
+    "src/**/run-security-tests.ts"
+  ]
 }

@@ -4,7 +4,7 @@
  * printable areas, Front/Back capabilities, and styling configurations.
  */
 
-export type ProductTemplateType = 'tshirt' | 'cap' | 'mug' | 'bag' | 'hoodie' | 'generic';
+export type ProductTemplateType = 'tshirt' | 'cap' | 'generic';
 
 export type CustomizerSide = 'front' | 'back';
 export type CustomizerLayerType = 'body' | 'trim' | 'base' | 'mask' | 'overlay';
@@ -52,7 +52,6 @@ export interface CustomizerTemplateCapabilities {
   supportsTapingColor: boolean;
   supportsBack: boolean;
   supportsEmbroidery: boolean;
-  supportsZipper: boolean;
 }
 
 export interface ReusableCustomizerTemplate {
@@ -86,7 +85,6 @@ export function getTemplateCapabilities(
       supportsTapingColor: false,
       supportsBack: hasBackFromViews,
       supportsEmbroidery: true,
-      supportsZipper: false,
     };
   }
 
@@ -97,20 +95,16 @@ export function getTemplateCapabilities(
   const hasTrimGroup = template.colorGroups.some((g) => g.id === 'TRIM');
   const defaultSupportsTrim = hasTrimLayer || hasTrimGroup;
 
-  const id = template.id.toLowerCase();
-  const isMug = id.startsWith('mug');
-  const isCap = id.startsWith('cap');
-  const isBag = id.startsWith('bag');
+  const isCap = template.id.toLowerCase().startsWith('cap');
   const isApparel = template.categoryCompatibility.some((c) =>
-    ['t-shirts', 'polos', 'apparel', 'hoodies'].includes(c.toLowerCase())
+    ['t-shirts', 'polos', 'apparel'].includes(c.toLowerCase())
   );
 
   return {
     supportsTrimColor: explicit.supportsTrimColor ?? defaultSupportsTrim,
-    supportsTapingColor: explicit.supportsTapingColor ?? (isApparel && !isCap && !isBag && !isMug),
+    supportsTapingColor: explicit.supportsTapingColor ?? (isApparel && !isCap),
     supportsBack: explicit.supportsBack ?? Boolean(template.supportsBack),
-    supportsEmbroidery: explicit.supportsEmbroidery ?? !isMug,
-    supportsZipper: explicit.supportsZipper ?? (isBag || id.startsWith('hoodie')),
+    supportsEmbroidery: explicit.supportsEmbroidery ?? true,
   };
 }
 
@@ -157,6 +151,11 @@ export function validateAssetUrl(url?: string | null): { valid: boolean; error?:
     return { valid: false, error: 'Base64 data URLs are not permitted. Mockup assets must be uploaded to Cloudinary.' };
   }
 
+  // Local static asset paths are allowed
+  if (trimmed.startsWith('/')) {
+    return { valid: true };
+  }
+
   try {
     const parsed = new URL(trimmed);
     if (parsed.protocol !== 'https:') {
@@ -172,12 +171,20 @@ export function validateAssetUrl(url?: string | null): { valid: boolean; error?:
   }
 }
 
+export function getFrontBaseAsset(template: ReusableCustomizerTemplate): CustomizerLayer | undefined {
+  return template.layers.find((l) => l.side === 'front' && l.layerType === 'base');
+}
+
 export function getFrontBodyAsset(template: ReusableCustomizerTemplate): CustomizerLayer | undefined {
   return template.layers.find((l) => l.side === 'front' && (l.layerType === 'body' || (l.layerType === 'mask' && l.colorGroup === 'BODY')));
 }
 
 export function getFrontTrimAsset(template: ReusableCustomizerTemplate): CustomizerLayer | undefined {
   return template.layers.find((l) => l.side === 'front' && (l.layerType === 'trim' || (l.layerType === 'mask' && l.colorGroup === 'TRIM')));
+}
+
+export function getBackBaseAsset(template: ReusableCustomizerTemplate): CustomizerLayer | undefined {
+  return template.layers.find((l) => l.side === 'back' && l.layerType === 'base');
 }
 
 export function getBackBodyAsset(template: ReusableCustomizerTemplate): CustomizerLayer | undefined {
@@ -199,14 +206,33 @@ export function getBackPrintArea(template: ReusableCustomizerTemplate): Customiz
 export function normalizeLayersFromFlatAssets(
   templateId: string,
   flat: {
+    frontBaseUrl?: string;
     frontBodyUrl?: string;
     frontTrimUrl?: string;
+    backBaseUrl?: string;
     backBodyUrl?: string;
     backTrimUrl?: string;
     supportsBack?: boolean;
   }
 ): CustomizerLayer[] {
   const layers: CustomizerLayer[] = [];
+
+  if (flat.frontBaseUrl) {
+    layers.push({
+      id: `${templateId}-front-base`,
+      templateId,
+      name: 'Front Base Photo',
+      side: 'front',
+      layerType: 'base',
+      assetUrl: flat.frontBaseUrl,
+      zIndex: 0,
+      tintable: false,
+      colorGroup: null,
+      editable: false,
+      visible: true,
+      enabled: true,
+    });
+  }
 
   if (flat.frontBodyUrl) {
     layers.push({
@@ -243,6 +269,23 @@ export function normalizeLayersFromFlatAssets(
   }
 
   if (flat.supportsBack !== false) {
+    if (flat.backBaseUrl) {
+      layers.push({
+        id: `${templateId}-back-base`,
+        templateId,
+        name: 'Back Base Photo',
+        side: 'back',
+        layerType: 'base',
+        assetUrl: flat.backBaseUrl,
+        zIndex: 0,
+        tintable: false,
+        colorGroup: null,
+        editable: false,
+        visible: true,
+        enabled: true,
+      });
+    }
+
     if (flat.backBodyUrl) {
       layers.push({
         id: `${templateId}-back-body`,
@@ -300,7 +343,7 @@ export const REUSABLE_TEMPLATES: Record<string, ReusableCustomizerTemplate> = {
         templateId: 'polo-v1',
         name: 'Front Base',
         side: 'front',
-        assetUrl: 'https://res.cloudinary.com/dphocsmkd/image/upload/v1775200001/zobbra/products/dev-polo-front-base.png',
+        assetUrl: '/images/templates/polo/dev-polo-front-base.png',
         layerType: 'base',
         zIndex: 0,
         tintable: false,
@@ -313,7 +356,7 @@ export const REUSABLE_TEMPLATES: Record<string, ReusableCustomizerTemplate> = {
         templateId: 'polo-v1',
         name: 'Front Body',
         side: 'front',
-        assetUrl: 'https://res.cloudinary.com/dphocsmkd/image/upload/v1775200002/zobbra/products/dev-polo-front-body-mask.png',
+        assetUrl: '/images/templates/polo/dev-polo-front-body-mask.png',
         layerType: 'mask',
         zIndex: 1,
         tintable: true,
@@ -326,7 +369,7 @@ export const REUSABLE_TEMPLATES: Record<string, ReusableCustomizerTemplate> = {
         templateId: 'polo-v1',
         name: 'Front Collar / Rib',
         side: 'front',
-        assetUrl: 'https://res.cloudinary.com/dphocsmkd/image/upload/v1775200003/zobbra/products/dev-polo-front-trim-mask.png',
+        assetUrl: '/images/templates/polo/dev-polo-front-trim-mask.png',
         layerType: 'mask',
         zIndex: 2,
         tintable: true,
@@ -339,7 +382,7 @@ export const REUSABLE_TEMPLATES: Record<string, ReusableCustomizerTemplate> = {
         templateId: 'polo-v1',
         name: 'Back Base',
         side: 'back',
-        assetUrl: 'https://res.cloudinary.com/dphocsmkd/image/upload/v1775200004/zobbra/products/dev-polo-back-base.png',
+        assetUrl: '/images/templates/polo/dev-polo-back-base.png',
         layerType: 'base',
         zIndex: 0,
         tintable: false,
@@ -352,7 +395,7 @@ export const REUSABLE_TEMPLATES: Record<string, ReusableCustomizerTemplate> = {
         templateId: 'polo-v1',
         name: 'Back Body',
         side: 'back',
-        assetUrl: 'https://res.cloudinary.com/dphocsmkd/image/upload/v1775200005/zobbra/products/dev-polo-back-body-mask.png',
+        assetUrl: '/images/templates/polo/dev-polo-back-body-mask.png',
         layerType: 'mask',
         zIndex: 1,
         tintable: true,
@@ -365,7 +408,7 @@ export const REUSABLE_TEMPLATES: Record<string, ReusableCustomizerTemplate> = {
         templateId: 'polo-v1',
         name: 'Back Collar / Rib',
         side: 'back',
-        assetUrl: 'https://res.cloudinary.com/dphocsmkd/image/upload/v1775200006/zobbra/products/dev-polo-back-trim-mask.png',
+        assetUrl: '/images/templates/polo/dev-polo-back-trim-mask.png',
         layerType: 'mask',
         zIndex: 2,
         tintable: true,
@@ -463,7 +506,74 @@ export const REUSABLE_TEMPLATES: Record<string, ReusableCustomizerTemplate> = {
       { id: 'BODY', label: 'CROWN COLOR', defaultColor: 'Charcoal Black' },
       { id: 'TRIM', label: 'VISOR / BRIM COLOR', defaultColor: 'Charcoal Black' },
     ],
-    layers: [],
+    // The visor is hidden from behind, so the back only recolours the crown and strap.
+    layers: [
+      {
+        id: 'cap-v1-front-base',
+        templateId: 'cap-v1',
+        name: 'Front Base',
+        side: 'front',
+        assetUrl: '/images/templates/cap/cap-front-base.png',
+        layerType: 'base',
+        zIndex: 0,
+        tintable: false,
+        colorGroup: null,
+        editable: false,
+        visible: true,
+      },
+      {
+        id: 'cap-v1-front-body',
+        templateId: 'cap-v1',
+        name: 'Front Crown',
+        side: 'front',
+        assetUrl: '/images/templates/cap/cap-front-body-mask.png',
+        layerType: 'mask',
+        zIndex: 1,
+        tintable: true,
+        colorGroup: 'BODY',
+        editable: false,
+        visible: true,
+      },
+      {
+        id: 'cap-v1-front-trim',
+        templateId: 'cap-v1',
+        name: 'Front Visor',
+        side: 'front',
+        assetUrl: '/images/templates/cap/cap-front-trim-mask.png',
+        layerType: 'mask',
+        zIndex: 2,
+        tintable: true,
+        colorGroup: 'TRIM',
+        editable: false,
+        visible: true,
+      },
+      {
+        id: 'cap-v1-back-base',
+        templateId: 'cap-v1',
+        name: 'Back Base',
+        side: 'back',
+        assetUrl: '/images/templates/cap/cap-back-base.png',
+        layerType: 'base',
+        zIndex: 0,
+        tintable: false,
+        colorGroup: null,
+        editable: false,
+        visible: true,
+      },
+      {
+        id: 'cap-v1-back-body',
+        templateId: 'cap-v1',
+        name: 'Back Crown & Strap',
+        side: 'back',
+        assetUrl: '/images/templates/cap/cap-back-body-mask.png',
+        layerType: 'mask',
+        zIndex: 1,
+        tintable: true,
+        colorGroup: 'BODY',
+        editable: false,
+        visible: true,
+      },
+    ],
     printAreas: [
       {
         templateId: 'cap-v1',
@@ -496,95 +606,6 @@ export const REUSABLE_TEMPLATES: Record<string, ReusableCustomizerTemplate> = {
     ],
   },
 
-  'bag-v1': {
-    id: 'bag-v1',
-    name: 'Bags & Backpacks',
-    description: 'Corporate bag with body and handle accent color groups',
-    categoryCompatibility: ['bags', 'backpacks'],
-    version: '1.0',
-    active: true,
-    supportsBack: true,
-    colorGroups: [
-      { id: 'BODY', label: 'BAG COLOR', defaultColor: 'Charcoal Black' },
-      { id: 'TRIM', label: 'HANDLE & ACCENTS', defaultColor: 'Charcoal Black' },
-    ],
-    layers: [],
-    printAreas: [
-      {
-        templateId: 'bag-v1',
-        side: 'front',
-        x: 0.31,
-        y: 0.350,
-        width: 0.38,
-        height: 0.300,
-        top: '35%',
-        left: '31%',
-        styleWidth: '38%',
-        styleHeight: '30%',
-        label: 'Branding Area: 12cm × 10cm (Front Panel)',
-        guideText: 'Add your corporate logo or artwork',
-      },
-      {
-        templateId: 'bag-v1',
-        side: 'back',
-        x: 0.32,
-        y: 0.360,
-        width: 0.36,
-        height: 0.260,
-        top: '36%',
-        left: '32%',
-        styleWidth: '36%',
-        styleHeight: '26%',
-        label: 'Branding Area: Upper Back / Strap',
-        guideText: 'Add rear branding or label',
-      },
-    ],
-  },
-
-  'mug-v1': {
-    id: 'mug-v1',
-    name: 'Ceramic Mug',
-    description: 'Classic 11oz ceramic mug with front and reverse print areas',
-    categoryCompatibility: ['drinkware', 'mugs'],
-    version: '1.0',
-    active: true,
-    supportsBack: true,
-    colorGroups: [
-      { id: 'BODY', label: 'MUG COLOR', defaultColor: 'White' },
-      { id: 'TRIM', label: 'HANDLE & INNER COLOR', defaultColor: 'White' },
-    ],
-    layers: [],
-    printAreas: [
-      {
-        templateId: 'mug-v1',
-        side: 'front',
-        x: 0.25,
-        y: 0.270,
-        width: 0.40,
-        height: 0.460,
-        top: '27%',
-        left: '25%',
-        styleWidth: '40%',
-        styleHeight: '46%',
-        label: 'Print Area: 8.5cm × 7.5cm (Front View)',
-        guideText: 'Add your logo or design',
-      },
-      {
-        templateId: 'mug-v1',
-        side: 'back',
-        x: 0.35,
-        y: 0.270,
-        width: 0.40,
-        height: 0.460,
-        top: '27%',
-        left: '35%',
-        styleWidth: '40%',
-        styleHeight: '46%',
-        label: 'Print Area: 8.5cm × 7.5cm (Reverse View)',
-        guideText: 'Add reverse side artwork',
-      },
-    ],
-  },
 };
 
 export function getReusableTemplateById(id?: string | null): ReusableCustomizerTemplate | null {
@@ -702,114 +723,6 @@ export const TEMPLATES: Record<ProductTemplateType, CustomizerTemplate> = {
     },
   },
 
-  mug: {
-    type: 'mug',
-    name: 'Custom Drinkware',
-    label: 'Custom Ceramic Mug',
-    categorySlug: 'drinkware',
-    supportsBack: true,
-    requiresSize: false,
-    colorLabel: 'MUG COLOR',
-    secondaryColorLabel: 'HANDLE & INNER COLOR',
-    addTextButtonLabel: '+ Add Text to Mug',
-    defaultColor: 'White',
-    defaultSecondaryColor: 'White',
-    frontPrintableArea: {
-      width: 190,
-      height: 190,
-      top: '27%',
-      left: '25%',
-      styleWidth: '40%',
-      styleHeight: '46%',
-      label: 'Print Area: 8.5cm × 7.5cm (Front View)',
-      guideText: 'Add your logo or design',
-      subGuideText: 'Choose a design tool to begin',
-    },
-    backPrintableArea: {
-      width: 190,
-      height: 190,
-      top: '27%',
-      left: '35%',
-      styleWidth: '40%',
-      styleHeight: '46%',
-      label: 'Print Area: 8.5cm × 7.5cm (Reverse View)',
-      guideText: 'Add reverse side artwork',
-      subGuideText: 'Choose a design tool to begin',
-    },
-  },
-
-  bag: {
-    type: 'bag',
-    name: 'Custom Bags & Backpacks',
-    label: 'Custom Corporate Bag',
-    categorySlug: 'bags',
-    supportsBack: true,
-    requiresSize: false,
-    colorLabel: 'BAG COLOR',
-    secondaryColorLabel: 'TRIM & ACCENTS',
-    addTextButtonLabel: '+ Add Text to Bag',
-    defaultColor: 'Charcoal Black',
-    defaultSecondaryColor: 'Charcoal Black',
-    frontPrintableArea: {
-      width: 190,
-      height: 170,
-      top: '35%',
-      left: '31%',
-      styleWidth: '38%',
-      styleHeight: '30%',
-      label: 'Branding Area: 12cm × 10cm (Front Panel)',
-      guideText: 'Add your corporate logo or artwork',
-      subGuideText: 'Choose a design tool to begin',
-    },
-    backPrintableArea: {
-      width: 180,
-      height: 140,
-      top: '36%',
-      left: '32%',
-      styleWidth: '36%',
-      styleHeight: '26%',
-      label: 'Branding Area: Upper Back / Strap',
-      guideText: 'Add rear branding or label',
-      subGuideText: 'Choose a design tool to begin',
-    },
-  },
-
-  hoodie: {
-    type: 'hoodie',
-    name: 'Custom Hoodies',
-    label: 'Custom Hoodie',
-    categorySlug: 'hoodies',
-    supportsBack: true,
-    requiresSize: true,
-    colorLabel: 'BODY COLOR',
-    secondaryColorLabel: 'HOOD LINING COLOR',
-    addTextButtonLabel: '+ Add Text to Hoodie',
-    defaultColor: 'Charcoal Black',
-    defaultSecondaryColor: 'Charcoal Black',
-    frontPrintableArea: {
-      width: 210,
-      height: 280,
-      top: '24%',
-      left: '29%',
-      styleWidth: '42%',
-      styleHeight: '48%',
-      label: 'Print Area: 30cm × 40cm',
-      guideText: 'Add your logo, text or artwork',
-      subGuideText: 'Choose a design tool to begin',
-    },
-    backPrintableArea: {
-      width: 210,
-      height: 300,
-      top: '24%',
-      left: '29%',
-      styleWidth: '42%',
-      styleHeight: '52%',
-      label: 'Back Print Area: 30cm × 40cm',
-      guideText: 'Add your back print artwork',
-      subGuideText: 'Choose a design tool to begin',
-    },
-  },
-
   generic: {
     type: 'generic',
     name: 'Custom Product',
@@ -836,9 +749,6 @@ export const TEMPLATES: Record<ProductTemplateType, CustomizerTemplate> = {
 
 const TYPE_MATCHERS: Array<[ProductTemplateType, RegExp]> = [
   ['cap', /\b(caps?|headwear|snapback)\b/],
-  ['mug', /\b(mugs?|drinkware|bottles?|cups?|tumblers?)\b/],
-  ['bag', /\b(bags?|backpacks?)\b/],
-  ['hoodie', /\b(hoodies?|sweatshirts?)\b/],
   ['tshirt', /\b(t-?shirts?|tees?|shirts?|polos?|apparel)\b/],
 ];
 
@@ -922,11 +832,7 @@ export function getCustomizerTemplate(product: any): CustomizerTemplate {
         subGuideText: backArea.subGuideText ?? 'Choose a design tool to begin',
       } : undefined;
 
-      const type: ProductTemplateType =
-        templateObj.id.startsWith('cap') ? 'cap' :
-        templateObj.id.startsWith('mug') ? 'mug' :
-        templateObj.id.startsWith('bag') ? 'bag' :
-        templateObj.id.startsWith('hoodie') ? 'hoodie' : 'tshirt';
+      const type: ProductTemplateType = templateObj.id.startsWith('cap') ? 'cap' : 'tshirt';
 
       const effectiveSupportsBack = templateObj.supportsBack && product?.backDesignEnabled !== false;
       const effectiveSecondaryColorLabel = product?.trimColorEnabled !== false && trimGroup ? trimGroup.label : undefined;
@@ -937,7 +843,7 @@ export function getCustomizerTemplate(product: any): CustomizerTemplate {
         label: templateObj.name,
         categorySlug: templateObj.categoryCompatibility[0] || 'apparel',
         supportsBack: effectiveSupportsBack,
-        requiresSize: type === 'tshirt' || type === 'hoodie',
+        requiresSize: type === 'tshirt',
         colorLabel: bodyGroup?.label || 'BODY COLOR',
         secondaryColorLabel: effectiveSecondaryColorLabel,
         addTextButtonLabel: '+ Add Text to Product',

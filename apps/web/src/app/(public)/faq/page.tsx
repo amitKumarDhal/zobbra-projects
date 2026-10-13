@@ -53,7 +53,7 @@ const faqs = [
     icon: Package,
     question: 'What products can I customize?',
     answer:
-      'We offer custom T-Shirts, Hoodies & Sweatshirts, Caps & Headwear, Bags & Backpacks, Corporate Merchandise, and Promotional Products. All products can be branded with your logo, colors, and custom text.',
+      'We offer custom T-Shirts, Polos and Caps & Headwear. All products can be branded with your logo, colors, and custom text.',
   },
   {
     id: 4,
@@ -61,7 +61,7 @@ const faqs = [
     icon: Layers,
     question: 'What is the minimum order quantity?',
     answer:
-      'MOQ varies by product. T-Shirts and Hoodies start at 20 pieces, Caps and Bags at 25 pieces, and Promotional items at 50 pieces. Contact us for smaller quantities — we may accommodate based on requirements.',
+      'MOQ varies by product. T-Shirts start at 20 pieces and Caps at 25 pieces. Contact us for smaller quantities — we may accommodate based on requirements.',
   },
   {
     id: 5,
@@ -176,8 +176,8 @@ export default function FAQPage() {
                   }}
                 />
                 <img
-                  src="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=400&q=80"
-                  alt="Custom backpack"
+                  src="/images/products/classic-black-polo.jpg"
+                  alt="Custom polo t-shirt"
                   className="absolute bottom-0 left-8 w-28 h-36 object-cover rounded-xl shadow-lg"
                 />
                 <img

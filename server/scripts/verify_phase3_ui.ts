@@ -29,7 +29,6 @@ async function main() {
     tapingColorEnabled: false,
     backDesignEnabled: true,
     embroideryEnabled: false,
-    zipperEnabled: false,
   });
 
   const product1 = await prisma.product.upsert({
@@ -41,7 +40,6 @@ async function main() {
       tapingColorEnabled: poloConfig.tapingColorEnabled,
       backDesignEnabled: poloConfig.backDesignEnabled,
       embroideryEnabled: poloConfig.embroideryEnabled,
-      zipperEnabled: poloConfig.zipperEnabled,
     },
     create: {
       name: 'Dev Polo Phase 3 Product',
@@ -55,7 +53,6 @@ async function main() {
       tapingColorEnabled: poloConfig.tapingColorEnabled,
       backDesignEnabled: poloConfig.backDesignEnabled,
       embroideryEnabled: poloConfig.embroideryEnabled,
-      zipperEnabled: poloConfig.zipperEnabled,
     },
   });
 
@@ -70,7 +67,6 @@ async function main() {
     tapingColorEnabled: adminPolo.tapingColorEnabled,
     backDesignEnabled: adminPolo.backDesignEnabled,
     embroideryEnabled: adminPolo.embroideryEnabled,
-    zipperEnabled: adminPolo.zipperEnabled,
   });
 
   console.log('Product 1 (Customer Public Customizer Output):', publicPolo.customizer);
@@ -81,13 +77,11 @@ async function main() {
     adminPolo.tapingColorEnabled === false &&
     adminPolo.backDesignEnabled === true &&
     adminPolo.embroideryEnabled === false &&
-    adminPolo.zipperEnabled === false &&
     publicPolo.customizer.enabled === true &&
     publicPolo.customizer.trimColor === true &&
     publicPolo.customizer.taping === false &&
     publicPolo.customizer.back === true &&
-    publicPolo.customizer.embroidery === false &&
-    publicPolo.customizer.zipper === false
+    publicPolo.customizer.embroidery === false
   ) {
     console.log('✓ Product 1 matches exact requested configuration!\n');
   } else {
@@ -95,14 +89,14 @@ async function main() {
   }
 
   // 2. PRODUCT 2: Second product with independent configuration
-  // For zipper + taping + embroidery, create/use an advanced template with those capabilities
+  // For taping + embroidery, create/use an advanced template with those capabilities
   console.log('--- Configuring Product 2 (Multi-Feature Template) ---');
   let multiTemplate = getCustomizerTemplateById('multi-feature-v1');
   if (!multiTemplate) {
     multiTemplate = await createCustomizerTemplate({
       id: 'multi-feature-v1',
       name: 'Executive Technical Apparel',
-      categoryCompatibility: ['apparel', 'bags'],
+      categoryCompatibility: ['apparel'],
       active: true,
       supportsBack: true,
       capabilities: {
@@ -110,7 +104,6 @@ async function main() {
         supportsTapingColor: true,
         supportsBack: true,
         supportsEmbroidery: true,
-        supportsZipper: true,
       },
     });
   }
@@ -122,7 +115,6 @@ async function main() {
     tapingColorEnabled: true,
     backDesignEnabled: false,
     embroideryEnabled: true,
-    zipperEnabled: true,
   });
 
   const product2 = await prisma.product.upsert({
@@ -134,7 +126,6 @@ async function main() {
       tapingColorEnabled: multiConfig.tapingColorEnabled,
       backDesignEnabled: multiConfig.backDesignEnabled,
       embroideryEnabled: multiConfig.embroideryEnabled,
-      zipperEnabled: multiConfig.zipperEnabled,
     },
     create: {
       name: 'Dev Tech Phase 3 Product',
@@ -148,7 +139,6 @@ async function main() {
       tapingColorEnabled: multiConfig.tapingColorEnabled,
       backDesignEnabled: multiConfig.backDesignEnabled,
       embroideryEnabled: multiConfig.embroideryEnabled,
-      zipperEnabled: multiConfig.zipperEnabled,
     },
   });
 
@@ -163,7 +153,6 @@ async function main() {
     tapingColorEnabled: adminMulti.tapingColorEnabled,
     backDesignEnabled: adminMulti.backDesignEnabled,
     embroideryEnabled: adminMulti.embroideryEnabled,
-    zipperEnabled: adminMulti.zipperEnabled,
   });
 
   console.log('Product 2 (Customer Public Customizer Output):', publicMulti.customizer);
@@ -174,13 +163,11 @@ async function main() {
     adminMulti.tapingColorEnabled === true &&
     adminMulti.backDesignEnabled === false &&
     adminMulti.embroideryEnabled === true &&
-    adminMulti.zipperEnabled === true &&
     publicMulti.customizer.enabled === true &&
     publicMulti.customizer.trimColor === false &&
     publicMulti.customizer.taping === true &&
     publicMulti.customizer.back === false &&
-    publicMulti.customizer.embroidery === true &&
-    publicMulti.customizer.zipper === true
+    publicMulti.customizer.embroidery === true
   ) {
     console.log('✓ Product 2 stores and exposes its own independent configuration!\n');
   } else {

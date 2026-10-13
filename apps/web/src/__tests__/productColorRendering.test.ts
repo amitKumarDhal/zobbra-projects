@@ -45,7 +45,6 @@ describe('Phase 4: Body + Collar/Rib Color Rendering', () => {
       taping: false,
       back: true,
       embroidery: false,
-      zipper: false,
     },
   };
 

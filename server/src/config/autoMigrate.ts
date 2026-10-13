@@ -101,7 +101,8 @@ export async function ensureDatabaseSchema() {
     `ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "tapingColorEnabled" BOOLEAN NOT NULL DEFAULT false`,
     `ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "backDesignEnabled" BOOLEAN NOT NULL DEFAULT true`,
     `ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "embroideryEnabled" BOOLEAN NOT NULL DEFAULT false`,
-    `ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "zipperEnabled" BOOLEAN NOT NULL DEFAULT false`,
+    // Zipper option removed (mirrors 20261010000000_drop_product_zipper_enabled)
+    `ALTER TABLE "products" DROP COLUMN IF EXISTS "zipperEnabled"`,
     `CREATE TABLE IF NOT EXISTS "customizer_templates" (
         "id" TEXT NOT NULL,
         "name" TEXT NOT NULL,

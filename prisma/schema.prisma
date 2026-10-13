@@ -247,8 +247,7 @@ model Product {
   trimColorEnabled      Boolean          @default(false)
   tapingColorEnabled    Boolean          @default(false)
   backDesignEnabled     Boolean          @default(true)
-  embroideryEnabled     Boolean          @default(false)
-  zipperEnabled         Boolean          @default(false)
+  embroideryEnabled     Boolean          @default(false)
 
   // Customer-facing options and content
   sizes                 String[]         @default([])

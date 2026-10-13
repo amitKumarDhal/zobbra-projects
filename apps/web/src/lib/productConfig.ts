@@ -112,7 +112,6 @@ export interface CustomizerFeatures {
   taping: boolean;
   back: boolean;
   embroidery: boolean;
-  zipper: boolean;
 }
 
 /** Product-level customization feature configuration (Phase 3). */
@@ -124,7 +123,6 @@ export function getCustomizerFeatures(product: any): CustomizerFeatures {
       taping: false,
       back: false,
       embroidery: false,
-      zipper: false,
     };
   }
 
@@ -136,7 +134,6 @@ export function getCustomizerFeatures(product: any): CustomizerFeatures {
       taping: Boolean(product.customizer.taping),
       back: Boolean(product.customizer.back),
       embroidery: Boolean(product.customizer.embroidery),
-      zipper: Boolean(product.customizer.zipper),
     };
   }
 
@@ -150,7 +147,6 @@ export function getCustomizerFeatures(product: any): CustomizerFeatures {
     taping: (product.tapingColorEnabled ?? false) && caps.supportsTapingColor,
     back: (product.backDesignEnabled ?? caps.supportsBack) && caps.supportsBack,
     embroidery: (product.embroideryEnabled ?? false) && caps.supportsEmbroidery,
-    zipper: (product.zipperEnabled ?? false) && caps.supportsZipper,
   };
 }
 

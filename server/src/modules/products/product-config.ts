@@ -290,7 +290,6 @@ export function normalizeProductConfig(body: Record<string, any>) {
   if (has('tapingColorEnabled')) data.tapingColorEnabled = Boolean(body.tapingColorEnabled);
   if (has('backDesignEnabled')) data.backDesignEnabled = Boolean(body.backDesignEnabled);
   if (has('embroideryEnabled')) data.embroideryEnabled = Boolean(body.embroideryEnabled);
-  if (has('zipperEnabled')) data.zipperEnabled = Boolean(body.zipperEnabled);
 
   // Template validation: if customizationEnabled is true, a valid customizer template must be assigned
   // (unless it's an existing legacy product with customizerViews)
@@ -317,9 +316,6 @@ export function normalizeProductConfig(body: Record<string, any>) {
         }
         if (data.embroideryEnabled === true && !capabilities.supportsEmbroidery) {
           fail(`The selected template '${template.name}' does not support embroidery.`);
-        }
-        if (data.zipperEnabled === true && !capabilities.supportsZipper) {
-          fail(`The selected template '${template.name}' does not support zipper option.`);
         }
       }
     }
@@ -457,7 +453,6 @@ export function toPublicProduct(product: any, reviews?: ReviewStats) {
   const taping = (product.tapingColorEnabled ?? false) && capabilities.supportsTapingColor;
   const back = (product.backDesignEnabled ?? capabilities.supportsBack) && capabilities.supportsBack;
   const embroidery = (product.embroideryEnabled ?? false) && capabilities.supportsEmbroidery;
-  const zipper = (product.zipperEnabled ?? false) && capabilities.supportsZipper;
 
   const customizer = {
     enabled: customizable,
@@ -465,7 +460,6 @@ export function toPublicProduct(product: any, reviews?: ReviewStats) {
     taping: customizable && taping,
     back: customizable && back,
     embroidery: customizable && embroidery,
-    zipper: customizable && zipper,
   };
 
   return {
@@ -486,7 +480,6 @@ export function toPublicProduct(product: any, reviews?: ReviewStats) {
     tapingColorEnabled: taping,
     backDesignEnabled: back,
     embroideryEnabled: embroidery,
-    zipperEnabled: zipper,
     orderImages: asArray<RatedMedia>(product.orderImages),
     videos: asArray<RatedMedia>(product.videos),
     freeGift: publicGift(product.freeGift),
@@ -509,14 +502,12 @@ export function toAdminProduct(product: any, reviews?: ReviewStats) {
     tapingColorEnabled: product.tapingColorEnabled ?? false,
     backDesignEnabled: product.backDesignEnabled ?? capabilities.supportsBack,
     embroideryEnabled: product.embroideryEnabled ?? false,
-    zipperEnabled: product.zipperEnabled ?? false,
     customizer: {
       enabled: product.customizationEnabled !== false && product.designerEnabled !== false,
       trimColor: (product.trimColorEnabled ?? capabilities.supportsTrimColor) && capabilities.supportsTrimColor,
       taping: (product.tapingColorEnabled ?? false) && capabilities.supportsTapingColor,
       back: (product.backDesignEnabled ?? capabilities.supportsBack) && capabilities.supportsBack,
       embroidery: (product.embroideryEnabled ?? false) && capabilities.supportsEmbroidery,
-      zipper: (product.zipperEnabled ?? false) && capabilities.supportsZipper,
     },
     rating: effectiveRating,
     reviewCount: effectiveReviewCount,

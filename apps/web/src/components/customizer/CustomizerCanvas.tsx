@@ -15,11 +15,14 @@ import {
 } from '@/lib/customizerViews';
 import { renderRecolored } from '@/lib/photoRecolor';
 import { getProductColors, getProductCollarColors } from '@/lib/productConfig';
+import { isTextObject, loadCustomizerFont, preloadCustomizerFonts } from '@/lib/customizerFonts';
 
 export interface CustomizerCanvasRef {
   addText: (text: string, options?: { fontFamily?: string; fontSize?: number; fill?: string; fontWeight?: string; fontStyle?: string; textAlign?: string }) => void;
   addImage: (file: File) => Promise<string>;
   updateActiveObject: (updates: any) => void;
+  /** Deselects whatever is selected on the canvas. */
+  clearSelection: () => void;
   deleteActiveObject: () => void;
   centerActiveH: () => void;
   centerActiveV: () => void;
@@ -232,8 +235,10 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     : resolvedTemplate.frontPrintableArea;
   // Guide line/label contrast against the product body color.
   const guideOnLight = isLightColor(getColorHex(selectedColor));
-  // A product photo has no known body colour, so its guide is white with a dark outline to read on any photo.
-  const guideOverPhoto = Boolean(getBackdropImage(product, activeSide));
+  // A plain product photo has no known body colour, so its guide is white with a dark outline to read
+  // on any photo. A recoloured photo shows the selected colour, so it uses the light/dark styles.
+  const guideOverPhoto =
+    Boolean(getBackdropImage(product, activeSide)) && !getSideRecolor(product, activeSide);
 
   const [fabricInstance, setFabricInstance] = useState<any>(null);
   const [canvas, setCanvas] = useState<any>(null);
@@ -334,6 +339,13 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         };
 
         newCanvas.on('object:modified', notifyState);
+        // Lets the side panel follow typing on the canvas and a resize of the selected object.
+        newCanvas.on('text:changed', (e: any) => {
+          if (onSelectionChange && e.target) onSelectionChange(e.target);
+        });
+        newCanvas.on('object:modified', (e: any) => {
+          if (onSelectionChange && e.target && e.target === newCanvas.getActiveObject()) onSelectionChange(e.target);
+        });
         newCanvas.on('object:added', notifyState);
         newCanvas.on('object:removed', notifyState);
 
@@ -504,6 +516,38 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       ? resolvedTemplate.backPrintableArea
       : resolvedTemplate.frontPrintableArea;
 
+  // Text is measured with whatever font is available; once the real web font arrives it must be
+  // measured again, or its box keeps the fallback font's size.
+  const remeasureText = (obj: any, cvs = canvas) => {
+    if (!cvs || !isTextObject(obj)) return;
+    fabricInstanceRef.current?.util?.clearFabricFontCache?.(obj.fontFamily);
+    obj.initDimensions?.();
+    obj.setCoords();
+    obj.dirty = true; // drop Fabric's cached bitmap, which was drawn with the fallback font
+    cvs.requestRenderAll();
+  };
+
+  const remeasureWhenFontReady = (obj: any, cvs = canvas) => {
+    if (!isTextObject(obj)) return;
+    loadCustomizerFont(obj.fontFamily, String(obj.fontWeight || 'normal'), obj.fontStyle || 'normal').then(() => {
+      remeasureText(obj, cvs);
+      saveCurrentState(cvs);
+    });
+  };
+
+  // Load the text fonts once, then re-measure any text already on the canvas (drafts, resumed designs).
+  useEffect(() => {
+    if (!canvas) return;
+    let cancelled = false;
+    preloadCustomizerFonts().then(() => {
+      if (cancelled) return;
+      canvas.getObjects().forEach((o: any) => remeasureWhenFontReady(o, canvas));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [canvas]);
+
   // Add custom text to canvas
   const handleAddText = (
     textString: string,
@@ -537,6 +581,7 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
     if (onSelectionChange) onSelectionChange(text);
     saveCurrentState();
     setHasCurrentObjects(true);
+    remeasureWhenFontReady(text);
   };
 
   // Add uploaded image to canvas, wait for Cloudinary upload, and update object src with CDN URL
@@ -767,8 +812,18 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       const active = canvas?.getActiveObject();
       if (!active) return;
       active.set(updates);
+      active.setCoords();
       canvas.renderAll();
       saveCurrentState();
+      if ('fontFamily' in updates || 'fontWeight' in updates || 'fontStyle' in updates) {
+        remeasureWhenFontReady(active);
+      }
+    },
+    clearSelection: () => {
+      if (!canvas) return;
+      canvas.discardActiveObject();
+      canvas.requestRenderAll();
+      if (onSelectionChange) onSelectionChange(null);
     },
     deleteActiveObject: () => {
       const active = canvas?.getActiveObject();
@@ -1062,8 +1117,9 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
         product={product}
       />
 
-      <span className="absolute top-3 inset-x-0 mx-auto w-max z-20 pointer-events-none rounded-md bg-[#94A3B8] px-2.5 py-0.5 text-[11px] font-medium lowercase text-white shadow-xs">
-        {activeSide}
+      <span className="absolute top-3 left-3 z-20 pointer-events-none flex items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-semibold capitalize text-gray-600 shadow-[0_1px_2px_rgba(16,24,40,0.08)] ring-1 ring-black/5 backdrop-blur-sm">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#E11D48]" />
+        {activeSide} view
       </span>
 
       {/*
@@ -1073,12 +1129,12 @@ export const CustomizerCanvas = forwardRef<CustomizerCanvasRef, CustomizerCanvas
       <div
         id="customizer-design-guide"
         aria-hidden="true"
-        className={`absolute z-[5] pointer-events-none flex flex-col items-center justify-center text-center border-[1.5px] border-dashed ${
+        className={`absolute z-[5] pointer-events-none flex flex-col items-center justify-center text-center rounded-lg border border-dashed transition-colors ${
           guideOverPhoto
             ? 'border-white/90 text-white shadow-[0_0_0_1px_rgba(0,0,0,0.5)] [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]'
             : guideOnLight
-              ? 'border-black/25 text-black/45'
-              : 'border-white/70 text-white/85'
+              ? 'border-black/25 bg-black/[0.02] text-black/50'
+              : 'border-white/60 bg-white/[0.04] text-white/90'
         }`}
         style={{
           top: currentArea.top,

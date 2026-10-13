@@ -1,14 +1,76 @@
+# ═══════════════════════════════════════════════════════════════
+# ZOBBRA DOCKERIGNORE - PRODUCTION BUILD & RELEASE HYGIENE
+# ═══════════════════════════════════════════════════════════════
+
+# ── 1. Environment & Secret Files (Recursive Exclusion) ───────
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Allow documentation/template example files
+!.env.example
+!.env.*.example
+!**/.env.example
+!**/.env.*.example
+
+# ── 2. Host Build Artifacts ────────────────────────────────────
 node_modules
-.next
+**/node_modules
 dist
+**/dist
+.next
+**/.next
 build
+**/build
+out
+**/out
+.turbo
+**/.turbo
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# ── 3. Tests, Test Output & Coverage ───────────────────────────
 coverage
+**/coverage
+test-results
+**/test-results
+server/tests
+**/tests
+**/__tests__
+cypress
+**/cypress
+cypress/screenshots
+cypress/videos
+cypress/downloads
+apps/web/cypress
+**/*.cy.ts
+**/*.cy.js
+**/*.test.ts
+**/*.test.tsx
+**/*.test.js
+**/*.spec.ts
+**/*.spec.tsx
+**/*.spec.js
+
+# ── 4. Destructive & Dev-Only Scripts ─────────────────────────
+server/scripts
+**/scripts
+server/src/db_audit.ts
+server/src/modules/payments/run-security-tests.ts
+server/src/modules/payments/payments.test.ts
+
+# ── 5. Scratch, Temporary, Backups & Logs ──────────────────────
+scratch
+**/scratch
+backups
+**/backups
+tmp
+temp
+*.log
+**/*.log
 .git
 .github
 .husky
-.turbo
-backups
-scratch
-*.log
-cypress/screenshots
-cypress/videos
+.DS_Store
+*.crdownload

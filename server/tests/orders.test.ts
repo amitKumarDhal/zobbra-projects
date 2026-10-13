@@ -153,7 +153,7 @@ describe('Approved Quote to Order MVP API Integration', () => {
       expect(convertRes.status).toBe(201);
       expect(convertRes.body.success).toBe(true);
       expect(convertRes.body.order).toBeDefined();
-      expect(convertRes.body.order.orderNumber).toMatch(/^ZQB-ORD-/);
+      expect(convertRes.body.order.orderNumber).toMatch(/^ZB\d{3,}/);
       expect(convertRes.body.order.subtotal).toBe(createQuoteRes.body.quote.subtotal);
       expect(convertRes.body.order.totalAmount).toBe(createQuoteRes.body.quote.totalAmount);
     });

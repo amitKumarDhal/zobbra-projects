@@ -13,6 +13,11 @@ import {
   ArrowLeft,
   Trash2,
   ShieldAlert,
+  Moon,
+  Sun,
+  Grid,
+  Palette,
+  Sparkles,
 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 import { uploadToCloudinary } from '@/lib/upload';
@@ -21,8 +26,10 @@ import {
   CustomizerPrintArea,
   validatePrintArea,
   validateAssetUrl,
+  getFrontBaseAsset,
   getFrontBodyAsset,
   getFrontTrimAsset,
+  getBackBaseAsset,
   getBackBodyAsset,
   getBackTrimAsset,
   getFrontPrintArea,
@@ -46,8 +53,10 @@ export default function CustomizerTemplatesAdminPage() {
   const [formVersion, setFormVersion] = useState('1.0');
   const [formActive, setFormActive] = useState(true);
   const [formSupportsBack, setFormSupportsBack] = useState(true);
+  const [formFrontBaseUrl, setFormFrontBaseUrl] = useState('');
   const [formFrontBodyUrl, setFormFrontBodyUrl] = useState('');
   const [formFrontTrimUrl, setFormFrontTrimUrl] = useState('');
+  const [formBackBaseUrl, setFormBackBaseUrl] = useState('');
   const [formBackBodyUrl, setFormBackBodyUrl] = useState('');
   const [formBackTrimUrl, setFormBackTrimUrl] = useState('');
 
@@ -63,9 +72,16 @@ export default function CustomizerTemplatesAdminPage() {
   const [backPrintW, setBackPrintW] = useState<number>(0.42);
   const [backPrintH, setBackPrintH] = useState<number>(0.52);
 
+  // Canvas Preview Options (high-contrast defaults for white garments)
+  const [bgMode, setBgMode] = useState<'dark-grid' | 'light-grid' | 'dark' | 'studio'>('dark-grid');
+  const [testTint, setTestTint] = useState<string>('#FFFFFF');
+  const [inspectMode, setInspectMode] = useState<'composite' | 'xray'>('composite');
+
   // File input refs
+  const frontBaseFileRef = useRef<HTMLInputElement>(null);
   const frontBodyFileRef = useRef<HTMLInputElement>(null);
   const frontTrimFileRef = useRef<HTMLInputElement>(null);
+  const backBaseFileRef = useRef<HTMLInputElement>(null);
   const backBodyFileRef = useRef<HTMLInputElement>(null);
   const backTrimFileRef = useRef<HTMLInputElement>(null);
 
@@ -108,13 +124,17 @@ export default function CustomizerTemplatesAdminPage() {
     setFormActive(template.active !== false);
     setFormSupportsBack(template.supportsBack !== false);
 
+    const fBase = getFrontBaseAsset(template);
     const fBody = getFrontBodyAsset(template);
     const fTrim = getFrontTrimAsset(template);
+    const bBase = getBackBaseAsset(template);
     const bBody = getBackBodyAsset(template);
     const bTrim = getBackTrimAsset(template);
 
+    setFormFrontBaseUrl(fBase?.assetUrl || '');
     setFormFrontBodyUrl(fBody?.assetUrl || '');
     setFormFrontTrimUrl(fTrim?.assetUrl || '');
+    setFormBackBaseUrl(bBase?.assetUrl || '');
     setFormBackBodyUrl(bBody?.assetUrl || '');
     setFormBackTrimUrl(bTrim?.assetUrl || '');
 
@@ -145,13 +165,16 @@ export default function CustomizerTemplatesAdminPage() {
     }
   };
 
-  // Upload handler for transparent PNG mockup layers
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'frontBody' | 'frontTrim' | 'backBody' | 'backTrim') => {
+  // Upload handler for template mockup and base photo layers
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: 'frontBase' | 'frontBody' | 'frontTrim' | 'backBase' | 'backBody' | 'backTrim'
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.includes('png')) {
-      setErrorMessage('Template mockup assets must be transparent PNG files.');
+    if (!file.type.includes('png') && !file.type.includes('jpeg') && !file.type.includes('webp')) {
+      setErrorMessage('Template assets must be PNG, JPEG, or WebP files.');
       return;
     }
 
@@ -165,12 +188,14 @@ export default function CustomizerTemplatesAdminPage() {
         throw new Error(urlCheck.error);
       }
 
+      if (field === 'frontBase') setFormFrontBaseUrl(url);
       if (field === 'frontBody') setFormFrontBodyUrl(url);
       if (field === 'frontTrim') setFormFrontTrimUrl(url);
+      if (field === 'backBase') setFormBackBaseUrl(url);
       if (field === 'backBody') setFormBackBodyUrl(url);
       if (field === 'backTrim') setFormBackTrimUrl(url);
 
-      setSuccessMessage('Mockup asset uploaded to Cloudinary successfully.');
+      setSuccessMessage('Mockup asset uploaded successfully.');
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to upload asset.');
     } finally {
@@ -189,12 +214,15 @@ export default function CustomizerTemplatesAdminPage() {
     try {
       // Validate URLs
       const urls = [
+        { label: 'Front Base', url: formFrontBaseUrl },
         { label: 'Front Body', url: formFrontBodyUrl },
         { label: 'Front Trim', url: formFrontTrimUrl },
+        { label: 'Back Base', url: formBackBaseUrl },
         { label: 'Back Body', url: formBackBodyUrl },
         { label: 'Back Trim', url: formBackTrimUrl },
       ];
       for (const item of urls) {
+        if (!item.url) continue;
         const check = validateAssetUrl(item.url);
         if (!check.valid) {
           throw new Error(`${item.label}: ${check.error}`);
@@ -246,8 +274,10 @@ export default function CustomizerTemplatesAdminPage() {
       }
 
       const layers = normalizeLayersFromFlatAssets(selectedId, {
+        frontBaseUrl: formFrontBaseUrl,
         frontBodyUrl: formFrontBodyUrl,
         frontTrimUrl: formFrontTrimUrl,
+        backBaseUrl: formBackBaseUrl,
         backBodyUrl: formBackBodyUrl,
         backTrimUrl: formBackTrimUrl,
         supportsBack: formSupportsBack,
@@ -360,12 +390,23 @@ export default function CustomizerTemplatesAdminPage() {
   };
 
   // Preview layer URLs and print area for active preview side
+  const activeBaseUrl = previewSide === 'front' ? formFrontBaseUrl : formBackBaseUrl;
   const activeBodyUrl = previewSide === 'front' ? formFrontBodyUrl : formBackBodyUrl;
   const activeTrimUrl = previewSide === 'front' ? formFrontTrimUrl : formBackTrimUrl;
   const activeX = previewSide === 'front' ? frontPrintX : backPrintX;
   const activeY = previewSide === 'front' ? frontPrintY : backPrintY;
   const activeW = previewSide === 'front' ? frontPrintW : backPrintW;
   const activeH = previewSide === 'front' ? frontPrintH : backPrintH;
+
+  const [baseImgFailed, setBaseImgFailed] = useState(false);
+  const [bodyImgFailed, setBodyImgFailed] = useState(false);
+  const [trimImgFailed, setTrimImgFailed] = useState(false);
+
+  useEffect(() => {
+    setBaseImgFailed(false);
+    setBodyImgFailed(false);
+    setTrimImgFailed(false);
+  }, [activeBaseUrl, activeBodyUrl, activeTrimUrl, previewSide]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -504,10 +545,59 @@ export default function CustomizerTemplatesAdminPage() {
               <span className="text-xs text-slate-400">Side: FRONT</span>
             </div>
 
+            {/* Front Base Garment Photo */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                <span className="flex items-center gap-1.5">
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">Z-0 BASE</span>
+                  Front Base Garment Photo (Realistic Mockup / Canvas)
+                </span>
+                {formFrontBaseUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setFormFrontBaseUrl('')}
+                    className="text-rose-600 hover:underline flex items-center gap-0.5 text-[11px]"
+                  >
+                    <Trash2 className="w-3 h-3" /> Remove
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={formFrontBaseUrl}
+                  onChange={(e) => setFormFrontBaseUrl(e.target.value)}
+                  placeholder="https://res.cloudinary.com/.../front-base.png or /images/templates/..."
+                  data-cy="front-base-url"
+                  className="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-2 bg-slate-50 font-mono"
+                />
+                <input
+                  type="file"
+                  ref={frontBaseFileRef}
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => handleFileUpload(e, 'frontBase')}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => frontBaseFileRef.current?.click()}
+                  disabled={uploadingField === 'frontBase'}
+                  data-cy="front-base-upload"
+                  className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-300 flex items-center gap-1.5 flex-shrink-0"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  {uploadingField === 'frontBase' ? 'Uploading...' : formFrontBaseUrl ? 'Replace' : 'Upload Image'}
+                </button>
+              </div>
+            </div>
+
             {/* Front Body */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                <span>Front Body Mockup (Transparent PNG)</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800 text-[10px] font-bold">Z-1 BODY</span>
+                  Front Body Mockup / Mask (Transparent PNG)
+                </span>
                 {formFrontBodyUrl && (
                   <button
                     type="button"
@@ -550,7 +640,10 @@ export default function CustomizerTemplatesAdminPage() {
             {/* Front Trim */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                <span>Front Collar / Rib / Trim Mask (Transparent PNG)</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">Z-2 TRIM</span>
+                  Front Collar / Rib / Trim Mask (Transparent PNG)
+                </span>
                 {formFrontTrimUrl && (
                   <button
                     type="button"
@@ -612,10 +705,59 @@ export default function CustomizerTemplatesAdminPage() {
 
             {formSupportsBack ? (
               <>
+                {/* Back Base Garment Photo */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                    <span className="flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">Z-0 BASE</span>
+                      Back Base Garment Photo (Realistic Mockup / Canvas)
+                    </span>
+                    {formBackBaseUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setFormBackBaseUrl('')}
+                        className="text-rose-600 hover:underline flex items-center gap-0.5 text-[11px]"
+                      >
+                        <Trash2 className="w-3 h-3" /> Remove
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={formBackBaseUrl}
+                      onChange={(e) => setFormBackBaseUrl(e.target.value)}
+                      placeholder="https://res.cloudinary.com/.../back-base.png or /images/templates/..."
+                      data-cy="back-base-url"
+                      className="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-2 bg-slate-50 font-mono"
+                    />
+                    <input
+                      type="file"
+                      ref={backBaseFileRef}
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(e) => handleFileUpload(e, 'backBase')}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => backBaseFileRef.current?.click()}
+                      disabled={uploadingField === 'backBase'}
+                      data-cy="back-base-upload"
+                      className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-300 flex items-center gap-1.5 flex-shrink-0"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      {uploadingField === 'backBase' ? 'Uploading...' : formBackBaseUrl ? 'Replace' : 'Upload Image'}
+                    </button>
+                  </div>
+                </div>
+
                 {/* Back Body */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span>Back Body Mockup (Transparent PNG)</span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800 text-[10px] font-bold">Z-1 BODY</span>
+                      Back Body Mockup / Mask (Transparent PNG)
+                    </span>
                     {formBackBodyUrl && (
                       <button
                         type="button"
@@ -658,7 +800,10 @@ export default function CustomizerTemplatesAdminPage() {
                 {/* Back Trim */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span>Back Collar / Rib / Trim Mask (Transparent PNG)</span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">Z-2 TRIM</span>
+                      Back Collar / Rib / Trim Mask (Transparent PNG)
+                    </span>
                     {formBackTrimUrl && (
                       <button
                         type="button"
@@ -851,88 +996,295 @@ export default function CustomizerTemplatesAdminPage() {
         {/* ── Right Column: Live Admin Asset Preview (5 cols) ── */}
         <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-6">
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
+            {/* Header: Title, Mode & Side Selector */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
                 <Eye className="w-4 h-4 text-brand-teal" /> ADMIN ASSET PREVIEW
               </h2>
-              {/* Preview Side Toggle */}
-              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setPreviewSide('front')}
-                  data-cy="preview-tab-front"
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
-                    previewSide === 'front'
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Front
-                </button>
-                {formSupportsBack && (
+
+              <div className="flex items-center gap-2">
+                {/* Inspection Mode (Composite vs X-Ray) */}
+                <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
                   <button
                     type="button"
-                    onClick={() => setPreviewSide('back')}
-                    data-cy="preview-tab-back"
-                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
-                      previewSide === 'back'
+                    onClick={() => setInspectMode('composite')}
+                    className={`px-2 py-1 text-[11px] font-semibold rounded-md transition-colors ${
+                      inspectMode === 'composite'
                         ? 'bg-white text-slate-900 shadow-sm'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    Back
+                    Garment
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setInspectMode('xray')}
+                    className={`px-2 py-1 text-[11px] font-semibold rounded-md transition-colors ${
+                      inspectMode === 'xray'
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    X-Ray Masks
+                  </button>
+                </div>
+
+                {/* Preview Side Toggle */}
+                <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewSide('front')}
+                    data-cy="preview-tab-front"
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                      previewSide === 'front'
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Front
+                  </button>
+                  {formSupportsBack && (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewSide('back')}
+                      data-cy="preview-tab-back"
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                        previewSide === 'back'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Back
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Stage Backdrop Contrast Bar */}
+            <div className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 text-xs">
+              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                <Grid className="w-3.5 h-3.5 text-slate-500" /> Canvas Backdrop:
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setBgMode('dark-grid')}
+                  title="Dark Checkerboard (High contrast for white garments)"
+                  className={`px-2 py-1 text-[11px] font-medium rounded transition-all flex items-center gap-1 ${
+                    bgMode === 'dark-grid'
+                      ? 'bg-slate-900 text-white font-bold shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <Moon className="w-3 h-3" /> Dark Grid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBgMode('light-grid')}
+                  title="Light Checkerboard"
+                  className={`px-2 py-1 text-[11px] font-medium rounded transition-all flex items-center gap-1 ${
+                    bgMode === 'light-grid'
+                      ? 'bg-slate-900 text-white font-bold shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <Grid className="w-3 h-3" /> Light Grid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBgMode('dark')}
+                  title="Solid Dark Stage"
+                  className={`px-2 py-1 text-[11px] font-medium rounded transition-all flex items-center gap-1 ${
+                    bgMode === 'dark'
+                      ? 'bg-slate-900 text-white font-bold shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Dark
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBgMode('studio')}
+                  title="Studio Neutral Gray"
+                  className={`px-2 py-1 text-[11px] font-medium rounded transition-all flex items-center gap-1 ${
+                    bgMode === 'studio'
+                      ? 'bg-slate-900 text-white font-bold shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <Sun className="w-3 h-3" /> Studio
+                </button>
               </div>
             </div>
 
             {/* Canvas Stage */}
             <div
               data-cy="admin-template-preview"
-              className="relative w-full aspect-square rounded-xl overflow-hidden border border-slate-300 shadow-inner flex items-center justify-center"
-              style={{
-                backgroundImage: `
-                  linear-gradient(45deg, #f1f5f9 25%, transparent 25%),
-                  linear-gradient(-45deg, #f1f5f9 25%, transparent 25%),
-                  linear-gradient(45deg, transparent 75%, #f1f5f9 75%),
-                  linear-gradient(-45deg, transparent 75%, #f1f5f9 75%)
-                `,
-                backgroundSize: '20px 20px',
-                backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-                backgroundColor: '#ffffff',
-              }}
+              className="relative w-full aspect-square rounded-xl overflow-hidden border border-slate-400/40 shadow-inner flex items-center justify-center transition-colors duration-200"
+              style={
+                bgMode === 'dark-grid'
+                  ? {
+                      backgroundColor: '#0f172a',
+                      backgroundImage: `
+                        linear-gradient(45deg, #1e293b 25%, transparent 25%),
+                        linear-gradient(-45deg, #1e293b 25%, transparent 25%),
+                        linear-gradient(45deg, transparent 75%, #1e293b 75%),
+                        linear-gradient(-45deg, transparent 75%, #1e293b 75%)
+                      `,
+                      backgroundSize: '24px 24px',
+                      backgroundPosition: '0 0, 0 12px, 12px -12px, -12px 0px',
+                    }
+                  : bgMode === 'light-grid'
+                    ? {
+                        backgroundColor: '#ffffff',
+                        backgroundImage: `
+                          linear-gradient(45deg, #cbd5e1 25%, transparent 25%),
+                          linear-gradient(-45deg, #cbd5e1 25%, transparent 25%),
+                          linear-gradient(45deg, transparent 75%, #cbd5e1 75%),
+                          linear-gradient(-45deg, transparent 75%, #cbd5e1 75%)
+                        `,
+                        backgroundSize: '24px 24px',
+                        backgroundPosition: '0 0, 0 12px, 12px -12px, -12px 0px',
+                      }
+                    : bgMode === 'dark'
+                      ? {
+                          backgroundColor: '#090d16',
+                          backgroundImage: 'radial-gradient(circle at 50% 50%, #1e293b 0%, #090d16 100%)',
+                        }
+                      : {
+                          backgroundColor: '#f1f5f9',
+                          backgroundImage: 'radial-gradient(circle at 50% 35%, #ffffff 0%, #cbd5e1 100%)',
+                        }
+              }
             >
-              {/* Layer 1: Body PNG */}
-              {activeBodyUrl ? (
-                <img
-                  src={activeBodyUrl}
-                  alt={`${previewSide} body layer`}
-                  data-cy="preview-body-layer"
-                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                  style={{ zIndex: 1 }}
-                />
-              ) : (
-                <div className="text-center p-6 text-slate-400 text-xs">
-                  <Upload className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                  No {previewSide} body mockup uploaded
-                </div>
-              )}
+              {/* X-Ray Mask Inspection Mode */}
+              {inspectMode === 'xray' ? (
+                <>
+                  {/* Subtle Base garment outline in background */}
+                  {activeBaseUrl && !baseImgFailed && (
+                    <img
+                      src={activeBaseUrl}
+                      alt={`${previewSide} base reference`}
+                      className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-25"
+                      style={{ zIndex: 1 }}
+                    />
+                  )}
 
-              {/* Layer 2: Trim PNG */}
-              {activeTrimUrl && (
-                <img
-                  src={activeTrimUrl}
-                  alt={`${previewSide} trim layer`}
-                  data-cy="preview-trim-layer"
-                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                  style={{ zIndex: 2 }}
-                />
+                  {/* Body Mask in highlighted cyan overlay */}
+                  {activeBodyUrl && !bodyImgFailed ? (
+                    <div
+                      className="absolute inset-0 pointer-events-none transition-all duration-150"
+                      style={{
+                        backgroundColor: '#06b6d4',
+                        WebkitMaskImage: `url(${activeBodyUrl})`,
+                        maskImage: `url(${activeBodyUrl})`,
+                        WebkitMaskSize: 'contain',
+                        maskSize: 'contain',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskPosition: 'center',
+                        maskPosition: 'center',
+                        opacity: 0.85,
+                        zIndex: 2,
+                      }}
+                    />
+                  ) : null}
+
+                  {/* Trim Mask in highlighted amber overlay */}
+                  {activeTrimUrl && !trimImgFailed ? (
+                    <div
+                      className="absolute inset-0 pointer-events-none transition-all duration-150"
+                      style={{
+                        backgroundColor: '#f59e0b',
+                        WebkitMaskImage: `url(${activeTrimUrl})`,
+                        maskImage: `url(${activeTrimUrl})`,
+                        WebkitMaskSize: 'contain',
+                        maskSize: 'contain',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskPosition: 'center',
+                        maskPosition: 'center',
+                        opacity: 0.9,
+                        zIndex: 3,
+                      }}
+                    />
+                  ) : null}
+                </>
+              ) : (
+                /* Composite Garment Preview Mode */
+                <>
+                  {/* Layer 0: Photorealistic Base Garment Photo */}
+                  {activeBaseUrl && !baseImgFailed ? (
+                    <img
+                      src={activeBaseUrl}
+                      alt={`${previewSide} base layer`}
+                      data-cy="preview-base-layer"
+                      onError={() => setBaseImgFailed(true)}
+                      className="absolute inset-0 w-full h-full object-contain pointer-events-none drop-shadow-xl"
+                      style={{ zIndex: 1 }}
+                    />
+                  ) : null}
+
+                  {/* Layer 1: Body Tint Recolor Overlay (Multiply blend over base) */}
+                  {activeBaseUrl && !baseImgFailed && activeBodyUrl && !bodyImgFailed && testTint !== '#FFFFFF' ? (
+                    <div
+                      className="absolute inset-0 pointer-events-none transition-all duration-150"
+                      style={{
+                        backgroundColor: testTint,
+                        WebkitMaskImage: `url(${activeBodyUrl})`,
+                        maskImage: `url(${activeBodyUrl})`,
+                        WebkitMaskSize: 'contain',
+                        maskSize: 'contain',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskPosition: 'center',
+                        maskPosition: 'center',
+                        mixBlendMode: 'multiply',
+                        opacity: 0.92,
+                        zIndex: 2,
+                      }}
+                    />
+                  ) : null}
+
+                  {/* Fallback when NO base photo exists: Render Body Mockup directly with drop shadow */}
+                  {(!activeBaseUrl || baseImgFailed) && activeBodyUrl && !bodyImgFailed ? (
+                    <img
+                      src={activeBodyUrl}
+                      alt={`${previewSide} body layer`}
+                      data-cy="preview-body-layer"
+                      onError={() => setBodyImgFailed(true)}
+                      className="absolute inset-0 w-full h-full object-contain pointer-events-none drop-shadow-2xl"
+                      style={{ zIndex: 1 }}
+                    />
+                  ) : null}
+
+                  {/* Layer 2: Trim PNG Overlay */}
+                  {activeTrimUrl && !trimImgFailed && (
+                    <img
+                      src={activeTrimUrl}
+                      alt={`${previewSide} trim layer`}
+                      data-cy="preview-trim-layer"
+                      onError={() => setTrimImgFailed(true)}
+                      className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                      style={{ zIndex: 3 }}
+                    />
+                  )}
+
+                  {/* Empty state warning if no images loaded */}
+                  {!activeBaseUrl && !activeBodyUrl && (
+                    <div className="text-center p-6 text-slate-400 text-xs z-[1]">
+                      <Upload className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                      {`No ${previewSide} mockup or base image uploaded yet`}
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Layer 3: Printable Area Guide Overlay */}
               <div
                 data-cy="preview-print-area"
-                className="absolute border-2 border-dashed border-cyan-500 bg-cyan-500/15 flex items-center justify-center text-center rounded pointer-events-none transition-all duration-150"
+                className="absolute border-2 border-dashed border-cyan-400 bg-cyan-400/20 flex items-center justify-center text-center rounded pointer-events-none transition-all duration-150 shadow-[0_0_15px_rgba(6,182,212,0.35)]"
                 style={{
                   left: `${(activeX * 100).toFixed(2)}%`,
                   top: `${(activeY * 100).toFixed(2)}%`,
@@ -941,20 +1293,90 @@ export default function CustomizerTemplatesAdminPage() {
                   zIndex: 10,
                 }}
               >
-                <div className="bg-slate-900/80 text-white text-[10px] font-mono px-1.5 py-0.5 rounded shadow">
+                <div className="bg-slate-900/90 text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded shadow-lg border border-cyan-500/30 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
                   Printable Area ({(activeW * 100).toFixed(0)}% × {(activeH * 100).toFixed(0)}%)
                 </div>
               </div>
             </div>
 
-            {/* Helper note */}
-            <div className="text-[11px] text-slate-500 space-y-1">
-              <p>
-                <strong>Layer Stack:</strong> Body Layer (Z-1) &rarr; Trim / Rib Mask (Z-2) &rarr; Printable Area (Z-10).
-              </p>
-              <p className="text-slate-400">
-                This is a configuration preview only. Customer color tinting will be rendered in Phase 3.
-              </p>
+            {/* Test Garment Color Swatches */}
+            <div className="space-y-1.5 bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Palette className="w-3.5 h-3.5 text-brand-teal" /> Test Garment Color:
+                </span>
+                <span className="font-mono text-[11px] text-slate-500">{testTint}</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {[
+                  { name: 'White (Original)', hex: '#FFFFFF', isWhite: true },
+                  { name: 'Navy Blue', hex: '#1E3A8A' },
+                  { name: 'Charcoal Black', hex: '#1F2937' },
+                  { name: 'Crimson Red', hex: '#DC2626' },
+                  { name: 'Royal Blue', hex: '#2563EB' },
+                  { name: 'Emerald Green', hex: '#16A34A' },
+                  { name: 'Gold Amber', hex: '#D97706' },
+                ].map((c) => (
+                  <button
+                    key={c.hex}
+                    type="button"
+                    title={c.name}
+                    onClick={() => setTestTint(c.hex)}
+                    className={`w-7 h-7 rounded-full border-2 transition-transform ${
+                      testTint === c.hex
+                        ? 'ring-2 ring-brand-teal ring-offset-2 scale-110 border-white'
+                        : 'border-slate-300 hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: c.hex }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Layer Stack Status & Legend */}
+            <div className="text-[11px] bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+              <span className="font-bold text-slate-700 uppercase tracking-wide block text-[10px]">
+                Active Preview Layers:
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      activeBaseUrl && !baseImgFailed ? 'bg-emerald-500' : 'bg-slate-300'
+                    }`}
+                  ></span>
+                  <span className="text-slate-600">
+                    Z-0 Base Photo: <strong>{activeBaseUrl && !baseImgFailed ? 'Loaded' : 'None'}</strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      activeBodyUrl && !bodyImgFailed ? 'bg-cyan-500' : 'bg-slate-300'
+                    }`}
+                  ></span>
+                  <span className="text-slate-600">
+                    Z-1 Body Mask: <strong>{activeBodyUrl && !bodyImgFailed ? 'Loaded' : 'None'}</strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      activeTrimUrl && !trimImgFailed ? 'bg-amber-500' : 'bg-slate-300'
+                    }`}
+                  ></span>
+                  <span className="text-slate-600">
+                    Z-2 Trim Mask: <strong>{activeTrimUrl && !trimImgFailed ? 'Loaded' : 'None'}</strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+                  <span className="text-slate-600">
+                    Z-10 Print Area: <strong>Active</strong>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

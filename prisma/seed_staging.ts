@@ -97,39 +97,12 @@ async function main() {
     },
   });
 
-  const catHoodies = await prisma.category.create({
-    data: {
-      name: 'Hoodies & Sweatshirts',
-      slug: 'hoodies',
-      description: 'Warm, cozy fleece hoodies with embroidery or DTF logo printing.',
-      image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=600&q=80',
-    },
-  });
-
   const catCaps = await prisma.category.create({
     data: {
       name: 'Caps & Headwear',
       slug: 'caps',
       description: 'Promotional embroidered cotton caps, snapbacks, and sun visors.',
       image: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=600&q=80',
-    },
-  });
-
-  const catBags = await prisma.category.create({
-    data: {
-      name: 'Bags & Backpacks',
-      slug: 'bags',
-      description: 'Customized laptop bags, conference totes, and drawstring gym bags.',
-      image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=600&q=80',
-    },
-  });
-
-  const catDrinkware = await prisma.category.create({
-    data: {
-      name: 'Mugs & Bottles',
-      slug: 'drinkware',
-      description: 'Stainless steel thermal bottles, ceramic coffee mugs, and sippers.',
-      image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&w=600&q=80',
     },
   });
 
@@ -189,26 +162,6 @@ async function main() {
     },
   });
 
-  const bagProduct = await prisma.product.create({
-    data: {
-      name: 'Executive Backpack',
-      slug: 'bag-executive',
-      hsnCode: '4202',
-      gstRate: 18.0,
-      description: 'Durable water-resistant executive laptop backpack with padded compartment and brand logo embossing.',
-      basePrice: 699.0,
-      images: [
-        'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80',
-      ],
-      categoryId: catBags.id,
-      variants: {
-        create: [
-          { color: 'Black', size: 'Standard', sku: 'ZOB-BAG-001-BLK', stock: 300 },
-        ],
-      },
-    },
-  });
-
   const capProduct = await prisma.product.create({
     data: {
       name: 'Promotional Cotton Cap with Embroidery',
@@ -236,7 +189,7 @@ async function main() {
       {
         type: 'TESTIMONIAL',
         title: 'Outstanding Quality & Speedy Turnaround!',
-        content: 'ZOBBRA delivered 500 customized polo t-shirts and hoodies for our annual conference within 5 working days. High-quality DTF printing and neat embroidery.',
+        content: 'ZOBBRA delivered 500 customized polo t-shirts and caps for our annual conference within 5 working days. High-quality DTF printing and neat embroidery.',
         author: 'Rahul Mishra, HR Manager @ Acme Tech',
       },
       {
@@ -248,7 +201,7 @@ async function main() {
       {
         type: 'FAQ',
         title: 'What is the minimum order quantity (MOQ) for custom printing?',
-        content: 'Our standard MOQ for customized Polo T-Shirts is 20 pieces, while caps and mugs have an MOQ of 50 pieces.',
+        content: 'Our standard MOQ for customized Polo T-Shirts is 20 pieces, while caps have an MOQ of 50 pieces.',
       },
       {
         type: 'FAQ',
@@ -259,7 +212,7 @@ async function main() {
         type: 'BLOG',
         title: 'Complete Guide to Corporate Swag & Merch Branding in 2026',
         slug: 'complete-guide-corporate-swag-2026',
-        content: 'Corporate gifting has evolved beyond generic pens. Discover how custom bio-washed polo t-shirts and thermal drinkware build brand loyalty.',
+        content: 'Corporate gifting has evolved beyond generic pens. Discover how custom bio-washed polo t-shirts and embroidered caps build brand loyalty.',
         author: 'ZOBBRA Editorial Team',
         image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80',
       },

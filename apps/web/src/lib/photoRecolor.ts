@@ -163,11 +163,24 @@ function getPrepared(source: RecolorSource): Promise<Prepared> {
  * Light colours use the photo's shading as a multiplier (white base → coloured cloth); dark colours
  * add the shading as an offset so folds and highlights stay visible on navy/black. The two are
  * blended by the colour's own brightness, so mid colours get a mix of both.
+ *
+ * A white base photo has little tonal range, so the offset is amplified for dark colours. Shadows
+ * ease towards 40% of the colour instead of clipping to flat black, and highlights ease towards
+ * white, which gives black and navy fabric visible folds and sheen.
  */
 export function dye(l: number, ref: number, c: number, weight: number): number {
   const s = l / ref;
   const multiplied = s <= 1 ? c * s : c + (1 - c) * Math.min(1, (s - 1) * 0.6);
-  const offset = c + (l - ref) * 0.85;
+  const d = (l - ref) * (0.85 + 1.5 * (1 - weight) ** 2);
+  const floor = c * 0.4;
+  const offset =
+    d < 0
+      ? c > floor
+        ? floor + (c - floor) * Math.exp(d / (c - floor))
+        : c
+      : c < 1
+      ? c + (1 - c) * (1 - Math.exp((-d * 2.5) / (1 - c)))
+      : 1;
   const v = weight * multiplied + (1 - weight) * offset;
   return v < 0 ? 0 : v > 1 ? 1 : v;
 }

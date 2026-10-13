@@ -18,6 +18,8 @@ import {
   ArrowDown,
   AlignHorizontalJustifyCenter,
   AlignVerticalJustifyCenter,
+  Printer,
+  Sparkles,
 } from 'lucide-react';
 import type { CustomizerTemplate } from '@/lib/customizerTemplates';
 import { isLightColor } from '@/lib/colors';
@@ -167,12 +169,14 @@ interface TextPanelProps {
   onChange: (patch: Partial<TextValue>) => void;
   onSubmit: () => void;
   addLabel: string;
+  /** A text on the product is selected: the controls edit it live and the button finishes editing. */
+  editing?: boolean;
 }
 
 const segBtn = (on: boolean) =>
   `p-1.5 rounded transition-all ${on ? 'bg-white text-black shadow-2xs' : 'text-gray-400 hover:text-gray-600'}`;
 
-export function TextPanel({ value, onChange, onSubmit, addLabel }: TextPanelProps) {
+export function TextPanel({ value, onChange, onSubmit, addLabel, editing }: TextPanelProps) {
   return (
     <form
       onSubmit={(e) => {
@@ -181,6 +185,15 @@ export function TextPanel({ value, onChange, onSubmit, addLabel }: TextPanelProp
       }}
       className="space-y-2.5"
     >
+      {editing && (
+        <p
+          data-cy="text-editing-hint"
+          className="flex items-center gap-1.5 rounded-lg bg-[#FFF1F2] px-2.5 py-1.5 text-[11px] font-medium text-[#BE123C]"
+        >
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#E11D48]" />
+          Changes apply to the selected text
+        </p>
+      )}
       <input
         type="text"
         value={value.text}
@@ -259,10 +272,10 @@ export function TextPanel({ value, onChange, onSubmit, addLabel }: TextPanelProp
 
       <button
         type="submit"
-        disabled={!value.text.trim()}
+        disabled={!editing && !value.text.trim()}
         className="w-full py-2 bg-[#111111] hover:bg-[#2563EB] disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg text-xs font-bold transition-all"
       >
-        {addLabel}
+        {editing ? 'Done editing' : addLabel}
       </button>
     </form>
   );
@@ -280,7 +293,7 @@ interface SwatchGridProps {
 
 function SwatchGrid({ colors, selected, onPick }: SwatchGridProps) {
   return (
-    <div className="grid grid-cols-5 gap-2.5 justify-items-center">
+    <div className="flex flex-wrap gap-2">
       {colors.map((col) => {
         const isSelected = selected.toLowerCase() === col.name.toLowerCase();
         const light = isLightColor(col.hex);
@@ -292,21 +305,62 @@ function SwatchGrid({ colors, selected, onPick }: SwatchGridProps) {
             aria-label={col.name}
             aria-pressed={isSelected}
             onClick={() => onPick(col.name)}
-            className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-all duration-150 cursor-pointer ${
+            className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3B6FEB] focus-visible:ring-offset-2 ${
               isSelected
-                ? 'ring-2 ring-[#E11D48] ring-offset-2 scale-105 shadow-sm'
-                : 'border border-black/10 hover:scale-105 shadow-2xs'
+                ? 'ring-2 ring-[#E11D48] ring-offset-2'
+                : 'shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)] hover:scale-110'
             }`}
             style={{ backgroundColor: col.hex }}
           >
             {isSelected && (
-              <Check className={`w-4 h-4 ${light ? 'text-black' : 'text-white'}`} strokeWidth={2.5} />
+              <Check className={`w-3.5 h-3.5 ${light ? 'text-black' : 'text-white'}`} strokeWidth={3} />
             )}
             <span className="sr-only">{col.name}</span>
           </button>
         );
       })}
     </div>
+  );
+}
+
+const SECTION_LABEL = 'text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-500';
+
+const BRANDING_OPTIONS: Array<{ method: 'Print' | 'Embroidery'; label: string; hint: string; Icon: React.ElementType }> = [
+  { method: 'Print', label: 'Print', hint: 'DTF / Screen', Icon: Printer },
+  { method: 'Embroidery', label: 'Embroidery', hint: 'High-density', Icon: Sparkles },
+];
+
+/** One colour group: label with the picked colour on the right, swatches underneath. */
+function ColorRow({
+  label,
+  value,
+  colors,
+  cy,
+  children,
+}: {
+  label: string;
+  value: string;
+  colors: Array<{ name: string; hex: string }>;
+  cy?: string;
+  children: React.ReactNode;
+}) {
+  const hex = colors.find((c) => c.name.toLowerCase() === value.toLowerCase())?.hex;
+  return (
+    <section className="space-y-2" data-cy={cy}>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className={`${SECTION_LABEL} min-w-0 leading-snug`}>{label}</h3>
+        <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs font-medium text-[#111111]">
+          {hex && (
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.15)]"
+              style={{ backgroundColor: hex }}
+            />
+          )}
+          {value}
+        </span>
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -366,7 +420,7 @@ export function ColorPanel({
   const canShowTrim = showTrimColor !== undefined ? showTrimColor : Boolean(template.secondaryColorLabel);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       {photoPreview && !photoRecolor && (
         <p
           data-cy="customizer-photo-colour-note"
@@ -378,83 +432,61 @@ export function ColorPanel({
 
       {/* BRANDING METHOD SELECTOR - Only shown when product allows embroidery */}
       {showBrandingMethod && (
-        <section className="space-y-2 pb-3 border-b border-gray-100" data-cy="branding-method-container">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
-              Branding Method
-            </h3>
-            <span className="text-xs font-bold text-[#3B6FEB]">
-              {brandingMethod === 'Embroidery' ? 'Embroidery' : 'Standard Print'}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 bg-[#F1F3F7] p-1 rounded-xl" data-cy="branding-method-selector">
-            <button
-              type="button"
-              data-cy="branding-method-print"
-              aria-pressed={brandingMethod === 'Print'}
-              onClick={() => onBrandingMethodChange?.('Print')}
-              className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                brandingMethod === 'Print'
-                  ? 'bg-white text-[#111111] shadow-2xs'
-                  : 'text-gray-500 hover:text-[#111111]'
-              }`}
-            >
-              Print (DTF / Screen)
-            </button>
-            <button
-              type="button"
-              data-cy="branding-method-embroidery"
-              aria-pressed={brandingMethod === 'Embroidery'}
-              onClick={() => onBrandingMethodChange?.('Embroidery')}
-              className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                brandingMethod === 'Embroidery'
-                  ? 'bg-white text-[#111111] shadow-2xs'
-                  : 'text-gray-500 hover:text-[#111111]'
-              }`}
-            >
-              High-Density Embroidery
-            </button>
+        <section className="space-y-1.5" data-cy="branding-method-container">
+          <h3 className={SECTION_LABEL}>Branding Method</h3>
+          <div className="grid grid-cols-2 gap-1 bg-[#F1F3F7] p-1 rounded-xl" data-cy="branding-method-selector">
+            {BRANDING_OPTIONS.map(({ method, label, hint, Icon }) => {
+              const on = brandingMethod === method;
+              return (
+                <button
+                  key={method}
+                  type="button"
+                  data-cy={`branding-method-${method.toLowerCase()}`}
+                  aria-pressed={on}
+                  title={`${label} (${hint})`}
+                  onClick={() => onBrandingMethodChange?.(method)}
+                  className={`flex min-w-0 items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-all ${
+                    on
+                      ? 'bg-white text-[#111111] shadow-[0_1px_2px_rgba(16,24,40,0.08)]'
+                      : 'text-gray-500 hover:text-[#111111]'
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 shrink-0 ${on ? 'text-[#E11D48]' : ''}`} />
+                  <span className="min-w-0 leading-tight">
+                    <span className={`block truncate text-xs ${on ? 'font-semibold' : 'font-medium'}`}>{label}</span>
+                    <span className="block truncate text-[10px] font-medium text-gray-400">{hint}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </section>
       )}
 
       {/* BODY COLOR */}
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
-            {template.colorLabel || 'BODY COLOR'}
-          </h3>
-          <span className="text-xs font-semibold text-gray-700">{selectedColor}</span>
-        </div>
+      <ColorRow label={template.colorLabel || 'BODY COLOR'} value={selectedColor} colors={bodyColors}>
         <div data-cy="customizer-body-colors">
           <SwatchGrid colors={bodyColors} selected={selectedColor} onPick={onBodyColor} />
         </div>
-      </section>
+      </ColorRow>
 
       {/* COLLAR & RIB COLOR - only shown when template/product supports secondary color */}
       {canShowTrim && (
-        <section className="space-y-2 pt-3 border-t border-gray-100">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
-              {template.secondaryColorLabel || 'COLLAR & RIB COLOR'}
-            </h3>
-            <span className="text-xs font-semibold text-gray-700">{collarColor}</span>
-          </div>
+        <ColorRow label={template.secondaryColorLabel || 'COLLAR & RIB COLOR'} value={collarColor} colors={trimColors}>
           <div data-cy="customizer-collar-colors">
             <SwatchGrid colors={trimColors} selected={collarColor} onPick={onCollarColor} />
           </div>
-        </section>
+        </ColorRow>
       )}
 
       {/* TAPING COLOR - only shown when template & product support taping customization */}
       {showTapingColor && (
-        <section className="space-y-2 pt-3 border-t border-gray-100" data-cy="taping-color-section">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
-              {tapingLabel || 'INNER NECK TAPING COLOR'}
-            </h3>
-            <span className="text-xs font-semibold text-gray-700">{tapingColor || selectedColor}</span>
-          </div>
+        <ColorRow
+          label={tapingLabel || 'INNER NECK TAPING COLOR'}
+          value={tapingColor || selectedColor}
+          colors={bodyColors}
+          cy="taping-color-section"
+        >
           <div data-cy="customizer-taping-colors">
             <SwatchGrid
               colors={bodyColors}
@@ -462,7 +494,7 @@ export function ColorPanel({
               onPick={onTapingColor || (() => {})}
             />
           </div>
-        </section>
+        </ColorRow>
       )}
     </div>
   );

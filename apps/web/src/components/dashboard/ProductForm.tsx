@@ -77,29 +77,7 @@ const POLO_DESCRIPTION_TEMPLATE = `Elevate your corporate identity with our Prem
 - **Print Methods**: High-Definition Embroidery, Screen Printing, and HD Digital DTF transfers.
 - **MOQ**: 20 Pieces. Individually polybagged.`;
 
-const BAG_DESCRIPTION_TEMPLATE = `Executive 28L corporate laptop backpack engineered with high-density water-resistant ballistic polyester, dual reinforced compartments, and a dedicated 15.6" padded laptop sleeve.
-
-### Key Features & Specifications:
-- **Material**: 900D Heavy-Duty Water-Repellent Ballistic Polyester with scratch-resistant coating.
-- **Laptop Protection**: Dedicated shock-absorbing padded sleeve accommodates up to 15.6-inch laptops and tablets.
-- **Capacity & Compartments**: 28-Litre capacity featuring 2 large zippered main compartments, 1 quick-access front zippered organizer, and 1 side elastic mesh water bottle holder.
-- **Ergonomics**: Contoured multi-panel airflow back padding with breathable mesh and adjustable padded shoulder straps for maximum lumbar support.
-- **Hardware & Finish**: Heavy-duty dual metal zippers with corded pullers, reinforced top padded grab handle, and subtle cyan-blue contrast piping.
-- **Branding Methods**: Tailored for High-Density Embroidery, Rubberized 3D Badges, Silk Screen Printing, and HD DTF Transfer on the front corporate branding zone (12cm × 8cm).
-- **MOQ**: 20 Pieces. Ideal for new hire welcome kits, corporate gifting, tech conferences, and executive teams.`;
-
-const MUG_DESCRIPTION_TEMPLATE = `Premium 330ml (11oz) matte-finish ceramic coffee mug engineered for corporate gifting, welcome kits, and daily office use.
-
-### Key Features & Specifications:
-- **Material**: Premium Grade-A Ceramic Stoneware with chip-resistant rim and durable glaze.
-- **Capacity**: 330 ml / 11 oz. Ergonomic C-shaped comfort handle.
-- **Finish**: Modern ultra-smooth matte exterior with food-grade non-porous interior.
-- **Safety Standards**: 100% Lead-Free, Cadmium-Free, Microwave Safe & Dishwasher Safe.
-- **Branding Methods**: High-precision Screen Printing, UV DTF Wrap, Sublimation Printing, and Metallic Gold/Silver Foil stamping on dual-sided branding areas (7cm × 7cm per side or full wrap 20cm × 8cm).
-- **Packaging**: Individually packed in protective thermocol bubble-wrap and corrugated Kraft gift box.
-- **MOQ**: 25 Pieces. Ideal for employee onboarding kits, client appreciation, executive desk accessories, and corporate events.`;
-
-type PresetKey = 'CAP' | 'POLO' | 'BAG' | 'MUG';
+type PresetKey = 'CAP' | 'POLO';
 type OrderMode = 'SINGLE' | 'BULK' | 'BOTH';
 
 interface ColorRow {
@@ -147,7 +125,6 @@ interface FormState {
   tapingColorEnabled: boolean;
   backDesignEnabled: boolean;
   embroideryEnabled: boolean;
-  zipperEnabled: boolean;
   isActive: boolean;
   requiresSize: boolean;
   sizes: string[];
@@ -191,7 +168,6 @@ const EMPTY_FORM: FormState = {
   tapingColorEnabled: false,
   backDesignEnabled: true,
   embroideryEnabled: false,
-  zipperEnabled: false,
   isActive: true,
   requiresSize: true,
   sizes: [],
@@ -225,24 +201,6 @@ const rangeRows = (rows: Array<[number, number | '', number]>, printType: string
   rows.map(([minQuantity, maxQuantity, pricePerUnit]) => ({ minQuantity, maxQuantity, pricePerUnit, printType }));
 
 const PRESETS: Record<PresetKey, { categoryMatch: (c: any) => boolean; values: Partial<FormState> }> = {
-  MUG: {
-    categoryMatch: (c) => c.slug === 'drinkware' || /mug|bottle|drink/i.test(c.name || ''),
-    values: {
-      name: 'Classic Corporate Ceramic Coffee Mug',
-      slug: 'classic-corporate-ceramic-mug',
-      basePrice: 149,
-      minOrderQty: 25,
-      description: MUG_DESCRIPTION_TEMPLATE,
-      images: [
-        'https://res.cloudinary.com/e3sasmyr/image/upload/v1790086438/products/corporate-ceramic-coffee-mug-black.jpg',
-        '/images/products/corporate-ceramic-mug.jpg',
-      ],
-      requiresSize: false,
-      sizes: [],
-      colors: colorRows(['Matte Black', 'Classic White', 'Navy Blue']),
-      ranges: rangeRows([[25, 49, 149], [50, 99, 129], [100, 249, 109], [250, 499, 95], [500, '', 79]], 'Screen Print / UV DTF'),
-    },
-  },
   CAP: {
     categoryMatch: (c) => c.slug === 'caps' || /cap/i.test(c.name || ''),
     values: {
@@ -277,24 +235,6 @@ const PRESETS: Record<PresetKey, { categoryMatch: (c: any) => boolean; values: P
       sizes: ['S', 'M', 'L', 'XL', 'XXL'],
       colors: colorRows(['Charcoal Black', 'Navy Blue']),
       ranges: rangeRows([[20, 49, 299], [50, 99, 279], [100, '', 259]], 'Front Only'),
-    },
-  },
-  BAG: {
-    categoryMatch: (c) => c.slug === 'bags' || /bag/i.test(c.name || ''),
-    values: {
-      name: 'Executive Corporate Laptop Backpack',
-      slug: 'executive-corporate-laptop-backpack',
-      basePrice: 699,
-      minOrderQty: 20,
-      description: BAG_DESCRIPTION_TEMPLATE,
-      images: [
-        'https://res.cloudinary.com/e3sasmyr/image/upload/v1790085384/products/executive-corporate-backpack-black.jpg',
-        '/images/products/executive-laptop-backpack.jpg',
-      ],
-      requiresSize: false,
-      sizes: [],
-      colors: colorRows(['Charcoal Black', 'Navy Blue', 'Heather Grey']),
-      ranges: rangeRows([[20, 49, 699], [50, 99, 649], [100, 249, 599], [250, 499, 549], [500, '', 499]], 'Front Logo Print / Embroidery'),
     },
   },
 };
@@ -336,7 +276,6 @@ function formFromProduct(p: any): FormState {
     tapingColorEnabled: Boolean(p.tapingColorEnabled),
     backDesignEnabled: p.backDesignEnabled !== false,
     embroideryEnabled: Boolean(p.embroideryEnabled),
-    zipperEnabled: Boolean(p.zipperEnabled),
     isActive: p.isActive !== false,
     requiresSize: p.requiresSize !== false,
     sizes: Array.isArray(p.sizes) && p.sizes.length > 0 ? p.sizes : p.requiresSize !== false ? variantSizes : [],
@@ -381,7 +320,6 @@ function payloadFromForm(f: FormState) {
     tapingColorEnabled: f.tapingColorEnabled,
     backDesignEnabled: f.backDesignEnabled,
     embroideryEnabled: f.embroideryEnabled,
-    zipperEnabled: f.zipperEnabled,
     isActive: f.isActive,
     requiresSize: f.requiresSize,
     requiresColor: true,
@@ -660,16 +598,8 @@ export function ProductForm({ productId }: { productId?: string }) {
 
   const selectedCat = categories.find((c) => c.id === form.categoryId);
   const isCapCategory = selectedCat?.slug === 'caps' || /cap/i.test(selectedCat?.name || '');
-  const isBagCategory = selectedCat?.slug === 'bags' || /bag/i.test(selectedCat?.name || '');
-  const isMugCategory = selectedCat?.slug === 'drinkware' || /mug|cup|bottle/i.test(selectedCat?.name || '');
-  const presetLabel = isMugCategory ? 'Mug' : isBagCategory ? 'Bag' : isCapCategory ? 'Cap' : 'Polo';
-  const presetDescription = isMugCategory
-    ? MUG_DESCRIPTION_TEMPLATE
-    : isBagCategory
-      ? BAG_DESCRIPTION_TEMPLATE
-      : isCapCategory
-        ? CAP_DESCRIPTION_TEMPLATE
-        : POLO_DESCRIPTION_TEMPLATE;
+  const presetLabel = isCapCategory ? 'Cap' : 'Polo';
+  const presetDescription = isCapCategory ? CAP_DESCRIPTION_TEMPLATE : POLO_DESCRIPTION_TEMPLATE;
 
   const selectedTemplate = useMemo(() => getReusableTemplateById(form.customizerTemplateId), [form.customizerTemplateId]);
   const templateCapabilities = useMemo(() => getTemplateCapabilities(selectedTemplate), [selectedTemplate]);
@@ -820,9 +750,6 @@ export function ProductForm({ productId }: { productId?: string }) {
         if (form.embroideryEnabled && !caps.supportsEmbroidery) {
           return `The selected template '${tmpl.name}' does not support embroidery.`;
         }
-        if (form.zipperEnabled && !caps.supportsZipper) {
-          return `The selected template '${tmpl.name}' does not support zipper option.`;
-        }
       }
     }
     for (const r of form.ranges) {
@@ -903,8 +830,6 @@ export function ProductForm({ productId }: { productId?: string }) {
             </span>
             {(
               [
-                ['MUG', '☕', 'Cup / Mug', isMugCategory],
-                ['BAG', '🎒', 'Backpack / Bag', isBagCategory],
                 ['CAP', '🧢', 'Cap / Headwear', isCapCategory],
                 ['POLO', '👕', 'Polo T-Shirt', false],
               ] as Array<[PresetKey, string, string, boolean]>
@@ -944,11 +869,7 @@ export function ProductForm({ productId }: { productId?: string }) {
             title="Basic Information"
             icon={<Package className="w-4 h-4 text-[#3B6FEB]" />}
             badge={
-              isMugCategory ? (
-                <span className="px-2.5 py-0.5 bg-blue-50 text-[#3B6FEB] border border-blue-200 rounded-full text-[10px] font-bold">☕ Cup / Mug Mode Active</span>
-              ) : isBagCategory ? (
-                <span className="px-2.5 py-0.5 bg-blue-50 text-[#3B6FEB] border border-blue-200 rounded-full text-[10px] font-bold">🎒 Bag / Backpack Mode Active</span>
-              ) : isCapCategory ? (
+              isCapCategory ? (
                 <span className="px-2.5 py-0.5 bg-blue-50 text-[#3B6FEB] border border-blue-200 rounded-full text-[10px] font-bold">🧢 Headwear Mode Active</span>
               ) : undefined
             }
@@ -1159,7 +1080,7 @@ export function ProductForm({ productId }: { productId?: string }) {
               checked={form.requiresSize}
               onChange={(next) => set('requiresSize', next)}
               label="Ask customers to select a size"
-              description="Turn off for one-size products such as caps, bags and mugs."
+              description="Turn off for one-size products such as caps."
             />
             {form.requiresSize && (
               <>
@@ -1942,15 +1863,6 @@ export function ProductForm({ productId }: { productId?: string }) {
                           onChange={(next) => set('embroideryEnabled', next)}
                           label="Enable embroidery option"
                           description="Allows customers to choose embroidery branding method."
-                        />
-                      )}
-                      {templateCapabilities.supportsZipper && (
-                        <Toggle
-                          cy="feature-zipper"
-                          checked={form.zipperEnabled}
-                          onChange={(next) => set('zipperEnabled', next)}
-                          label="Enable zipper option"
-                          description="Allows customers to customize zipper options."
                         />
                       )}
                     </div>

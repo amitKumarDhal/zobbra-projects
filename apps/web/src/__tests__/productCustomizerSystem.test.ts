@@ -17,7 +17,7 @@ describe('Product-Level Customizer System (Web)', () => {
   describe('Reusable Template Registry', () => {
     it('provides reusable templates with generic layers and color groups', () => {
       const templates = listReusableTemplates();
-      expect(templates.length).toBeGreaterThanOrEqual(4);
+      expect(templates.length).toBeGreaterThanOrEqual(3); // polo, t-shirt, cap
 
       const polo = getReusableTemplateById('polo-v1');
       expect(polo).toBeDefined();

@@ -48,65 +48,15 @@ describe('Customizer Template Resolver Suite', () => {
     expect(template.frontPrintableArea.height).toBe(115);
   });
 
-  it('correctly resolves Mug / Drinkware product to mug template', () => {
-    const mugProduct = {
-      id: 'f973411d-2eca-46df-9fd1-8881b485423c',
-      name: 'Classic Corporate Ceramic Coffee Mug',
-      slug: 'classic-corporate-ceramic-mug',
-      category: {
-        id: 'cat-3',
-        name: 'Mugs & Bottles',
-        slug: 'drinkware',
-      },
-    };
-
-    const template = getCustomizerTemplate(mugProduct);
-    expect(template.type).toBe('mug');
-    expect(template.supportsBack).toBe(true);
-    expect(template.colorLabel).toBe('MUG COLOR');
-    expect(template.addTextButtonLabel).toBe('+ Add Text to Mug');
-    expect(template.frontPrintableArea.label).toContain('Print Area');
-    expect(template.frontPrintableArea.width).toBe(190);
-    expect(template.frontPrintableArea.height).toBe(190);
-  });
-
-  it('correctly resolves Bag / Backpack product to bag template', () => {
-    const bagProduct = {
-      id: '2ecf1df7-8183-4331-a873-29b315d3f63a',
-      name: 'Executive Corporate Laptop Backpack',
-      slug: 'executive-corporate-laptop-backpack',
-      category: {
-        id: 'cat-4',
-        name: 'Bags & Backpacks',
-        slug: 'bags',
-      },
-    };
-
-    const template = getCustomizerTemplate(bagProduct);
-    expect(template.type).toBe('bag');
-    expect(template.supportsBack).toBe(true);
-    expect(template.colorLabel).toBe('BAG COLOR');
-    expect(template.addTextButtonLabel).toBe('+ Add Text to Bag');
-    expect(template.frontPrintableArea.label).toContain('Branding Area');
-    expect(template.frontPrintableArea.width).toBe(190);
-    expect(template.frontPrintableArea.height).toBe(170);
-  });
-
-  it('correctly resolves future/other categories like Hoodie', () => {
-    const hoodieProduct = {
-      id: 'prod-hoodie-1',
-      name: 'Premium Heavyweight Pullover Hoodie',
-      slug: 'premium-heavyweight-pullover-hoodie',
-      category: {
-        name: 'Hoodies & Sweatshirts',
-        slug: 'hoodies',
-      },
-    };
-
-    const template = getCustomizerTemplate(hoodieProduct);
-    expect(template.type).toBe('hoodie');
-    expect(template.supportsBack).toBe(true);
-    expect(template.addTextButtonLabel).toBe('+ Add Text to Hoodie');
+  it('falls back to the generic template for discontinued categories (mugs, bags, hoodies)', () => {
+    const discontinued = [
+      { name: 'Classic Corporate Ceramic Coffee Mug', slug: 'classic-corporate-ceramic-mug', category: { name: 'Mugs & Bottles', slug: 'drinkware' } },
+      { name: 'Executive Corporate Laptop Backpack', slug: 'executive-corporate-laptop-backpack', category: { name: 'Bags & Backpacks', slug: 'bags' } },
+      { name: 'Premium Heavyweight Pullover Hoodie', slug: 'premium-heavyweight-pullover-hoodie', category: { name: 'Hoodies & Sweatshirts', slug: 'hoodies' } },
+    ];
+    for (const product of discontinued) {
+      expect(getCustomizerTemplate(product).type, product.name).toBe('generic');
+    }
   });
 
   it('provides safe, non-crashing generic template for unmapped products', () => {

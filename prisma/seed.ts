@@ -118,39 +118,12 @@ async function main() {
     },
   });
 
-  const catHoodies = await prisma.category.create({
-    data: {
-      name: 'Hoodies & Sweatshirts',
-      slug: 'hoodies',
-      description: 'Warm, cozy fleece hoodies with embroidery or DTF logo printing.',
-      image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=600&q=80',
-    },
-  });
-
   const catCaps = await prisma.category.create({
     data: {
       name: 'Caps & Headwear',
       slug: 'caps',
       description: 'Promotional embroidered cotton caps, snapbacks, and sun visors.',
       image: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=600&q=80',
-    },
-  });
-
-  const catBags = await prisma.category.create({
-    data: {
-      name: 'Bags & Backpacks',
-      slug: 'bags',
-      description: 'Customized laptop bags, conference totes, and drawstring gym bags.',
-      image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=600&q=80',
-    },
-  });
-
-  const catDrinkware = await prisma.category.create({
-    data: {
-      name: 'Mugs & Bottles',
-      slug: 'drinkware',
-      description: 'Stainless steel thermal bottles, ceramic coffee mugs, and sippers.',
-      image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&w=600&q=80',
     },
   });
 
@@ -266,26 +239,6 @@ async function main() {
     },
   });
 
-  const bagProduct = await prisma.product.create({
-    data: {
-      name: 'Executive Backpack',
-      slug: 'bag-executive',
-      hsnCode: '4202',
-      gstRate: 18.0,
-      description: 'Durable water-resistant executive laptop backpack with padded compartment and brand logo embossing.',
-      basePrice: 699.0,
-      images: [
-        'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80',
-      ],
-      categoryId: catBags.id,
-      variants: {
-        create: [
-          { color: 'Black', size: 'Standard', sku: 'ZOB-BAG-001-BLK', stock: 300 },
-        ],
-      },
-    },
-  });
-
   const capProduct = await prisma.product.create({
     data: {
       name: 'Classic Promotional Structured Cotton Cap',
@@ -327,92 +280,6 @@ async function main() {
           { minQuantity: 100, maxQuantity: 249, pricePerUnit: 109.0, printType: 'Front 3D Embroidery' },
           { minQuantity: 250, maxQuantity: 499, pricePerUnit: 95.0, printType: 'Front 3D Embroidery' },
           { minQuantity: 500, maxQuantity: 9999, pricePerUnit: 85.0, printType: 'Front 3D Embroidery' },
-        ],
-      },
-    },
-  });
-
-  const bagProduct = await prisma.product.create({
-    data: {
-      name: 'Executive Corporate Laptop Backpack',
-      slug: 'executive-corporate-laptop-backpack',
-      hsnCode: '4202',
-      gstRate: 18.0,
-      description: `Executive 28L corporate laptop backpack engineered with high-density water-resistant ballistic polyester, dual reinforced compartments, and a dedicated 15.6" padded laptop sleeve.
-
-### Key Features & Specifications:
-- **Material**: 900D Heavy-Duty Water-Repellent Ballistic Polyester with scratch-resistant coating.
-- **Laptop Protection**: Dedicated shock-absorbing padded sleeve accommodates up to 15.6-inch laptops and tablets.
-- **Capacity & Compartments**: 28-Litre capacity featuring 2 large zippered main compartments, 1 quick-access front zippered organizer, and 1 side elastic mesh water bottle holder.
-- **Ergonomics**: Contoured multi-panel airflow back padding with breathable mesh and adjustable padded shoulder straps for maximum lumbar support.
-- **Hardware & Finish**: Heavy-duty dual metal zippers with corded pullers, reinforced top padded grab handle, and subtle cyan-blue contrast piping.
-- **Branding Methods**: Tailored for High-Density Embroidery, Rubberized 3D Badges, Silk Screen Printing, and HD DTF Transfer on the front corporate branding zone (12cm × 8cm).
-- **MOQ**: 20 Pieces. Ideal for new hire welcome kits, corporate gifting, tech conferences, and executive teams.`,
-      basePrice: 699.0,
-      images: [
-        'https://res.cloudinary.com/e3sasmyr/image/upload/v1790085384/products/executive-corporate-backpack-black.jpg',
-        '/images/products/executive-laptop-backpack.jpg',
-      ],
-      categoryId: catBags.id,
-      requiresColor: true,
-      requiresSize: false,
-      variants: {
-        create: [
-          { color: 'Charcoal Black', size: 'Free Size', sku: 'BAG-EXEC-BLK-FS', stock: 500 },
-          { color: 'Navy Blue', size: 'Free Size', sku: 'BAG-EXEC-NVY-FS', stock: 350 },
-          { color: 'Heather Grey', size: 'Free Size', sku: 'BAG-EXEC-GRY-FS', stock: 250 },
-        ],
-      },
-      bulkPricing: {
-        create: [
-          { minQuantity: 20, maxQuantity: 49, pricePerUnit: 699.0, printType: 'Front Logo Print / Embroidery' },
-          { minQuantity: 50, maxQuantity: 99, pricePerUnit: 649.0, printType: 'Front Logo Print / Embroidery' },
-          { minQuantity: 100, maxQuantity: 249, pricePerUnit: 599.0, printType: 'Front Logo Print / Embroidery' },
-          { minQuantity: 250, maxQuantity: 499, pricePerUnit: 549.0, printType: 'Front Logo Print / Embroidery' },
-          { minQuantity: 500, maxQuantity: 9999, pricePerUnit: 499.0, printType: 'Front Logo Print / Embroidery' },
-        ],
-      },
-    },
-  });
-
-  const mugProduct = await prisma.product.create({
-    data: {
-      name: 'Classic Corporate Ceramic Coffee Mug',
-      slug: 'classic-corporate-ceramic-mug',
-      hsnCode: '6912',
-      gstRate: 12.0,
-      description: `Premium 330ml (11oz) matte-finish ceramic coffee mug engineered for corporate gifting, welcome kits, and daily office use.
-
-### Key Features & Specifications:
-- **Material**: Premium Grade-A Ceramic Stoneware with chip-resistant rim and durable glaze.
-- **Capacity**: 330 ml / 11 oz. Ergonomic C-shaped comfort handle.
-- **Finish**: Modern ultra-smooth matte exterior with food-grade non-porous interior.
-- **Safety Standards**: 100% Lead-Free, Cadmium-Free, Microwave Safe & Dishwasher Safe.
-- **Branding Methods**: High-precision Screen Printing, UV DTF Wrap, Sublimation Printing, and Metallic Gold/Silver Foil stamping on dual-sided branding areas (7cm × 7cm per side or full wrap 20cm × 8cm).
-- **Packaging**: Individually packed in protective thermocol bubble-wrap and corrugated Kraft gift box.
-- **MOQ**: 25 Pieces. Ideal for employee onboarding kits, client appreciation, executive desk accessories, and corporate events.`,
-      basePrice: 149.0,
-      images: [
-        'https://res.cloudinary.com/e3sasmyr/image/upload/v1790086438/products/corporate-ceramic-coffee-mug-black.jpg',
-        '/images/products/corporate-ceramic-mug.jpg',
-      ],
-      categoryId: catDrinkware.id,
-      requiresColor: true,
-      requiresSize: false,
-      variants: {
-        create: [
-          { color: 'Matte Black', size: 'Free Size', sku: 'MUG-MATTE-BLK-FS', stock: 1000 },
-          { color: 'Classic White', size: 'Free Size', sku: 'MUG-GLOSS-WHT-FS', stock: 800 },
-          { color: 'Navy Blue', size: 'Free Size', sku: 'MUG-MATTE-NVY-FS', stock: 500 },
-        ],
-      },
-      bulkPricing: {
-        create: [
-          { minQuantity: 25, maxQuantity: 49, pricePerUnit: 149.0, printType: 'Front & Back Logo Print' },
-          { minQuantity: 50, maxQuantity: 99, pricePerUnit: 129.0, printType: 'Front & Back Logo Print' },
-          { minQuantity: 100, maxQuantity: 249, pricePerUnit: 109.0, printType: 'Front & Back Logo Print' },
-          { minQuantity: 250, maxQuantity: 499, pricePerUnit: 95.0, printType: 'Front & Back Logo Print' },
-          { minQuantity: 500, maxQuantity: 9999, pricePerUnit: 79.0, printType: 'Front & Back Logo Print' },
         ],
       },
     },
@@ -500,7 +367,7 @@ async function main() {
       {
         type: 'TESTIMONIAL',
         title: 'Outstanding Quality & Speedy Turnaround!',
-        content: 'Zobra Prints delivered 500 customized polo t-shirts and hoodies for our annual conference within 5 working days. High-quality DTF printing and neat embroidery.',
+        content: 'Zobra Prints delivered 500 customized polo t-shirts and caps for our annual conference within 5 working days. High-quality DTF printing and neat embroidery.',
         author: 'Rahul Mishra, HR Manager @ Acme Tech',
       },
       {
@@ -512,7 +379,7 @@ async function main() {
       {
         type: 'FAQ',
         title: 'What is the minimum order quantity (MOQ) for custom printing?',
-        content: 'Our standard MOQ for customized Polo T-Shirts is 20 pieces, while caps and mugs have an MOQ of 50 pieces.',
+        content: 'Our standard MOQ for customized Polo T-Shirts is 20 pieces, while caps have an MOQ of 50 pieces.',
       },
       {
         type: 'FAQ',
@@ -523,7 +390,7 @@ async function main() {
         type: 'BLOG',
         title: 'Complete Guide to Corporate Swag & Merch Branding in 2026',
         slug: 'complete-guide-corporate-swag-2026',
-        content: 'Corporate gifting has evolved beyond generic pens. Discover how custom bio-washed polo t-shirts and thermal drinkware build brand loyalty.',
+        content: 'Corporate gifting has evolved beyond generic pens. Discover how custom bio-washed polo t-shirts and embroidered caps build brand loyalty.',
         author: 'Zobra Editorial Team',
         image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80',
       },

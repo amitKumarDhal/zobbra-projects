@@ -22,7 +22,6 @@ describe('Phase 6 Web: Customizer Feature Controls, Branding Method & Order Revi
     tapingColorEnabled: true,
     backDesignEnabled: true,
     embroideryEnabled: true,
-    zipperEnabled: false,
     colors: [
       { name: 'White', hex: '#FFFFFF' },
       { name: 'Navy', hex: '#0D1333' },
@@ -42,15 +41,15 @@ describe('Phase 6 Web: Customizer Feature Controls, Branding Method & Order Revi
     tapingColorEnabled: false,
   };
 
-  // Test fixture: Mug (template inherently does NOT support embroidery or taping)
-  const mugProduct = {
-    id: 'prod-phase6-mug',
-    name: 'Ceramic Coffee Mug',
-    slug: 'ceramic-coffee-mug',
-    category: { id: 'cat-drinkware', name: 'Drinkware', slug: 'drinkware' },
+  // Test fixture: Cap (template supports embroidery but NOT taping)
+  const capProduct = {
+    id: 'prod-phase6-cap',
+    name: 'Classic Cotton Cap',
+    slug: 'classic-cotton-cap',
+    category: { id: 'cat-caps', name: 'Caps & Headwear', slug: 'caps' },
     customizationEnabled: true,
-    customizerTemplateId: 'mug-v1',
-    embroideryEnabled: true, // Product tries to enable, but template does not support
+    customizerTemplateId: 'cap-v1',
+    embroideryEnabled: true,
     tapingColorEnabled: true, // Product tries to enable, but template does not support
   };
 
@@ -79,13 +78,9 @@ describe('Phase 6 Web: Customizer Feature Controls, Branding Method & Order Revi
       expect(showBrandingMethod).toBe(false);
     });
 
-    it('hides branding method selector when template does not support embroidery (e.g. Mug)', () => {
-      const features = getCustomizerFeatures(mugProduct);
-      // Even though product has embroideryEnabled: true, template capabilities override it
-      expect(features.embroidery).toBe(false);
-
-      const showBrandingMethod = Boolean(features.embroidery);
-      expect(showBrandingMethod).toBe(false);
+    it('shows branding method selector for caps (cap template supports embroidery)', () => {
+      const features = getCustomizerFeatures(capProduct);
+      expect(features.embroidery).toBe(true);
     });
   });
 
@@ -192,8 +187,8 @@ describe('Phase 6 Web: Customizer Feature Controls, Branding Method & Order Revi
       expect(showTapingColor).toBe(false);
     });
 
-    it('hides taping color selector when template does not support taping (e.g. Mug or Cap)', () => {
-      const features = getCustomizerFeatures(mugProduct);
+    it('hides taping color selector when template does not support taping (e.g. Cap)', () => {
+      const features = getCustomizerFeatures(capProduct);
       expect(features.taping).toBe(false);
 
       const showTapingColor = Boolean(features.taping);

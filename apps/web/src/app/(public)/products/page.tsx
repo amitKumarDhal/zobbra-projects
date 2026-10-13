@@ -24,10 +24,7 @@ import { canCustomize, getHighlights, getMoq, getProductColors, getSocialProof, 
 const CATEGORIES = [
   { id: 'all', label: 'All Merchandise' },
   { id: 't-shirts', label: 'T-Shirts & Apparel' },
-  { id: 'hoodies', label: 'Hoodies & Sweatshirts' },
   { id: 'caps', label: 'Caps & Headwear' },
-  { id: 'bags', label: 'Bags & Backpacks' },
-  { id: 'drinkware', label: 'Mugs & Bottles' },
 ];
 
 function normalizeCat(c: string | null): string {
@@ -302,7 +299,7 @@ function ProductsCatalog() {
             <h3 className="text-base font-heading font-bold text-gray-900">No products found</h3>
             <p className="text-xs text-gray-500 max-w-sm mt-1 mb-4 leading-relaxed">
               {search.trim()
-                ? `We couldn't find any products matching "${search.trim()}". Try searching for apparel, caps, or bags.`
+                ? `We couldn't find any products matching "${search.trim()}". Try searching for t-shirts or caps.`
                 : 'No products are currently available in this category.'}
             </p>
             <button

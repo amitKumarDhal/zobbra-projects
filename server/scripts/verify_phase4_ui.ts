@@ -36,7 +36,6 @@ async function main() {
     tapingColorEnabled: false,
     backDesignEnabled: true,
     embroideryEnabled: false,
-    zipperEnabled: false,
   });
 
   const devPolo = await prisma.product.upsert({
@@ -48,7 +47,6 @@ async function main() {
       tapingColorEnabled: poloConfig.tapingColorEnabled,
       backDesignEnabled: poloConfig.backDesignEnabled,
       embroideryEnabled: poloConfig.embroideryEnabled,
-      zipperEnabled: poloConfig.zipperEnabled,
       colors: configuredColors as any,
     },
     create: {
@@ -63,7 +61,6 @@ async function main() {
       tapingColorEnabled: poloConfig.tapingColorEnabled,
       backDesignEnabled: poloConfig.backDesignEnabled,
       embroideryEnabled: poloConfig.embroideryEnabled,
-      zipperEnabled: poloConfig.zipperEnabled,
       colors: configuredColors as any,
     },
   });
@@ -154,7 +151,6 @@ async function main() {
       trimColorEnabled: false,
       backDesignEnabled: true,
       embroideryEnabled: false,
-      zipperEnabled: false,
     },
     create: {
       name: 'Dev Polo No Trim',
@@ -167,7 +163,6 @@ async function main() {
       trimColorEnabled: false,
       backDesignEnabled: true,
       embroideryEnabled: false,
-      zipperEnabled: false,
     },
   });
 

@@ -1,0 +1,63 @@
+# ═══════════════════════════════════════════════════════════════
+# ZOBBRA WEB DOCKERIGNORE - PRODUCTION BUILD & RELEASE HYGIENE
+# ═══════════════════════════════════════════════════════════════
+
+# ── 1. Environment & Secret Files (Recursive Exclusion) ───────
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Allow documentation/template example files
+!.env.example
+!.env.*.example
+!**/.env.example
+!**/.env.*.example
+
+# ── 2. Host Build Artifacts ────────────────────────────────────
+node_modules
+**/node_modules
+.next
+**/.next
+dist
+**/dist
+build
+**/build
+out
+**/out
+.turbo
+**/.turbo
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# ── 3. Tests, Test Output & Coverage ───────────────────────────
+coverage
+**/coverage
+cypress
+**/cypress
+cypress/screenshots
+cypress/videos
+cypress/downloads
+src/__tests__
+**/__tests__
+**/*.cy.ts
+**/*.cy.js
+**/*.test.ts
+**/*.test.tsx
+**/*.test.js
+**/*.spec.ts
+**/*.spec.tsx
+**/*.spec.js
+
+# ── 4. Scratch, Temporary, Backups & Logs ──────────────────────
+scratch
+**/scratch
+backups
+**/backups
+tmp
+temp
+*.log
+**/*.log
+.git
+.DS_Store
+*.crdownload
