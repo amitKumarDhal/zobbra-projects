@@ -14,9 +14,9 @@ describe('Customer Shipment Tracking Coming Soon Experience', () => {
     cy.contains('h1', 'Shipment Tracking').should('be.visible');
     cy.contains('Live shipment tracking will be available soon.').should('be.visible');
 
-    // 4. Verify Professional Coming Soon Card
+    // 4. Verify Professional Coming Soon Notice
+    cy.get('[data-cy="tracking-coming-soon"]').should('be.visible');
     cy.contains('Real-Time Courier Tracking').should('be.visible');
-    cy.contains('Track your ZOBBRA orders from dispatch to delivery with real-time courier updates.').should('be.visible');
     cy.contains('Courier tracking integration is currently under development.').should('be.visible');
 
     // 5. Verify NO Fake AWB or Fake Courier Data Exists
@@ -26,16 +26,16 @@ describe('Customer Shipment Tracking Coming Soon Experience', () => {
     cy.contains('In Transit to Kolkata Distribution Center').should('not.exist');
     cy.contains('Out for Delivery to Client Facility').should('not.exist');
 
-    // 6. Verify Action Buttons
-    cy.get('[data-cy="back-to-orders-btn"]').should('be.visible');
+    // 6. Verify Action Buttons — WhatsApp goes to the ZOBBRA sales line, not the customer
+    cy.get('[data-cy="view-all-orders-btn"]').should('be.visible');
     cy.get('[data-cy="tracking-whatsapp-btn"]')
       .should('be.visible')
       .and('have.attr', 'target', '_blank')
       .and('have.attr', 'href')
-      .and('include', 'https://wa.me/');
+      .and('include', 'https://wa.me/919124449665');
 
     // 7. Verify Navigation to My Orders
-    cy.get('[data-cy="back-to-orders-btn"]').click();
+    cy.get('[data-cy="view-all-orders-btn"]').click();
     cy.url().should('include', '/customer/orders');
   });
 });

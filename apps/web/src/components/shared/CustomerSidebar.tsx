@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Package,
-  PlusCircle,
+  Palette,
   FileText,
   ShoppingBag,
   Truck,
@@ -39,7 +39,8 @@ export function CustomerSidebar({ isOpen = false, onClose }: CustomerSidebarProp
 
   const navItems = [
     { name: 'Browse Products', href: '/customer/products', icon: Package },
-    { name: 'Request Quote', href: '/customer/create-quote', icon: PlusCircle },
+    // Same "Design & Order Online" flow guests get: pick a product, then customize it in the studio
+    { name: 'Design & Order', href: '/products', icon: Palette },
     { name: 'My Quotes', href: '/customer/quotes', icon: FileText },
     { name: 'My Orders', href: '/customer/orders', icon: ShoppingBag },
     { name: 'Track Shipments', href: '/customer/tracking', icon: Truck },

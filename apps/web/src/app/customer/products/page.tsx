@@ -18,7 +18,6 @@ import {
   Palette,
   AlertCircle,
   RefreshCw,
-  Sparkles,
   Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -339,10 +338,10 @@ function CustomerProductsCatalog() {
     router.replace('/customer/products', { scroll: false });
   };
 
+  // Sort order is not a filter: it never hides products, so it doesn't count here
   const hasActiveFilters =
     debouncedSearch ||
     selectedCategory !== 'ALL' ||
-    sortBy !== 'recommended' ||
     selectedColor ||
     selectedSize ||
     selectedMoq ||
@@ -354,10 +353,6 @@ function CustomerProductsCatalog() {
       {/* ─── 1. PAGE HEADER ───────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-[#E5E7EB]">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#EEF2FF] text-[#3B6FEB] uppercase tracking-wider mb-2">
-            <Sparkles className="w-3 h-3 text-[#3B6FEB]" />
-            B2B PRODUCT DISCOVERY
-          </div>
           <h1
             className="text-2xl sm:text-3xl lg:text-4xl font-heading font-black text-[#111111] tracking-tight"
             data-cy="page-header-title"
@@ -369,20 +364,9 @@ function CustomerProductsCatalog() {
           </p>
         </div>
 
-        {/* Primary & Secondary CTAs */}
+        {/* Page CTA — Create Quote already lives in the portal navbar */}
         <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-          <Link href="/customer/create-quote" className="inline-block">
-            <Button
-              variant="primary"
-              size="md"
-              data-cy="create-quote-header-btn"
-              className="font-bold gap-1.5 shadow-sm"
-            >
-              <PlusCircle className="w-4 h-4" /> CREATE QUOTE
-            </Button>
-          </Link>
-
-          <Link href="/design-order" className="inline-block">
+          <Link href="/products" className="inline-block">
             <Button
               variant="black"
               size="md"
@@ -422,29 +406,8 @@ function CustomerProductsCatalog() {
             )}
           </div>
 
-          {/* Desktop Category Selector & Sort */}
+          {/* Sort & Filters (categories are picked from the pill strip below) */}
           <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap justify-between lg:justify-end">
-            {/* Category Dropdown */}
-            <div className="flex items-center gap-1.5">
-              <label htmlFor="category-select" className="text-xs font-semibold text-[#6B7280] hidden sm:block">
-                Category:
-              </label>
-              <select
-                id="category-select"
-                data-cy="category-filter-select"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-3 py-2 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs font-semibold text-[#111111] focus:outline-none focus:border-[#3B6FEB] cursor-pointer"
-              >
-                <option value="ALL">All Categories ▼</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.slug}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Sort Dropdown */}
             <div className="flex items-center gap-1.5">
               <label htmlFor="sort-select" className="text-xs font-semibold text-[#6B7280] hidden sm:block">
@@ -750,32 +713,62 @@ function CustomerProductsCatalog() {
           </Button>
         </div>
       ) : sortedProducts.length === 0 ? (
-        /* Empty State */
+        /* Empty State — different guidance when filters caused it vs. an empty catalog */
         <div
-          className="text-center py-20 px-6 bg-white rounded-2xl border border-[#E5E7EB] shadow-xs space-y-4 max-w-md mx-auto"
+          className="text-center py-16 px-6 bg-white rounded-2xl border border-[#E5E7EB] shadow-xs space-y-4 max-w-md mx-auto"
           data-cy="empty-state"
         >
           <div className="w-14 h-14 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center mx-auto">
             <PackageX className="w-7 h-7" />
           </div>
-          <div>
-            <h3 className="text-lg font-heading font-black text-[#111111]">No products found</h3>
-            <p className="text-xs text-[#6B7280] mt-1 leading-relaxed">
-              Try removing a filter or searching for another product.
-            </p>
-          </div>
-          <Button
-            variant="black"
-            size="sm"
-            onClick={handleClearFilters}
-            data-cy="clear-filters-btn"
-            className="font-bold"
-          >
-            CLEAR FILTERS
-          </Button>
+          {hasActiveFilters ? (
+            <>
+              <div>
+                <h3 className="text-lg font-heading font-black text-[#111111]">No products found</h3>
+                <p className="text-xs text-[#6B7280] mt-1 leading-relaxed">
+                  Try removing a filter or searching for another product.
+                </p>
+              </div>
+              <Button
+                variant="black"
+                size="sm"
+                onClick={handleClearFilters}
+                data-cy="clear-filters-btn"
+                className="font-bold"
+              >
+                CLEAR FILTERS
+              </Button>
+            </>
+          ) : (
+            <>
+              <div>
+                <h3 className="text-lg font-heading font-black text-[#111111]">
+                  No products available yet
+                </h3>
+                <p className="text-xs text-[#6B7280] mt-1 leading-relaxed">
+                  Our catalog is being updated. Tell us what you need and our team will send you a
+                  quote.
+                </p>
+              </div>
+              <Link href="/customer/create-quote" className="inline-block">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  data-cy="empty-request-quote-btn"
+                  className="font-bold gap-1.5"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" /> REQUEST A QUOTE
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       ) : (
-        /* Real Product Grid */
+        <>
+        <p className="text-xs font-semibold text-[#6B7280] -mb-2 sm:-mb-4" data-cy="product-count">
+          {sortedProducts.length} {sortedProducts.length === 1 ? 'product' : 'products'}
+        </p>
+        {/* Real Product Grid */}
         <div
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6"
           data-cy="product-grid"
@@ -952,6 +945,7 @@ function CustomerProductsCatalog() {
             );
           })}
         </div>
+        </>
       )}
 
       {/* ─── 4. QUICK VIEW MODAL (Section 13) ──────────────────────────────── */}

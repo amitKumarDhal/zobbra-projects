@@ -46,8 +46,7 @@ describe('Customer Product Discovery Catalog UX (/customer/products)', () => {
       .and('contain', 'BROWSE PRODUCTS');
     cy.contains('Choose products for your next corporate order.').should('be.visible');
 
-    // Verify Header CTAs
-    cy.get('[data-cy="create-quote-header-btn"]').should('be.visible');
+    // Verify Header CTA (Create Quote lives in the portal navbar)
     cy.get('[data-cy="design-order-header-btn"]').should('be.visible');
 
     // Verify products grid loaded
@@ -81,14 +80,13 @@ describe('Customer Product Discovery Catalog UX (/customer/products)', () => {
     visitProducts('/customer/products');
     cy.get('[data-cy="product-grid"]', { timeout: 12000 }).should('be.visible');
 
-    // Select category dropdown
-    cy.get('[data-cy="category-filter-select"]').select('apparel');
+    // Select category pill
+    cy.get('[data-cy="category-pill-apparel"]').click();
 
     cy.wait(1000);
 
     // URL parameter reflects category
     cy.url().should('include', 'category=apparel');
-    cy.get('[data-cy="category-filter-select"]').should('have.value', 'apparel');
     cy.get('[data-cy="product-grid"]').should('be.visible');
   });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { clearSession } from '@/lib/otpAuth';
 import { usePathname } from 'next/navigation';
@@ -29,8 +29,20 @@ export function CustomerNavbar({ onMenuToggle }: CustomerNavbarProps) {
 
   const { userName, companyName, initials } = useCustomerUser();
 
-  // Generate breadcrumb path — only show last 2 segments on small screens
+  // Breadcrumb segments after "Portal" — the /customer prefix is the portal itself, so skip it
   const pathSegments = pathname.split('/').filter(Boolean);
+  const crumbs = pathSegments
+    .map((segment, index) => ({
+      label: segment.replace(/-/g, ' '),
+      href: '/' + pathSegments.slice(0, index + 1).join('/'),
+    }))
+    .filter((crumb) => crumb.href !== '/customer');
+
+  // Detected after mount so the server render and first client render match
+  const [isMac, setIsMac] = useState(false);
+  useEffect(() => {
+    setIsMac(/Mac|iPhone|iPad/.test(navigator.platform));
+  }, []);
 
   return (
     <>
@@ -47,33 +59,31 @@ export function CustomerNavbar({ onMenuToggle }: CustomerNavbarProps) {
           </button>
 
           {/* Breadcrumb */}
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#6B7280] overflow-hidden">
-            <Link href="/customer/products" className="hover:text-[#3B6FEB] transition-colors flex-shrink-0">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs font-semibold text-[#6B7280] overflow-hidden">
+            {/* inline-flex + items-center keeps text centred inside the global 44px link min-height */}
+            <Link href="/customer/products" className="inline-flex items-center hover:text-[#3B6FEB] transition-colors flex-shrink-0">
               Portal
             </Link>
-            {pathSegments.map((segment, index) => {
-              const joined = '/' + pathSegments.slice(0, index + 1).join('/');
-              // There is no /customer overview page; its breadcrumb goes to the customer home
-              const href = joined === '/customer' ? '/customer/products' : joined;
-              const isLast = index === pathSegments.length - 1;
-              // On mobile, only show last segment to save space
-              const showOnMobile = index === pathSegments.length - 1;
+            {crumbs.map((crumb, index) => {
+              const isLast = index === crumbs.length - 1;
+              // On mobile, only show the last segment to save space
+              const mobileClass = isLast ? '' : 'hidden sm:inline-flex';
               return (
-                <React.Fragment key={href}>
-                  <ChevronRight className={`w-3.5 h-3.5 text-[#9CA3AF] flex-shrink-0 ${!showOnMobile ? 'hidden sm:block' : ''}`} />
+                <React.Fragment key={crumb.href}>
+                  <ChevronRight className={`w-3.5 h-3.5 text-[#9CA3AF] flex-shrink-0 ${isLast ? '' : 'hidden sm:block'}`} />
                   {isLast ? (
-                    <span className={`text-[#111111] font-bold capitalize truncate max-w-[80px] sm:max-w-none ${!showOnMobile ? 'hidden sm:block' : ''}`}>
-                      {segment}
+                    <span aria-current="page" className="text-[#111111] font-bold capitalize truncate max-w-[120px] sm:max-w-none">
+                      {crumb.label}
                     </span>
                   ) : (
-                    <Link href={href} className={`hover:text-[#3B6FEB] capitalize transition-colors flex-shrink-0 ${!showOnMobile ? 'hidden sm:block' : ''}`}>
-                      {segment}
+                    <Link href={crumb.href} className={`inline-flex items-center hover:text-[#3B6FEB] capitalize transition-colors flex-shrink-0 ${mobileClass}`}>
+                      {crumb.label}
                     </Link>
                   )}
                 </React.Fragment>
               );
             })}
-          </div>
+          </nav>
         </div>
 
         {/* Right: Create Quote + Search + Profile */}
@@ -95,7 +105,7 @@ export function CustomerNavbar({ onMenuToggle }: CustomerNavbarProps) {
           >
             <Search className="w-3.5 h-3.5 text-[#3B6FEB]" />
             <span>Search portal...</span>
-            <kbd className="bg-white px-1.5 py-0.5 rounded text-[10px] text-[#111111] font-mono border border-[#E5E7EB]">⌘K</kbd>
+            <kbd className="bg-white px-1.5 py-0.5 rounded text-[10px] text-[#111111] font-mono border border-[#E5E7EB]">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
           </button>
 
           {/* Mobile search icon */}

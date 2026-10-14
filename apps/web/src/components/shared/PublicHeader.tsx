@@ -9,6 +9,7 @@ import {
   Mail,
   Phone,
   ArrowRight,
+  UserCircle,
 } from 'lucide-react';
 import { ZobbraLogo } from './ZobbraLogo';
 
@@ -30,6 +31,26 @@ export function PublicHeader() {
     }
     return () => document.body.classList.remove('drawer-open');
   }, [mobileMenuOpen]);
+
+  // Signed-in users browsing the public catalog/studio see their name (linking back to their
+  // portal) instead of a Login link. Read after mount so server and client renders match.
+  const [account, setAccount] = useState<{ href: string; label: string } | null>(null);
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('zobra_token');
+      const raw = localStorage.getItem('user') || localStorage.getItem('zobra_user');
+      const user = raw ? JSON.parse(raw) : null;
+      const href =
+        user?.role === 'CUSTOMER' ? '/customer/products' : user?.role === 'ADMIN' ? '/dashboard' : null;
+      // New WhatsApp OTP accounts may not have a name yet — fall back to their phone number
+      const label = user?.name?.trim() || user?.phone || 'My Account';
+      setAccount(token && href ? { href, label } : null);
+    } catch {
+      setAccount(null);
+    }
+  }, [pathname]);
+
+  const accountLink = account ?? { href: '/login', label: 'Login' };
 
   const navLinks = [
     { name: 'Home', href: '/' },
@@ -76,10 +97,13 @@ export function PublicHeader() {
             {/* Right: Login & CTA Button */}
             <div className="hidden md:flex flex-1 items-center justify-end gap-3.5">
               <Link
-                href="/login"
-                className="text-[13px] font-semibold text-[#444444] hover:text-[#050505] transition-colors py-1 px-2 rounded hover:bg-[#F7F7F5] min-h-0 flex items-center justify-center"
+                href={accountLink.href}
+                data-cy="public-header-account-link"
+                title={account ? 'Go to your account' : undefined}
+                className="text-[13px] font-semibold text-[#444444] hover:text-[#050505] transition-colors py-1 px-2 rounded hover:bg-[#F7F7F5] min-h-0 flex items-center justify-center gap-1.5 max-w-[180px]"
               >
-                Login
+                {account && <UserCircle className="w-4 h-4 shrink-0" />}
+                <span className="truncate">{accountLink.label}</span>
               </Link>
               <Link
                 href="/get-quote"
@@ -144,11 +168,12 @@ export function PublicHeader() {
             })}
             <div className="pt-2.5 border-t border-[#E5E5E5] space-y-2 mt-2.5">
               <Link
-                href="/login"
+                href={accountLink.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-center py-2 px-3 text-sm font-semibold text-[#333333] hover:text-black hover:bg-[#F7F7F5] rounded border border-[#E5E5E5] transition-colors min-h-[40px] flex items-center justify-center"
+                className="text-center py-2 px-3 text-sm font-semibold text-[#333333] hover:text-black hover:bg-[#F7F7F5] rounded border border-[#E5E5E5] transition-colors min-h-[40px] flex items-center justify-center gap-1.5"
               >
-                Login
+                {account && <UserCircle className="w-4 h-4 shrink-0" />}
+                <span className="truncate">{accountLink.label}</span>
               </Link>
               <Link
                 href="/get-quote"

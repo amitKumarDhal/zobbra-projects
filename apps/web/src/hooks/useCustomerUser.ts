@@ -65,6 +65,13 @@ function getCachedUser(): CustomerUser | null {
   }
 }
 
+const USER_UPDATED_EVENT = 'zobra:customer-user-updated';
+
+/** Call after writing a new user to localStorage so every mounted useCustomerUser re-reads it. */
+export function notifyCustomerUserUpdated(): void {
+  window.dispatchEvent(new Event(USER_UPDATED_EVENT));
+}
+
 function initials(name: string): string {
   return name
     .split(' ')
@@ -122,8 +129,16 @@ export function useCustomerUser(): UseCustomerUserResult {
       }
     }
 
+    // Pick up profile edits saved elsewhere on the page (e.g. navbar after a profile save)
+    const onUserUpdated = () => {
+      const updated = getCachedUser();
+      if (updated && !cancelled) setUser(updated);
+    };
+    window.addEventListener(USER_UPDATED_EVENT, onUserUpdated);
+
     return () => {
       cancelled = true;
+      window.removeEventListener(USER_UPDATED_EVENT, onUserUpdated);
     };
   }, []);
 
